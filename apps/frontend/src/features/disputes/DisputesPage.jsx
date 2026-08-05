@@ -1,0 +1,9 @@
+// TODO: implement the disputes feature — see docs/requirements for the spec.
+export default function DisputesPage() {
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-semibold capitalize">disputes</h1>
+      <p className="text-gray-500 mt-2 text-sm">This feature isn't built yet.</p>
+    </div>
+  );
+}

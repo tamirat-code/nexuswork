@@ -1,0 +1,10 @@
+# Production overrides — e.g. remove bind mounts, add a reverse proxy,
+# point MONGO_URI at a managed cluster instead of the local mongo service.
+services:
+  backend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+
+  frontend:
+    restart: always

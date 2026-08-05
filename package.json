@@ -1,0 +1,12 @@
+{
+  "name": "student-freelance-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["apps/backend", "apps/frontend"],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "test:backend": "npm test --workspace=apps/backend"
+  }
+}

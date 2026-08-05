@@ -1,0 +1,59 @@
+import Proposal from "./proposals.model.js";
+import Project from "../projects/projects.model.js";
+import Contract from "../contracts/contracts.model.js";
+
+export async function submitProposal(studentId, data) {
+  const project = await Project.findById(data.project_id);
+  if (!project || project.status !== "open") {
+    const err = new Error("Project is not open for proposals");
+    err.status = 400;
+    throw err;
+  }
+  return Proposal.create({ ...data, student_id: studentId });
+}
+
+export async function listForProject(projectId, requestingUser) {
+  const project = await Project.findById(projectId);
+  if (!project) {
+    const err = new Error("Project not found");
+    err.status = 404;
+    throw err;
+  }
+  if (String(project.client_id) !== String(requestingUser._id) && requestingUser.role !== "admin") {
+    const err = new Error("Not authorized to view these proposals");
+    err.status = 403;
+    throw err;
+  }
+  return Proposal.find({ project_id: projectId }).sort({ createdAt: -1 });
+}
+
+// accepting a proposal closes out the other pending proposals and creates the contract
+export async function acceptProposal(proposalId, requestingUser) {
+  const proposal = await Proposal.findById(proposalId).populate("project_id");
+  if (!proposal) {
+    const err = new Error("Proposal not found");
+    err.status = 404;
+    throw err;
+  }
+  const project = proposal.project_id;
+  if (String(project.client_id) !== String(requestingUser._id)) {
+    const err = new Error("Not authorized to accept this proposal");
+    err.status = 403;
+    throw err;
+  }
+  proposal.status = "accepted";
+  await proposal.save();
+  project.status = "in_progress";
+  await project.save();
+  await Proposal.updateMany(
+    { project_id: project._id, _id: { $ne: proposal._id }, status: "pending" },
+    { status: "rejected" }
+  );
+  const contract = await Contract.create({
+    proposal_id: proposal._id,
+    project_id: project._id,
+    client_id: project.client_id,
+    student_id: proposal.student_id,
+  });
+  return { proposal, contract };
+}

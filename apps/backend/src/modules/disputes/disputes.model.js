@@ -1,0 +1,13 @@
+import mongoose from "mongoose";
+
+const disputeSchema = new mongoose.Schema(
+  {
+    milestone_id: { type: mongoose.Schema.Types.ObjectId, ref: "Milestone", required: true },
+    opened_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    status: { type: String, enum: ["open", "under_review", "resolved"], default: "open" },
+    resolution_summary: { type: String },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model("Dispute", disputeSchema);
