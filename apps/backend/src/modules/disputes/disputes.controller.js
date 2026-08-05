@@ -1,4 +1,5 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import { requireFields } from "../../shared/validators/validate.js";
 import { openDispute, resolveDispute, listOpen } from "./disputes.service.js";
 
 export const create = asyncHandler(async (req, res) => {
@@ -7,7 +8,8 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const resolve = asyncHandler(async (req, res) => {
-  const dispute = await resolveDispute(req.params.id, req.body.resolution_summary);
+  requireFields(req.body, ["outcome"]);
+  const dispute = await resolveDispute(req.params.id, req.body);
   res.json({ success: true, data: dispute });
 });
 
