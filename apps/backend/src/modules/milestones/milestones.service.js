@@ -91,3 +91,16 @@ export async function approveMilestone(milestoneId, requestingUserId) {
   await milestone.save();
   return { milestone, payout };
 }
+export async function listForContract(contractId) {
+  return Milestone.find({ contract_id: contractId }).sort({ createdAt: 1 });
+}
+
+export async function getById(id) {
+  const milestone = await Milestone.findById(id);
+  if (!milestone) {
+    const err = new Error("Milestone not found");
+    err.status = 404;
+    throw err;
+  }
+  return milestone;
+}

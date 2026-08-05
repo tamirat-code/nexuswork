@@ -8,6 +8,16 @@ export const create = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: milestone });
 });
 
+export const listByContract = asyncHandler(async (req, res) => {
+  const milestones = await milestonesService.listForContract(req.params.contractId);
+  res.json({ success: true, data: milestones });
+});
+
+export const getOne = asyncHandler(async (req, res) => {
+  const milestone = await milestonesService.getById(req.params.id);
+  res.json({ success: true, data: milestone });
+});
+
 export const fund = asyncHandler(async (req, res) => {
   const milestone = await milestonesService.fundMilestone(req.params.id, req.user._id);
   res.json({ success: true, data: milestone });
