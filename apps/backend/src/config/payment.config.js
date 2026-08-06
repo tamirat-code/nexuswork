@@ -1,7 +1,8 @@
-// Payment gateway config (Section 3.9). Stripe test mode for development;
-// swap PAYMENT_PROVIDER + keys for a regional processor (Chapa, SantimPay, Telebirr) in production.
 export const paymentConfig = {
-  provider: process.env.PAYMENT_PROVIDER || "stripe",
-  secretKey: process.env.PAYMENT_SECRET_KEY,
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   commissionRate: Number(process.env.COMMISSION_RATE || 0.1),
+  currency: process.env.PAYMENT_CURRENCY || "usd",
+  connectRefreshUrl: process.env.STRIPE_CONNECT_REFRESH_URL || "http://localhost:5173/wallet/connect/refresh",
+  connectReturnUrl: process.env.STRIPE_CONNECT_RETURN_URL || "http://localhost:5173/wallet/connect/done",
 };

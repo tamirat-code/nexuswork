@@ -1,43 +1,47 @@
 import Milestone from "./milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
-import { recordPayment } from "../payments/payments.service.js";
-import { credit } from "../wallets/wallets.service.js";
-import { paymentConfig } from "../../config/payment.config.js";
+import Wallet from "../wallets/wallets.model.js";
+import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { addSubmission } from "../submissions/submissions.service.js";
+import { paymentConfig } from "../../config/payment.config.js";
+import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
 
 export async function createMilestone(contractId, requestingUserId, data) {
   const contract = await Contract.findById(contractId);
-  if (!contract) {
-    const err = new Error("Contract not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!contract) throw new NotFoundError("Contract not found");
   if (String(contract.client_id) !== String(requestingUserId)) {
-    const err = new Error("Only the client can define milestones");
-    err.status = 403;
-    throw err;
+    throw new ForbiddenError("Only the client can define milestones");
   }
   return Milestone.create({ contract_id: contractId, ...data });
 }
 
-export async function fundMilestone(milestoneId, requestingUserId) {
+export async function listForContract(contractId) {
+  return Milestone.find({ contract_id: contractId }).sort({ createdAt: 1 });
+}
+
+export async function getById(id) {
+  const milestone = await Milestone.findById(id);
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  return milestone;
+}
+
+export async function initiateFunding(milestoneId, requestingUserId) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
-  if (!milestone) {
-    const err = new Error("Milestone not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!milestone) throw new NotFoundError("Milestone not found");
   if (String(milestone.contract_id.client_id) !== String(requestingUserId)) {
-    const err = new Error("Only the client can fund this milestone");
-    err.status = 403;
-    throw err;
+    throw new ForbiddenError("Only the client can fund this milestone");
   }
   if (milestone.status !== "not_funded") {
-    const err = new Error(`Cannot fund a milestone in status ${milestone.status}`);
-    err.status = 400;
-    throw err;
+    throw new ValidationError(`Cannot fund a milestone in status ${milestone.status}`);
   }
-  await recordPayment({ milestone_id: milestone._id, amount: milestone.amount, direction: "deposit" });
+  return createDepositIntent(milestone);
+}
+
+export async function confirmFunding(paymentIntentId) {
+  const payment = await markDepositSucceeded(paymentIntentId);
+  if (!payment) return null;
+  const milestone = await Milestone.findById(payment.milestone_id);
+  if (!milestone) return null;
   milestone.status = "funded";
   await milestone.save();
   return milestone;
@@ -45,20 +49,12 @@ export async function fundMilestone(milestoneId, requestingUserId) {
 
 export async function submitWork(milestoneId, requestingUserId, { file_url, note } = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
-  if (!milestone) {
-    const err = new Error("Milestone not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!milestone) throw new NotFoundError("Milestone not found");
   if (String(milestone.contract_id.student_id) !== String(requestingUserId)) {
-    const err = new Error("Only the assigned student can submit work");
-    err.status = 403;
-    throw err;
+    throw new ForbiddenError("Only the assigned student can submit work");
   }
   if (milestone.status !== "funded") {
-    const err = new Error("Milestone must be funded before work is submitted");
-    err.status = 400;
-    throw err;
+    throw new ValidationError("Milestone must be funded before work is submitted");
   }
   const submission = await addSubmission(milestone._id, { file_url, note });
   milestone.status = "delivered";
@@ -68,39 +64,24 @@ export async function submitWork(milestoneId, requestingUserId, { file_url, note
 
 export async function approveMilestone(milestoneId, requestingUserId) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
-  if (!milestone) {
-    const err = new Error("Milestone not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!milestone) throw new NotFoundError("Milestone not found");
   const contract = milestone.contract_id;
   if (String(contract.client_id) !== String(requestingUserId)) {
-    const err = new Error("Only the client can approve this milestone");
-    err.status = 403;
-    throw err;
+    throw new ForbiddenError("Only the client can approve this milestone");
   }
   if (milestone.status !== "delivered") {
-    const err = new Error("Milestone must be delivered before approval");
-    err.status = 400;
-    throw err;
+    throw new ValidationError("Milestone must be delivered before approval");
   }
+
+  const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
   const payout = milestone.amount * (1 - paymentConfig.commissionRate);
-  await recordPayment({ milestone_id: milestone._id, amount: payout, direction: "release" });
-  await credit(contract.student_id, payout);
+  await releaseToStudent({
+    milestoneId: milestone._id,
+    amount: payout,
+    stripeAccountId: studentWallet?.stripe_account_id,
+  });
+
   milestone.status = "released";
   await milestone.save();
   return { milestone, payout };
-}
-export async function listForContract(contractId) {
-  return Milestone.find({ contract_id: contractId }).sort({ createdAt: 1 });
-}
-
-export async function getById(id) {
-  const milestone = await Milestone.findById(id);
-  if (!milestone) {
-    const err = new Error("Milestone not found");
-    err.status = 404;
-    throw err;
-  }
-  return milestone;
 }

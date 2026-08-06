@@ -8,11 +8,15 @@ import { requestLogger } from "./middleware/logging.middleware.js";
 import { rateLimiter } from "./middleware/rateLimiter.middleware.js";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 import { v1Router } from "./api/v1/index.js";
+import { WebhooksRoutes } from "./modules/webhooks/index.js";
 
 const app = express();
 
 app.use(helmet());
 app.use(cors(corsConfig));
+
+app.use("/webhooks", express.raw({ type: "application/json" }), WebhooksRoutes);
+
 app.use(express.json({ limit: "2mb" }));
 app.use(requestLogger);
 app.use(rateLimiter);

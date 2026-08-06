@@ -1,7 +1,7 @@
 import Dispute from "./disputes.model.js";
 import Milestone from "../milestones/milestones.model.js";
-import { recordPayment } from "../payments/payments.service.js";
-import { credit } from "../wallets/wallets.service.js";
+import Wallet from "../wallets/wallets.model.js";
+import { refundClient, releaseToStudent } from "../payments/payments.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
@@ -33,13 +33,16 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome })
   const contract = milestone.contract_id;
 
   if (outcome === "refund_client") {
-    await recordPayment({ milestone_id: milestone._id, amount: milestone.amount, direction: "refund" });
-    await credit(contract.client_id, milestone.amount);
+    await refundClient(milestone._id);
     milestone.status = "not_funded";
   } else {
+    const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
     const payout = milestone.amount * (1 - paymentConfig.commissionRate);
-    await recordPayment({ milestone_id: milestone._id, amount: payout, direction: "release" });
-    await credit(contract.student_id, payout);
+    await releaseToStudent({
+      milestoneId: milestone._id,
+      amount: payout,
+      stripeAccountId: studentWallet?.stripe_account_id,
+    });
     milestone.status = "released";
   }
   await milestone.save();

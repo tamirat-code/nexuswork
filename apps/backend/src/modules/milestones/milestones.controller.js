@@ -19,8 +19,8 @@ export const getOne = asyncHandler(async (req, res) => {
 });
 
 export const fund = asyncHandler(async (req, res) => {
-  const milestone = await milestonesService.fundMilestone(req.params.id, req.user._id);
-  res.json({ success: true, data: milestone });
+  const result = await milestonesService.initiateFunding(req.params.id, req.user._id);
+  res.json({ success: true, data: result });
 });
 
 export const submit = asyncHandler(async (req, res) => {

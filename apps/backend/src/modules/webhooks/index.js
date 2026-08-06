@@ -1,0 +1,1 @@
+export { default as WebhooksRoutes } from "./webhooks.routes.js";
