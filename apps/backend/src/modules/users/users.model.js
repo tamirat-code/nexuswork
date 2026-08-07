@@ -15,6 +15,9 @@ const userSchema = new mongoose.Schema(
       enum: ["active", "suspended", "deactivated"],
       default: "active",
     },
+    email_verified: { type: Boolean, default: false },
+    failed_login_attempts: { type: Number, default: 0 },
+    locked_until: { type: Date, default: null },
   },
   { timestamps: true }
 );
