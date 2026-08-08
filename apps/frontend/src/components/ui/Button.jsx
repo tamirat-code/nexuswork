@@ -2,9 +2,9 @@ const base =
   "inline-flex items-center justify-center gap-2 rounded-control font-semibold text-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
 
 const variants = {
-  primary: "bg-ink text-white hover:bg-ink-700 active:bg-ink-900",
-  secondary: "border border-ink-100 text-ink hover:bg-ink-50",
-  ghost: "text-ink hover:bg-ink-50",
+  primary: "bg-brass text-ink hover:bg-brass-300 active:bg-brass-700",
+  secondary: "border border-ink-300 text-slate hover:bg-ink-50",
+  ghost: "text-slate hover:bg-ink-50",
   danger: "bg-brick text-white hover:opacity-90",
 };
 

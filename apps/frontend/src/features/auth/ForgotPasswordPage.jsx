@@ -31,12 +31,12 @@ export default function ForgotPasswordPage() {
       <AuthShell eyebrow="Check your inbox" title="Reset link sent">
         <div className="rounded-card border border-escrow bg-escrow-100 p-5 flex gap-3">
           <SealMark className="h-5 w-5 shrink-0 text-escrow mt-0.5" />
-          <p className="text-sm text-ink">
+          <p className="text-sm text-slate">
             If an account exists for <strong>{email}</strong>, we've sent a link to reset the password. It expires
             in 1 hour.
           </p>
         </div>
-        <Link to="/login" className="mt-6 inline-block text-sm font-semibold text-ink hover:underline">
+        <Link to="/login" className="mt-6 inline-block text-sm font-semibold text-brass hover:underline">
           Back to login
         </Link>
       </AuthShell>
@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
       title="Forgot your password?"
       subtitle="Enter your email and we'll send you a link to reset it."
       footer={
-        <Link to="/login" className="font-semibold text-ink hover:underline">
+        <Link to="/login" className="font-semibold text-brass hover:underline">
           Back to login
         </Link>
       }

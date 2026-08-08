@@ -1,7 +1,7 @@
 export default function Skeleton({ className = "" }) {
   return (
     <div
-      className={`animate-shimmer rounded-control bg-[length:200%_100%] bg-gradient-to-r from-ink-50 via-ink-100 to-ink-50 ${className}`}
+      className={`animate-shimmer rounded-control bg-[length:200%_100%] bg-gradient-to-r from-ink-50 via-ink-300 to-ink-50 ${className}`}
       aria-hidden="true"
     />
   );

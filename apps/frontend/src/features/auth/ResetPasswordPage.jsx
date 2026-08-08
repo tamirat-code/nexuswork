@@ -19,10 +19,10 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <AuthShell eyebrow="Password reset" title="This link is missing a token">
-        <p className="text-sm text-slate mb-6">
+        <p className="text-sm text-slate-300 mb-6">
           Make sure you opened the full link from your email, or request a new one.
         </p>
-        <Link to="/forgot-password" className="text-sm font-semibold text-ink hover:underline">
+        <Link to="/forgot-password" className="text-sm font-semibold text-brass hover:underline">
           Request a new link
         </Link>
       </AuthShell>
@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <AuthShell eyebrow="Success" title="Password reset">
-        <p className="text-sm text-slate">Redirecting you to log in…</p>
+        <p className="text-sm text-slate-300">Redirecting you to log in…</p>
       </AuthShell>
     );
   }

@@ -17,10 +17,10 @@ export default function RolePicker({ value, onChange }) {
             aria-checked={selected}
             onClick={() => onChange(opt.value)}
             className={`text-left rounded-card border p-4 transition-colors duration-150
-              ${selected ? "border-ink bg-ink-50" : "border-ink-100 hover:border-ink-300"}`}
+              ${selected ? "border-brass bg-ink-50" : "border-ink-300 hover:border-brass"}`}
           >
-            <p className="text-sm font-semibold text-ink">{opt.label}</p>
-            <p className="text-xs text-slate mt-0.5">{opt.hint}</p>
+            <p className="text-sm font-semibold text-slate">{opt.label}</p>
+            <p className="text-xs text-slate-300 mt-0.5">{opt.hint}</p>
           </button>
         );
       })}

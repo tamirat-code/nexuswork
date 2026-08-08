@@ -67,7 +67,7 @@ export default function RegisterPage() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-ink hover:underline">
+          <Link to="/login" className="font-semibold text-brass hover:underline">
             Log in
           </Link>
         </>
@@ -79,9 +79,9 @@ export default function RegisterPage() {
         <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading} />
 
         <div className="flex items-center gap-3 text-xs text-slate-300">
-          <div className="h-px flex-1 bg-ink-100" />
+          <div className="h-px flex-1 bg-ink-300" />
           or with email
-          <div className="h-px flex-1 bg-ink-100" />
+          <div className="h-px flex-1 bg-ink-300" />
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">

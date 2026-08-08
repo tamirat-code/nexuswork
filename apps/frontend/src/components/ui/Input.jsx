@@ -8,15 +8,15 @@ export default function Input({ label, error, hint, className = "", ...props }) 
   return (
     <div className="space-y-1.5">
       {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-ink-700">
+        <label htmlFor={id} className="block text-sm font-medium text-slate">
           {label}
         </label>
       )}
       <input
         id={id}
-        className={`w-full h-11 rounded-control border px-3.5 text-sm text-ink placeholder:text-slate-300
-          transition-colors duration-150 bg-white
-          ${error ? "border-brick" : "border-ink-100 hover:border-ink-300"}
+        className={`w-full h-11 rounded-control border px-3.5 text-sm text-slate placeholder:text-slate-300
+          transition-colors duration-150 bg-ink-50
+          ${error ? "border-brick" : "border-ink-300 hover:border-brass"}
           ${className}`}
         aria-invalid={Boolean(error) || undefined}
         aria-describedby={errorId || hintId}
@@ -28,7 +28,7 @@ export default function Input({ label, error, hint, className = "", ...props }) 
         </p>
       )}
       {!error && hint && (
-        <p id={hintId} className="text-xs text-slate">
+        <p id={hintId} className="text-xs text-slate-300">
           {hint}
         </p>
       )}

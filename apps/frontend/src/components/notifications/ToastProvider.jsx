@@ -24,7 +24,7 @@ export function ToastProvider({ children }) {
   const variantStyles = {
     success: "bg-escrow text-white",
     error: "bg-brick text-white",
-    info: "bg-ink text-white",
+    info: "bg-brass text-ink",
   };
 
   return (

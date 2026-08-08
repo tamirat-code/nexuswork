@@ -1,3 +1,58 @@
+/* CollabFlow design tokens — dark teal theme */
+:root {
+  /* Surfaces */
+  --bg: #020f18;
+  --bg-alt: #071520;
+  --bg-nested: #0a1e2e;
+  --card: #051e2e;
+  --border: #0e3347;
+  --border-alt: #0a3347;
+
+  /* Teal accent */
+  --accent: #00c8b4;
+  --accent-hover: #00e5d1;
+  --accent-active: #009e8e;
+  --accent-dark: #006e62;
+
+  /* Text */
+  --text-heading: #e0f5f2;
+  --text-body: #c0e8e4;
+  --text-bright: #f0fbfa;
+  --text-muted: #a0cdd8;
+  --text-faint: #3a7080;
+  --text-faint-alt: #2a6070;
+
+  /* Status */
+  --danger: #f87171;
+  --danger-alt: #ff6b6b;
+  --danger-bg: #2d0a0a;
+  --warning: #f59e0b;
+  --warning-bg: #2d1f05;
+  --success: #22c55e;
+  --success-alt: #34d399;
+  --success-bg: #052e1a;
+  --info: #60a5fa;
+  --purple: #7C3AED;
+}
+
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text-body);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Dark scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-alt);
 }

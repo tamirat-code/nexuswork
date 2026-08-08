@@ -16,16 +16,16 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink-100 bg-paper/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/90 backdrop-blur">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <SealMark className="h-6 w-6 text-ink" />
-          <span className="font-display text-lg text-ink">NexusWork</span>
+          <SealMark className="h-6 w-6 text-brass" />
+          <span className="font-display text-lg text-slate">NexusWork</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm">
           {links.map((l) => (
-            <Link key={l.to} to={l.to} className="text-ink-500 hover:text-ink transition-colors">
+            <Link key={l.to} to={l.to} className="text-slate-300 hover:text-brass transition-colors">
               {l.label}
             </Link>
           ))}
@@ -38,7 +38,7 @@ export default function Navbar() {
             </Button>
           ) : (
             <>
-              <Link to="/login" className="text-sm font-medium text-ink-500 hover:text-ink px-2">
+              <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-brass px-2">
                 Log in
               </Link>
               <Link to="/register">
@@ -50,7 +50,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          className="md:hidden p-2 -mr-2 text-ink"
+          className="md:hidden p-2 -mr-2 text-slate"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
@@ -68,25 +68,25 @@ export default function Navbar() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden overflow-hidden border-t border-ink-100 bg-paper"
+            className="md:hidden overflow-hidden border-t border-ink-300 bg-ink"
           >
             <div className="px-6 py-4 flex flex-col gap-4 text-sm">
               {links.map((l) => (
-                <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)} className="text-ink-500">
+                <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)} className="text-slate-300">
                   {l.label}
                 </Link>
               ))}
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-ink-300" />
               {user ? (
                 <button onClick={logout} className="text-left text-brick font-medium">
                   Log out
                 </button>
               ) : (
                 <>
-                  <Link to="/login" onClick={() => setMobileOpen(false)} className="text-ink-500">
+                  <Link to="/login" onClick={() => setMobileOpen(false)} className="text-slate-300">
                     Log in
                   </Link>
-                  <Link to="/register" onClick={() => setMobileOpen(false)} className="font-semibold text-ink">
+                  <Link to="/register" onClick={() => setMobileOpen(false)} className="font-semibold text-brass">
                     Sign up
                   </Link>
                 </>

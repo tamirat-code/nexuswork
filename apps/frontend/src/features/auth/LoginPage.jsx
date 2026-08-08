@@ -82,7 +82,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setPendingGoogleCredential(null)}
-            className="text-sm text-slate hover:underline"
+            className="text-sm text-slate-300 hover:underline"
           >
             Use a different sign-in method
           </button>
@@ -98,7 +98,7 @@ export default function LoginPage() {
       footer={
         <>
           No account?{" "}
-          <Link to="/register" className="font-semibold text-ink hover:underline">
+          <Link to="/register" className="font-semibold text-brass hover:underline">
             Sign up
           </Link>
         </>
@@ -108,9 +108,9 @@ export default function LoginPage() {
         <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading} />
 
         <div className="flex items-center gap-3 text-xs text-slate-300">
-          <div className="h-px flex-1 bg-ink-100" />
+          <div className="h-px flex-1 bg-ink-300" />
           or with email
-          <div className="h-px flex-1 bg-ink-100" />
+          <div className="h-px flex-1 bg-ink-300" />
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -130,7 +130,7 @@ export default function LoginPage() {
               error={error}
               autoComplete="current-password"
             />
-            <Link to="/forgot-password" className="mt-1.5 inline-block text-xs text-slate hover:underline">
+            <Link to="/forgot-password" className="mt-1.5 inline-block text-xs text-slate-300 hover:underline">
               Forgot your password?
             </Link>
           </div>
