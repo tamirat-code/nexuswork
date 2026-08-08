@@ -3,7 +3,16 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password_hash: { type: String, required: true, select: false },
+    
+    password_hash: {
+      type: String,
+      select: false,
+      required: function () {
+        return this.auth_provider === "local";
+      },
+    },
+    auth_provider: { type: String, enum: ["local", "google"], default: "local" },
+    google_id: { type: String, unique: true, sparse: true }, // sparse = unique only among docs that HAVE this field
     role: {
       type: String,
       enum: ["student", "client", "university_staff", "admin"],

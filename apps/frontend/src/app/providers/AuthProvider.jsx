@@ -18,6 +18,13 @@ export function AuthProvider({ children }) {
     storage.set("nw_user", JSON.stringify(user));
   }, []);
 
+  const clear = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    storage.remove("nw_token");
+    storage.remove("nw_user");
+  }, []);
+
   const login = useCallback(
     async (email, password) => {
       const { data } = await authApi.login(email, password);
@@ -34,15 +41,39 @@ export function AuthProvider({ children }) {
     [persist]
   );
 
-  const logout = useCallback(() => {
-    setToken(null);
-    setUser(null);
-    storage.remove("nw_token");
-    storage.remove("nw_user");
-  }, []);
+  const loginWithGoogle = useCallback(
+    async (credential, role) => {
+      try {
+        const { data } = await authApi.googleAuth(credential, role);
+        persist(data.token, data.user);
+        return { isNewUser: data.isNewUser };
+      } catch (err) {
+        if (err.needsRole) return { needsRole: true };
+        throw err;
+      }
+    },
+    [persist]
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      if (token) await authApi.logout(token);
+    } finally {
+      clear();
+    }
+  }, [token, clear]);
+
+  const refreshMe = useCallback(async () => {
+    if (!token) return;
+    const { data } = await authApi.getMe(token);
+    setUser(data);
+    storage.set("nw_user", JSON.stringify(data));
+  }, [token]);
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, logout, refreshMe }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

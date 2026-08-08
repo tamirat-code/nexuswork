@@ -9,6 +9,7 @@ function toPublicUser(user) {
     name: user.name,
     role: user.role,
     email_verified: user.email_verified,
+    auth_provider: user.auth_provider,
   };
 }
 
@@ -60,4 +61,17 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 export const resendVerification = asyncHandler(async (req, res) => {
   await authService.resendVerificationEmail(req.user._id);
   res.json({ success: true, data: { sent: true } });
+});
+
+export const googleAuth = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["credential"]);
+  try {
+    const { token, user, isNewUser } = await authService.loginOrRegisterWithGoogle(req.body.credential, req.body.role);
+    res.status(isNewUser ? 201 : 200).json({ success: true, data: { token, user: toPublicUser(user), isNewUser } });
+  } catch (err) {
+    if (err.needsRole) {
+      return res.status(422).json({ success: false, message: err.message, needsRole: true });
+    }
+    throw err;
+  }
 });

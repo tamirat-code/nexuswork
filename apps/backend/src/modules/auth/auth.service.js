@@ -4,15 +4,18 @@ import crypto from "node:crypto";
 import User from "../users/users.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import StudentProfile from "../students/students.model.js";
+import University from "../universities/universities.model.js";
 import { RevokedToken, PasswordResetToken, EmailVerificationToken } from "./tokens.model.js";
 import { authConfig } from "../../config/auth.config.js";
-import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../../shared/mailer/mailer.service.js";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../../shared/mailer/mailer.service.js";
+import { verifyGoogleIdToken } from "./google.client.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
-const RESET_TOKEN_TTL_MINUTES = 15;
+const RESET_TOKEN_TTL_MINUTES = 60;
 const VERIFY_TOKEN_TTL_HOURS = 24;
+const SELF_REGISTERABLE_ROLES = ["student", "client", "university_staff"];
 
 function signToken(user) {
   const jti = crypto.randomUUID();
@@ -29,8 +32,9 @@ function hashToken(raw) {
 }
 
 export async function registerUser({ email, password, name, role }) {
-  if (!["student", "client"].includes(role)) {
-    throw new ValidationError("role must be 'student' or 'client'");
+  if (!SELF_REGISTERABLE_ROLES.includes(role)) {
+    // admin accounts are never self-registered — see auth.service.js top-of-file note.
+    throw new ValidationError(`role must be one of: ${SELF_REGISTERABLE_ROLES.join(", ")}`);
   }
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
@@ -38,17 +42,33 @@ export async function registerUser({ email, password, name, role }) {
     err.status = 409;
     throw err;
   }
+
+  let university = null;
+  if (role === "university_staff") {
+    const domain = email.toLowerCase().split("@")[1];
+    university = await University.findOne({ domain });
+    if (!university) {
+      throw new ValidationError(
+        "Your email domain isn't registered to a university on NexusWork yet. Ask a platform admin to add your university first."
+      );
+    }
+  }
+
   const password_hash = await bcrypt.hash(password, authConfig.bcryptSaltRounds);
-  const user = await User.create({ email, password_hash, name, role });
-  await Wallet.create({ user_id: user._id });
+  const user = await User.create({ email, password_hash, name, role, auth_provider: "local" });
+
   if (role === "student") {
+    await Wallet.create({ user_id: user._id });
     await StudentProfile.create({ user_id: user._id });
+  } else if (role === "client") {
+    await Wallet.create({ user_id: user._id });
+  } else if (role === "university_staff") {
+    university.contact_staff.push(user._id);
+    await university.save();
   }
 
   await issueVerificationEmail(user);
-sendWelcomeEmail(user.email, user.name).catch((err) =>
-    console.error("[mail] welcome email failed:", err.message || err)
-  );
+
   return { token: signToken(user), user };
 }
 
@@ -58,6 +78,10 @@ export async function loginUser({ email, password }) {
     const err = new Error("Invalid credentials");
     err.status = 401;
     throw err;
+  }
+
+  if (user.auth_provider === "google" && !user.password_hash) {
+    throw new ValidationError("This account uses Google Sign-In. Continue with Google instead of a password.");
   }
 
   if (user.locked_until && user.locked_until > new Date()) {
@@ -89,6 +113,62 @@ export async function loginUser({ email, password }) {
   return { token: signToken(user), user };
 }
 
+export async function loginOrRegisterWithGoogle(idToken, role) {
+  const { googleId, email, emailVerified, name } = await verifyGoogleIdToken(idToken);
+
+  let user = await User.findOne({ google_id: googleId });
+  if (user) {
+    return { token: signToken(user), user, isNewUser: false };
+  }
+
+  user = await User.findOne({ email: email.toLowerCase() });
+  if (user) {
+    user.google_id = googleId;
+    if (emailVerified) user.email_verified = true;
+    await user.save();
+    return { token: signToken(user), user, isNewUser: false };
+  }
+
+  if (!role || !SELF_REGISTERABLE_ROLES.includes(role)) {
+    const err = new Error(`New Google sign-ins need a role (${SELF_REGISTERABLE_ROLES.join(", ")}) to create an account`);
+    err.status = 422;
+    err.needsRole = true;
+    throw err;
+  }
+
+  let university = null;
+  if (role === "university_staff") {
+    const domain = email.toLowerCase().split("@")[1];
+    university = await University.findOne({ domain });
+    if (!university) {
+      throw new ValidationError(
+        "Your email domain isn't registered to a university on NexusWork yet. Ask a platform admin to add your university first."
+      );
+    }
+  }
+
+  user = await User.create({
+    email: email.toLowerCase(),
+    name,
+    role,
+    auth_provider: "google",
+    google_id: googleId,
+    email_verified: Boolean(emailVerified),
+  });
+
+  if (role === "university_staff") {
+    university.contact_staff.push(user._id);
+    await university.save();
+  } else {
+    await Wallet.create({ user_id: user._id });
+    if (role === "student") {
+      await StudentProfile.create({ user_id: user._id });
+    }
+  }
+
+  return { token: signToken(user), user, isNewUser: true };
+}
+
 export async function logoutUser(decodedToken) {
   if (!decodedToken?.jti || !decodedToken?.exp) return;
   await RevokedToken.create({
@@ -105,6 +185,9 @@ export async function isTokenRevoked(jti) {
 
 export async function changePassword(userId, currentPassword, newPassword) {
   const user = await User.findById(userId).select("+password_hash");
+  if (user.auth_provider === "google" && !user.password_hash) {
+    throw new ValidationError("This account uses Google Sign-In and has no password to change.");
+  }
   const match = await bcrypt.compare(currentPassword, user.password_hash);
   if (!match) {
     throw new ValidationError("Current password is incorrect");
@@ -115,7 +198,7 @@ export async function changePassword(userId, currentPassword, newPassword) {
 
 export async function requestPasswordReset(email) {
   const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) return;
+  if (!user || (user.auth_provider === "google" && !user.password_hash)) return;
 
   const rawToken = generateRawToken();
   await PasswordResetToken.create({
