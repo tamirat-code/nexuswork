@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
+import ReCAPTCHA from "react-google-recaptcha";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import AuthShell from "./components/AuthShell.jsx";
@@ -22,11 +22,12 @@ export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth();
   const { show } = useToast();
   const navigate = useNavigate();
-  const { executeRecaptcha } = useGoogleReCaptcha();
+  const recaptchaRef = useRef(null);
 
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", organizationName: "" });
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -43,6 +44,7 @@ export default function RegisterPage() {
     if (form.confirmPassword !== form.password) next.confirmPassword = "Passwords don't match";
 
     if (!termsAccepted) next.terms = "You must accept the Terms of Service and Privacy Policy";
+    if (!recaptchaToken) next.recaptcha = "Please complete the reCAPTCHA challenge";
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -53,7 +55,6 @@ export default function RegisterPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const recaptchaToken = await executeRecaptcha("register");
       await register({
         name: form.name,
         email: form.email,
@@ -67,6 +68,8 @@ export default function RegisterPage() {
       navigate("/dashboard");
     } catch (err) {
       show(err.message, { variant: "error" });
+      recaptchaRef.current?.reset();
+      setRecaptchaToken(null);
     } finally {
       setSubmitting(false);
     }
@@ -158,6 +161,21 @@ export default function RegisterPage() {
             error={errors.confirmPassword}
             autoComplete="new-password"
           />
+
+          <div>
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={(token) => setRecaptchaToken(token)}
+              onExpired={() => setRecaptchaToken(null)}
+            />
+            {errors.recaptcha && (
+              <p className="text-sm text-brick mt-1.5" role="alert">
+                {errors.recaptcha}
+              </p>
+            )}
+          </div>
+
           <Button type="submit" loading={submitting} className="w-full" size="lg">
             Create account
           </Button>
