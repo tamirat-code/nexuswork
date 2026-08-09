@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import App from "./App.jsx";
 import { AuthProvider } from "./app/providers/AuthProvider.jsx";
 import { QueryProvider } from "./app/providers/QueryProvider.jsx";
@@ -12,18 +13,20 @@ import "./styles/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <QueryProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <SocketProvider>
-                <App />
-              </SocketProvider>
-            </AuthProvider>
-          </ToastProvider>
-        </QueryProvider>
-      </BrowserRouter>
-    </GoogleOAuthProvider>
+    <GoogleReCaptchaProvider reCaptchaKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <BrowserRouter>
+          <QueryProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <SocketProvider>
+                  <App />
+                </SocketProvider>
+              </AuthProvider>
+            </ToastProvider>
+          </QueryProvider>
+        </BrowserRouter>
+      </GoogleOAuthProvider>
+    </GoogleReCaptchaProvider>
   </React.StrictMode>
 );

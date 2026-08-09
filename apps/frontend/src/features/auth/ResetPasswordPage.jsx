@@ -5,6 +5,14 @@ import AuthShell from "./components/AuthShell.jsx";
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
 
+function passwordIssue(password) {
+  if (password.length < 8) return "At least 8 characters";
+  if (!/[a-z]/.test(password)) return "Include at least one lowercase letter";
+  if (!/[A-Z]/.test(password)) return "Include at least one uppercase letter";
+  if (!/[0-9]/.test(password)) return "Include at least one number";
+  return null;
+}
+
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -31,7 +39,8 @@ export default function ResetPasswordPage() {
 
   function validate() {
     const next = {};
-    if (password.length < 8) next.password = "At least 8 characters";
+    const pwIssue = passwordIssue(password);
+    if (pwIssue) next.password = pwIssue;
     if (confirm !== password) next.confirm = "Passwords don't match";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -69,6 +78,7 @@ export default function ResetPasswordPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
+          hint="At least 8 characters, with upper, lower, and a number"
           autoComplete="new-password"
         />
         <Input

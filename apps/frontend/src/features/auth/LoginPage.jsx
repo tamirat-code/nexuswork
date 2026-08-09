@@ -5,6 +5,7 @@ import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import AuthShell from "./components/AuthShell.jsx";
 import GoogleAuthButton from "./components/GoogleAuthButton.jsx";
 import RolePicker from "./components/RolePicker.jsx";
+import TermsCheckbox from "./components/TermsCheckbox.jsx";
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
 
@@ -20,6 +21,8 @@ export default function LoginPage() {
 
   const [pendingGoogleCredential, setPendingGoogleCredential] = useState(null);
   const [pendingRole, setPendingRole] = useState("student");
+  const [pendingTerms, setPendingTerms] = useState(false);
+  const [pendingTermsError, setPendingTermsError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleSubmit(e) {
@@ -55,9 +58,13 @@ export default function LoginPage() {
   }
 
   async function completeGoogleWithRole() {
+    if (!pendingTerms) {
+      setPendingTermsError("You must accept the Terms of Service and Privacy Policy");
+      return;
+    }
     setGoogleLoading(true);
     try {
-      const result = await loginWithGoogle(pendingGoogleCredential, pendingRole);
+      await loginWithGoogle(pendingGoogleCredential, { role: pendingRole, termsAccepted: pendingTerms });
       show("Account created with Google.");
       navigate("/dashboard");
     } catch (err) {
@@ -76,6 +83,7 @@ export default function LoginPage() {
       >
         <div className="space-y-5">
           <RolePicker value={pendingRole} onChange={setPendingRole} />
+          <TermsCheckbox checked={pendingTerms} onChange={setPendingTerms} error={pendingTermsError} />
           <Button onClick={completeGoogleWithRole} loading={googleLoading} className="w-full" size="lg">
             Create account
           </Button>

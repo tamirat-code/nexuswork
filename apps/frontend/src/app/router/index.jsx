@@ -13,6 +13,8 @@ import PostProjectPage from "../../features/projects/PostProjectPage.jsx";
 import DashboardPage from "../../features/workspace/DashboardPage.jsx";
 import ContractDetailPage from "../../features/contracts/ContractDetailPage.jsx";
 import WalletsPage from "../../features/wallets/WalletsPage.jsx";
+import TermsPage from "../../features/legal/TermsPage.jsx";
+import PrivacyPage from "../../features/legal/PrivacyPage.jsx";
 
 export default function AppRouter() {
   return (
@@ -23,6 +25,8 @@ export default function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/projects" element={<ProjectListPage />} />
       <Route path="/projects/:id" element={<ProjectDetailPage />} />
       <Route

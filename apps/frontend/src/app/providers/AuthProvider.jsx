@@ -42,9 +42,9 @@ export function AuthProvider({ children }) {
   );
 
   const loginWithGoogle = useCallback(
-    async (credential, role) => {
+    async (credential, options) => {
       try {
-        const { data } = await authApi.googleAuth(credential, role);
+        const { data } = await authApi.googleAuth(credential, options);
         persist(data.token, data.user);
         return { isNewUser: data.isNewUser };
       } catch (err) {

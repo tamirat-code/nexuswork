@@ -1,20 +1,32 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import AuthShell from "./components/AuthShell.jsx";
 import GoogleAuthButton from "./components/GoogleAuthButton.jsx";
 import RolePicker from "./components/RolePicker.jsx";
+import TermsCheckbox from "./components/TermsCheckbox.jsx";
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
+
+function passwordIssue(password) {
+  if (password.length < 8) return "At least 8 characters";
+  if (!/[a-z]/.test(password)) return "Include at least one lowercase letter";
+  if (!/[A-Z]/.test(password)) return "Include at least one uppercase letter";
+  if (!/[0-9]/.test(password)) return "Include at least one number";
+  return null;
+}
 
 export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth();
   const { show } = useToast();
   const navigate = useNavigate();
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const [role, setRole] = useState("student");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", organizationName: "" });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -25,7 +37,13 @@ export default function RegisterPage() {
     const next = {};
     if (!form.name.trim()) next.name = "Enter your name";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = "Enter a valid email";
-    if (form.password.length < 8) next.password = "At least 8 characters";
+
+    const pwIssue = passwordIssue(form.password);
+    if (pwIssue) next.password = pwIssue;
+    if (form.confirmPassword !== form.password) next.confirmPassword = "Passwords don't match";
+
+    if (!termsAccepted) next.terms = "You must accept the Terms of Service and Privacy Policy";
+
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -35,7 +53,16 @@ export default function RegisterPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      await register({ ...form, role });
+      const recaptchaToken = await executeRecaptcha("register");
+      await register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role,
+        termsAccepted,
+        recaptchaToken,
+        ...(role === "client" && form.organizationName ? { organizationName: form.organizationName } : {}),
+      });
       show("Account created. Check your email to verify it.");
       navigate("/dashboard");
     } catch (err) {
@@ -47,9 +74,17 @@ export default function RegisterPage() {
 
   async function handleGoogleCredential(credential, err) {
     if (err) return show(err.message, { variant: "error" });
+    if (!termsAccepted) {
+      setErrors((prev) => ({ ...prev, terms: "You must accept the Terms of Service and Privacy Policy" }));
+      return;
+    }
     setGoogleLoading(true);
     try {
-      const result = await loginWithGoogle(credential, role);
+      const result = await loginWithGoogle(credential, {
+        role,
+        termsAccepted,
+        ...(role === "client" && form.organizationName ? { organizationName: form.organizationName } : {}),
+      });
       show(result.isNewUser ? "Account created with Google." : "Welcome back.");
       navigate("/dashboard");
     } catch (err) {
@@ -63,7 +98,7 @@ export default function RegisterPage() {
     <AuthShell
       eyebrow="Get started"
       title="Create your account"
-      subtitle="Join as a student looking for work, or a client with work to post."
+      subtitle="Join as a student looking for work, a client with work to post, or university staff."
       footer={
         <>
           Already have an account?{" "}
@@ -75,6 +110,18 @@ export default function RegisterPage() {
     >
       <div className="space-y-5">
         <RolePicker value={role} onChange={setRole} />
+
+        {role === "client" && (
+          <Input
+            label="Organization name (optional)"
+            value={form.organizationName}
+            onChange={update("organizationName")}
+            hint="Leave blank if you're hiring as an individual"
+            autoComplete="organization"
+          />
+        )}
+
+        <TermsCheckbox checked={termsAccepted} onChange={setTermsAccepted} error={errors.terms} />
 
         <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading} />
 
@@ -100,7 +147,15 @@ export default function RegisterPage() {
             value={form.password}
             onChange={update("password")}
             error={errors.password}
-            hint="At least 8 characters"
+            hint="At least 8 characters, with upper, lower, and a number"
+            autoComplete="new-password"
+          />
+          <Input
+            label="Confirm password"
+            type="password"
+            value={form.confirmPassword}
+            onChange={update("confirmPassword")}
+            error={errors.confirmPassword}
             autoComplete="new-password"
           />
           <Button type="submit" loading={submitting} className="w-full" size="lg">
