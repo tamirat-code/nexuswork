@@ -14,7 +14,7 @@ function toPublicUser(user) {
 }
 
 export const register = asyncHandler(async (req, res) => {
-  requireFields(req.body, ["email", "password", "name", "role"]);
+  requireFields(req.body, ["email", "password", "name", "role", "termsAccepted", "recaptchaToken"]);
   const { token, user } = await authService.registerUser(req.body);
   res.status(201).json({ success: true, data: { token, user: toPublicUser(user) } });
 });
@@ -66,7 +66,11 @@ export const resendVerification = asyncHandler(async (req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
   requireFields(req.body, ["credential"]);
   try {
-    const { token, user, isNewUser } = await authService.loginOrRegisterWithGoogle(req.body.credential, req.body.role);
+    const { token, user, isNewUser } = await authService.loginOrRegisterWithGoogle(req.body.credential, {
+      role: req.body.role,
+      termsAccepted: req.body.termsAccepted,
+      organizationName: req.body.organizationName,
+    });
     res.status(isNewUser ? 201 : 200).json({ success: true, data: { token, user: toPublicUser(user), isNewUser } });
   } catch (err) {
     if (err.needsRole) {

@@ -4,11 +4,15 @@ import crypto from "node:crypto";
 import User from "../users/users.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import StudentProfile from "../students/students.model.js";
+import ClientProfile from "../clients/clients.model.js";
 import University from "../universities/universities.model.js";
 import { RevokedToken, PasswordResetToken, EmailVerificationToken } from "./tokens.model.js";
 import { authConfig } from "../../config/auth.config.js";
+import { legalConfig } from "../../config/legal.config.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../../shared/mailer/mailer.service.js";
 import { verifyGoogleIdToken } from "./google.client.js";
+import { verifyRecaptcha } from "../../shared/recaptcha/recaptcha.service.js";
+import { requireStrongPassword } from "../../shared/validators/password.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -31,11 +35,28 @@ function hashToken(raw) {
   return crypto.createHash("sha256").update(raw).digest("hex");
 }
 
-export async function registerUser({ email, password, name, role }) {
+export async function registerUser({
+  email,
+  password,
+  name,
+  role,
+  termsAccepted,
+  recaptchaToken,
+  organizationName,
+}) {
+  await verifyRecaptcha(recaptchaToken);
+
   if (!SELF_REGISTERABLE_ROLES.includes(role)) {
     // admin accounts are never self-registered — see auth.service.js top-of-file note.
     throw new ValidationError(`role must be one of: ${SELF_REGISTERABLE_ROLES.join(", ")}`);
   }
+
+  if (termsAccepted !== true) {
+    throw new ValidationError("You must accept the Terms of Service and Privacy Policy to register");
+  }
+
+  requireStrongPassword(password);
+
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
     const err = new Error("Email already registered");
@@ -55,13 +76,25 @@ export async function registerUser({ email, password, name, role }) {
   }
 
   const password_hash = await bcrypt.hash(password, authConfig.bcryptSaltRounds);
-  const user = await User.create({ email, password_hash, name, role, auth_provider: "local" });
+  const user = await User.create({
+    email,
+    password_hash,
+    name,
+    role,
+    auth_provider: "local",
+    terms_accepted_at: new Date(),
+    terms_version: legalConfig.currentTermsVersion,
+  });
 
   if (role === "student") {
     await Wallet.create({ user_id: user._id });
     await StudentProfile.create({ user_id: user._id });
   } else if (role === "client") {
     await Wallet.create({ user_id: user._id });
+    await ClientProfile.create({
+      user_id: user._id,
+      ...(organizationName ? { organization_name: organizationName } : {}),
+    });
   } else if (role === "university_staff") {
     university.contact_staff.push(user._id);
     await university.save();
@@ -113,7 +146,7 @@ export async function loginUser({ email, password }) {
   return { token: signToken(user), user };
 }
 
-export async function loginOrRegisterWithGoogle(idToken, role) {
+export async function loginOrRegisterWithGoogle(idToken, { role, termsAccepted, organizationName } = {}) {
   const { googleId, email, emailVerified, name } = await verifyGoogleIdToken(idToken);
 
   let user = await User.findOne({ google_id: googleId });
@@ -136,6 +169,10 @@ export async function loginOrRegisterWithGoogle(idToken, role) {
     throw err;
   }
 
+  if (termsAccepted !== true) {
+    throw new ValidationError("You must accept the Terms of Service and Privacy Policy to create an account");
+  }
+
   let university = null;
   if (role === "university_staff") {
     const domain = email.toLowerCase().split("@")[1];
@@ -154,11 +191,19 @@ export async function loginOrRegisterWithGoogle(idToken, role) {
     auth_provider: "google",
     google_id: googleId,
     email_verified: Boolean(emailVerified),
+    terms_accepted_at: new Date(),
+    terms_version: legalConfig.currentTermsVersion,
   });
 
   if (role === "university_staff") {
     university.contact_staff.push(user._id);
     await university.save();
+  } else if (role === "client") {
+    await Wallet.create({ user_id: user._id });
+    await ClientProfile.create({
+      user_id: user._id,
+      ...(organizationName ? { organization_name: organizationName } : {}),
+    });
   } else {
     await Wallet.create({ user_id: user._id });
     if (role === "student") {
@@ -192,6 +237,7 @@ export async function changePassword(userId, currentPassword, newPassword) {
   if (!match) {
     throw new ValidationError("Current password is incorrect");
   }
+  requireStrongPassword(newPassword);
   user.password_hash = await bcrypt.hash(newPassword, authConfig.bcryptSaltRounds);
   await user.save();
 }
@@ -221,6 +267,7 @@ export async function resetPassword(rawToken, newPassword) {
   const user = await User.findById(record.user_id);
   if (!user) throw new ValidationError("This reset link is invalid or has expired");
 
+  requireStrongPassword(newPassword);
   user.password_hash = await bcrypt.hash(newPassword, authConfig.bcryptSaltRounds);
   user.failed_login_attempts = 0;
   user.locked_until = null;

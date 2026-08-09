@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    
     password_hash: {
       type: String,
       select: false,
@@ -27,6 +26,8 @@ const userSchema = new mongoose.Schema(
     email_verified: { type: Boolean, default: false },
     failed_login_attempts: { type: Number, default: 0 },
     locked_until: { type: Date, default: null },
+    terms_accepted_at: { type: Date },
+    terms_version: { type: String },
   },
   { timestamps: true }
 );
