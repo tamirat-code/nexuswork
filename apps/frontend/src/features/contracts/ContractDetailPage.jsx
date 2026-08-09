@@ -12,16 +12,21 @@ export default function ContractDetailPage() {
     queryFn: () => getContract(id, token),
   });
 
-  if (isLoading) return <div className="p-6">{<Spinner />}</div>;
-  if (error) return <p className="p-6 text-brick">{error.message}</p>;
+  if (isLoading)
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner />
+      </div>
+    );
+  if (error) return <p className="p-6 text-center text-brick">{error.message}</p>;
 
   const contract = data.data;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold text-slate">Contract</h1>
-      <p className="text-slate-300 mt-2">Status: {contract.status}</p>
-      <p className="text-slate-300 mt-4 text-sm">
+    <div className="mx-auto max-w-6xl px-6 py-10">
+      <h1 className="font-display text-3xl text-slate">Contract</h1>
+      <p className="mt-2 text-slate-300">Status: {contract.status}</p>
+      <p className="mt-4 text-sm text-slate-300">
         Milestones, messaging, and file exchange for this contract go here.
       </p>
     </div>

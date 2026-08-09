@@ -33,25 +33,32 @@ export default function PostProjectPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto mt-10 p-6">
-      <h1 className="text-2xl font-semibold mb-6">Post a Project</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input placeholder="Title" value={form.title} onChange={update("title")} required />
-        <textarea
-          className="w-full border rounded px-3 py-2 text-sm"
-          placeholder="Description"
-          value={form.description}
-          onChange={update("description")}
-          required
-        />
-        <Input placeholder="Required skills (comma separated)" value={form.required_skills} onChange={update("required_skills")} />
-        <Input type="number" placeholder="Budget (USD)" value={form.budget} onChange={update("budget")} required />
-        <Input type="date" value={form.deadline} onChange={update("deadline")} required />
-        <FormError message={error} />
-        <Button type="submit" className="w-full">
-          Post Project
-        </Button>
-      </form>
+    <div className="mx-auto max-w-6xl px-6 py-10">
+      <div className="max-w-lg">
+        <h1 className="mb-6 font-display text-3xl text-slate">Post a Project</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input placeholder="Title" value={form.title} onChange={update("title")} required />
+          <textarea
+            className="w-full rounded-control border border-ink-300 bg-ink-50 px-3.5 py-2.5 text-sm text-slate placeholder:text-slate-300 transition-colors duration-150 hover:border-brass focus:outline-none"
+            rows={5}
+            placeholder="Description"
+            value={form.description}
+            onChange={update("description")}
+            required
+          />
+          <Input
+            placeholder="Required skills (comma separated)"
+            value={form.required_skills}
+            onChange={update("required_skills")}
+          />
+          <Input type="number" placeholder="Budget (USD)" value={form.budget} onChange={update("budget")} required />
+          <Input type="date" value={form.deadline} onChange={update("deadline")} required />
+          <FormError message={error} />
+          <Button type="submit" className="w-full">
+            Post Project
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

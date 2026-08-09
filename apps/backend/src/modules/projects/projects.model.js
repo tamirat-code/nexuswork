@@ -7,6 +7,7 @@ const projectSchema = new mongoose.Schema(
     description: { type: String, required: true },
     required_skills: [{ type: String }],
     category: { type: String },
+    experience_level: { type: String, enum: ["entry", "intermediate", "advanced"] },
     budget: { type: Number, required: true },
     deadline: { type: Date, required: true },
     attachments: [{ url: String, filename: String }],
