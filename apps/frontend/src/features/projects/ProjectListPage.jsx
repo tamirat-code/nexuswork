@@ -27,12 +27,33 @@ function FilterButton({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`block w-full rounded-control px-3 py-2 text-left text-sm transition-colors ${
+      aria-pressed={active}
+      className={`block w-full rounded-control px-3 py-1.5 text-left text-sm transition-colors ${
         active ? "bg-brass/10 font-semibold text-brass" : "text-slate-300 hover:bg-ink-50 hover:text-slate"
       }`}
     >
       {children}
     </button>
+  );
+}
+
+function FilterGroup({ label, children }) {
+  return (
+    <div>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">{label}</p>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <div className="rounded-card border border-ink-300 bg-ink-50 p-5">
+      <div className="h-3 w-32 rounded bg-ink-300" />
+      <div className="mt-3 h-4 w-2/3 rounded bg-ink-300" />
+      <div className="mt-3 h-3 w-full rounded bg-ink-300" />
+      <div className="mt-2 h-3 w-4/5 rounded bg-ink-300" />
+    </div>
   );
 }
 
@@ -66,6 +87,13 @@ export default function ProjectListPage() {
     setSearchParams(next, { replace: true });
   }
 
+  function clearFilters() {
+    setSearchInput("");
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }
+
+  const hasFilters = category !== "All" || experience_level !== "any" || sort !== "newest" || Boolean(search);
+
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     if (category !== "All") params.set("category", category);
@@ -85,12 +113,14 @@ export default function ProjectListPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <header className="flex flex-col items-start justify-between gap-4 border-b border-ink-300 pb-6 sm:flex-row sm:items-end">
         <div>
-          <h1 className="font-display text-3xl text-slate">Open projects</h1>
-          <p className="mt-1 text-sm text-slate-300">
+          <h1 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">
+            Open projects
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-300">
             {isLoading
-              ? "Loading…"
+              ? "Loading briefs…"
               : `${projects.length} brief${projects.length === 1 ? "" : "s"} matching your filters`}
           </p>
         </div>
@@ -99,81 +129,104 @@ export default function ProjectListPage() {
             <Button>Post a project</Button>
           </Link>
         )}
-      </div>
+      </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[220px_1fr]">
-        <aside className="space-y-8">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-300">Category</p>
-            <div className="space-y-1">
-              <FilterButton active={category === "All"} onClick={() => updateParam("category", "All")}>
-                All
+      <div className="mt-8 grid gap-8 lg:grid-cols-[210px_1fr]">
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <FilterGroup label="Category">
+            <FilterButton active={category === "All"} onClick={() => updateParam("category", "All")}>
+              All
+            </FilterButton>
+            {CATEGORIES.map((cat) => (
+              <FilterButton key={cat} active={category === cat} onClick={() => updateParam("category", cat)}>
+                {cat}
               </FilterButton>
-              {CATEGORIES.map((cat) => (
-                <FilterButton key={cat} active={category === cat} onClick={() => updateParam("category", cat)}>
-                  {cat}
-                </FilterButton>
-              ))}
-            </div>
-          </div>
+            ))}
+          </FilterGroup>
 
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-300">Experience</p>
-            <div className="space-y-1">
-              {EXPERIENCE_LEVELS.map((lvl) => (
-                <FilterButton
-                  key={lvl.value}
-                  active={experience_level === lvl.value}
-                  onClick={() => updateParam("experience_level", lvl.value)}
-                >
-                  {lvl.label}
-                </FilterButton>
-              ))}
-            </div>
-          </div>
+          <FilterGroup label="Experience">
+            {EXPERIENCE_LEVELS.map((lvl) => (
+              <FilterButton
+                key={lvl.value}
+                active={experience_level === lvl.value}
+                onClick={() => updateParam("experience_level", lvl.value)}
+              >
+                {lvl.label}
+              </FilterButton>
+            ))}
+          </FilterGroup>
 
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-300">Sort by</p>
-            <div className="space-y-1">
-              {SORT_OPTIONS.map((opt) => (
-                <FilterButton
-                  key={opt.value}
-                  active={sort === opt.value}
-                  onClick={() => updateParam("sort", opt.value)}
-                >
-                  {opt.label}
-                </FilterButton>
-              ))}
-            </div>
-          </div>
+          <FilterGroup label="Sort by">
+            {SORT_OPTIONS.map((opt) => (
+              <FilterButton
+                key={opt.value}
+                active={sort === opt.value}
+                onClick={() => updateParam("sort", opt.value)}
+              >
+                {opt.label}
+              </FilterButton>
+            ))}
+          </FilterGroup>
+
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-sm font-semibold text-brass transition-colors hover:text-brass-300"
+            >
+              Clear all filters
+            </button>
+          )}
         </aside>
 
         <div>
+          <label htmlFor="project-search" className="sr-only">
+            Search projects
+          </label>
           <input
-            type="text"
+            id="project-search"
+            type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by title, skill or keyword"
-            className="mb-6 h-12 w-full rounded-control border border-ink-300 bg-ink-50 px-4 text-sm text-slate placeholder:text-slate-300 focus:border-brass/50 focus:outline-none"
+            className="mb-5 h-11 w-full rounded-control border border-ink-300 bg-ink-50 px-4 text-sm text-slate transition-colors placeholder:text-slate-300 focus:border-brass/50 focus:outline-none"
           />
 
           {isLoading && (
-            <div className="flex justify-center py-16">
-              <Spinner />
+            <div className="space-y-4">
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
             </div>
           )}
 
-          {error && <p className="text-sm text-brick">{error.message}</p>}
-
-          {!isLoading && !error && projects.length === 0 && (
-            <p className="text-sm text-slate-300">No projects match your filters yet.</p>
+          {error && (
+            <p className="rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm text-brick">
+              {error.message}
+            </p>
           )}
 
-          <div className="space-y-4">
-            {projects.map((project) => (
-              <ProjectCard key={project._id} project={project} />
-            ))}
-          </div>
+          {!isLoading && !error && projects.length === 0 && (
+            <div className="rounded-card border border-ink-300 bg-ink-50 px-6 py-14 text-center">
+              <p className="font-display text-base tracking-tight text-slate">No projects match your filters</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-300">
+                Try a broader category or clear the filters to see every open brief.
+              </p>
+              {hasFilters && (
+                <Button variant="secondary" className="mt-5" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          )}
+
+          {projects.length > 0 && (
+            <div className="space-y-4">
+              {projects.map((project) => (
+                <ProjectCard key={project._id} project={project} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

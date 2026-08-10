@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../hooks/useAuth.js";
 import { SealMark } from "../../features/auth/components/AuthShell.jsx";
@@ -8,37 +8,49 @@ import Button from "../ui/Button.jsx";
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const links = [
     { to: "/projects", label: "Browse projects" },
+    { to: "/search", label: "Search" },
     ...(user?.role === "client" ? [{ to: "/projects/new", label: "Post a project" }] : []),
     ...(user ? [{ to: "/dashboard", label: "Dashboard" }, { to: "/wallet", label: "Wallet" }] : []),
   ];
 
+  const linkClass = ({ isActive }) =>
+    `text-sm transition-colors ${isActive ? "font-semibold text-brass" : "text-slate-300 hover:text-slate"}`;
+
   return (
-    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/90 backdrop-blur">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <SealMark className="h-6 w-6 text-brass" />
-          <span className="font-display text-lg text-slate">NexusWork</span>
+    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/85 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-6">
+        <Link to="/" className="flex shrink-0 items-center gap-2">
+          <SealMark className="h-5 w-5 text-brass" />
+          <span className="font-display text-base tracking-tight text-slate">NexusWork</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm">
+        <nav aria-label="Main" className="hidden items-center gap-6 md:flex">
           {links.map((l) => (
-            <Link key={l.to} to={l.to} className="text-slate-300 hover:text-brass transition-colors">
+            <NavLink key={l.to} to={l.to} end={l.to === "/projects"} className={linkClass}>
               {l.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden items-center gap-3 md:flex">
           {user ? (
             <Button variant="secondary" size="sm" onClick={logout}>
               Log out
             </Button>
           ) : (
             <>
-              <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-brass px-2">
+              <Link
+                to="/login"
+                className="px-1 text-sm font-medium text-slate-300 transition-colors hover:text-slate"
+              >
                 Log in
               </Link>
               <Link to="/register">
@@ -50,7 +62,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          className="md:hidden p-2 -mr-2 text-slate"
+          className="-mr-2 p-2 text-slate md:hidden"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
@@ -64,29 +76,30 @@ export default function Navbar() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.nav
+            aria-label="Mobile"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden overflow-hidden border-t border-ink-300 bg-ink"
+            className="overflow-hidden border-t border-ink-300 bg-ink md:hidden"
           >
-            <div className="px-6 py-4 flex flex-col gap-4 text-sm">
+            <div className="flex flex-col gap-3 px-6 py-4 text-sm">
               {links.map((l) => (
-                <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)} className="text-slate-300">
+                <NavLink key={l.to} to={l.to} end={l.to === "/projects"} className={linkClass}>
                   {l.label}
-                </Link>
+                </NavLink>
               ))}
-              <div className="h-px bg-ink-300" />
+              <div className="my-1 h-px bg-ink-300" />
               {user ? (
-                <button onClick={logout} className="text-left text-brick font-medium">
+                <button onClick={logout} className="text-left font-medium text-brick">
                   Log out
                 </button>
               ) : (
                 <>
-                  <Link to="/login" onClick={() => setMobileOpen(false)} className="text-slate-300">
+                  <Link to="/login" className="text-slate-300">
                     Log in
                   </Link>
-                  <Link to="/register" onClick={() => setMobileOpen(false)} className="font-semibold text-brass">
+                  <Link to="/register" className="font-semibold text-brass">
                     Sign up
                   </Link>
                 </>

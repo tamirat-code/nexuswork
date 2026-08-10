@@ -1,17 +1,19 @@
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-control font-semibold text-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 rounded-control font-semibold tracking-tight " +
+  "transition-[background-color,border-color,color,box-shadow,transform] duration-150 " +
+  "select-none active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0";
 
 const variants = {
-  primary: "bg-brass text-ink hover:bg-brass-300 active:bg-brass-700",
-  secondary: "border border-ink-300 text-slate hover:bg-ink-50",
-  ghost: "text-slate hover:bg-ink-50",
-  danger: "bg-brick text-white hover:opacity-90",
+  primary: "bg-brass text-ink shadow-card hover:bg-brass-300 active:bg-brass-700 active:text-ink",
+  secondary: "border border-ink-300 bg-ink-50 text-slate hover:border-brass hover:text-white",
+  ghost: "text-slate-300 hover:bg-ink-50 hover:text-slate",
+  danger: "bg-brick text-ink hover:opacity-90",
 };
 
 const sizes = {
-  sm: "h-9 px-3",
-  md: "h-11 px-5",
-  lg: "h-12 px-6 text-base",
+  sm: "h-9 px-3.5 text-[13px]",
+  md: "h-11 px-5 text-sm",
+  lg: "h-12 px-6 text-[15px]",
 };
 
 function Spinner() {
@@ -34,7 +36,7 @@ export default function Button({
 }) {
   return (
     <button
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${base} ${variants[variant] ?? variants.primary} ${sizes[size] ?? sizes.md} ${className}`}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}

@@ -3,26 +3,26 @@ import { Link } from "react-router-dom";
 export default function TermsCheckbox({ checked, onChange, error }) {
   return (
     <div>
-      <label className="flex items-start gap-2.5 text-sm text-ink-500 cursor-pointer">
+      <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-relaxed text-slate-300">
         <input
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-ink-300 text-ink focus:ring-brass"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 bg-ink-100 text-brass accent-[#00c8b4]"
         />
         <span>
           I agree to the{" "}
-          <Link to="/terms" target="_blank" className="font-medium text-ink hover:underline">
+          <Link to="/terms" target="_blank" className="font-semibold text-brass hover:underline">
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link to="/privacy" target="_blank" className="font-medium text-ink hover:underline">
+          <Link to="/privacy" target="_blank" className="font-semibold text-brass hover:underline">
             Privacy Policy
           </Link>
         </span>
       </label>
       {error && (
-        <p className="text-sm text-brick mt-1.5" role="alert">
+        <p className="mt-1.5 text-[13px] text-brick" role="alert">
           {error}
         </p>
       )}
