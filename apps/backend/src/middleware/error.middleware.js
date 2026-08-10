@@ -6,6 +6,6 @@ export function notFound(req, res, next) {
 
 export function errorHandler(err, req, res, next) {
   logger.error(err.message, err.stack);
-  const status = err.status || 500;
+  const status = err.status || (err.name === "MulterError" ? 400 : 500);
   res.status(status).json({ success: false, message: err.message || "Internal server error" });
 }

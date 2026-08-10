@@ -4,6 +4,7 @@ import helmet from "helmet";
 
 import { appConfig } from "./config/app.config.js";
 import { corsConfig } from "./config/cors.config.js";
+import { storageConfig } from "./config/storage.config.js";
 import { requestLogger } from "./middleware/logging.middleware.js";
 import { rateLimiter } from "./middleware/rateLimiter.middleware.js";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
@@ -20,6 +21,15 @@ app.use("/webhooks", express.raw({ type: "application/json" }), WebhooksRoutes);
 app.use(express.json({ limit: "2mb" }));
 app.use(requestLogger);
 app.use(rateLimiter);
+
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(storageConfig.absoluteUploadDir)
+);
 
 app.use(appConfig.apiPrefix, v1Router);
 

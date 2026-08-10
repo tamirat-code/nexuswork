@@ -1,13 +1,24 @@
 import mongoose from "mongoose";
 
-// TODO: define the real schema for the "files" module.
-// See docs/database/ for the field list from the project's schema design.
-const filesSchema = new mongoose.Schema(
+const fileSchema = new mongoose.Schema(
   {
-    // placeholder field so the model is valid until this module is implemented
-    _placeholder: { type: Boolean, default: true },
+    owner_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    filename: { type: String, required: true }, // name on disk
+    original_name: { type: String, required: true }, // name the user uploaded
+    mimetype: { type: String, required: true },
+    size: { type: Number, required: true }, // bytes
+    url: { type: String, required: true },
+    // Optional link back to whatever this file belongs to.
+    related_type: {
+      type: String,
+      enum: ["project_attachment", "submission", "portfolio", "message_attachment", "other"],
+      default: "other",
+    },
+    related_id: { type: mongoose.Schema.Types.ObjectId },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Files", filesSchema);
+fileSchema.index({ owner_id: 1, createdAt: -1 });
+
+export default mongoose.model("File", fileSchema);
