@@ -1,13 +1,17 @@
 import mongoose from "mongoose";
 
-// TODO: define the real schema for the "skills" module.
-// See docs/database/ for the field list from the project's schema design.
-const skillsSchema = new mongoose.Schema(
+const skillSchema = new mongoose.Schema(
   {
-    // placeholder field so the model is valid until this module is implemented
-    _placeholder: { type: Boolean, default: true },
+    name: { type: String, required: true, unique: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    category: { type: String, default: "" },
+    description: { type: String, default: "" },
+    is_active: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Skills", skillsSchema);
+skillSchema.index({ name: "text", category: "text" });
+skillSchema.index({ is_active: 1, name: 1 });
+
+export default mongoose.model("Skill", skillSchema);

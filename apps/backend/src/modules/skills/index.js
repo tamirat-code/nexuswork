@@ -1,2 +1,2 @@
 export { default as SkillsRoutes } from "./skills.routes.js";
-export { default as Skills } from "./skills.model.js";
+export { default as Skill } from "./skills.model.js";
