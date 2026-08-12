@@ -70,8 +70,14 @@ export function AuthProvider({ children }) {
     storage.set("nw_user", JSON.stringify(data));
   }, [token]);
 
+  const setLocalUser = useCallback((nextUser) => {
+    setUser(nextUser);
+    if (nextUser) storage.set("nw_user", JSON.stringify(nextUser));
+    else storage.remove("nw_user");
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, logout, refreshMe }}>
+    <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, logout, refreshMe, setLocalUser }}>
       {children}
     </AuthContext.Provider>
   );

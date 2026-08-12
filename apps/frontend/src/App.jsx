@@ -1,25 +1,34 @@
 import { useLocation } from "react-router-dom";
-import Navbar from "./components/common/Navbar.jsx";
-import Footer from "./components/common/Footer.jsx";
 import AppRouter from "./app/router/index.jsx";
+import MarketingLayout from "./components/layouts/MarketingLayout.jsx";
+import AppLayout from "./components/layouts/AppLayout.jsx";
+import ScrollToTop, { SkipLink } from "./components/common/ScrollToTop.jsx";
+import { STANDALONE_PATHS, WORKSPACE_PATHS } from "./config/navigation.js";
+import { useAuth } from "./hooks/useAuth.js";
 
-const STANDALONE_LAYOUT_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email"];
+const matches = (paths, pathname) =>
+  paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
 export default function App() {
-  const location = useLocation();
-  const standalone = STANDALONE_LAYOUT_PATHS.some((p) => location.pathname.startsWith(p));
+  const { pathname } = useLocation();
+  const { token } = useAuth();
 
-  if (standalone) {
-    return <AppRouter />;
-  }
+  const standalone = matches(STANDALONE_PATHS, pathname);
+  const workspace = !standalone && token && matches(WORKSPACE_PATHS, pathname);
+
+  const Layout = standalone ? null : workspace ? AppLayout : MarketingLayout;
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper">
-      <Navbar />
-      <main className="flex-1">
+    <>
+      <ScrollToTop />
+      {!standalone && <SkipLink />}
+      {Layout ? (
+        <Layout>
+          <AppRouter />
+        </Layout>
+      ) : (
         <AppRouter />
-      </main>
-      <Footer />
-    </div>
+      )}
+    </>
   );
 }

@@ -18,6 +18,15 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     name: { type: String, required: true, trim: true },
+    // Profile fields used by the frontend
+    headline: { type: String, default: "", trim: true },
+    bio: { type: String, default: "" },
+    location: { type: String, default: "", trim: true },
+    university: { type: String, default: "", trim: true },
+    skills: { type: String, default: "" }, // simple comma-separated string for now
+    website: { type: String, default: "", trim: true },
+    avatarUrl: { type: String, default: null },
+    universityVerified: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["active", "suspended", "deactivated"],

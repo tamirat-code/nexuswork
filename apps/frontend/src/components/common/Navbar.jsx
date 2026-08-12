@@ -1,258 +1,128 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../../hooks/useAuth.js";
+import { marketingNav } from "../../config/navigation.js";
 import { SealMark } from "../../features/auth/components/AuthShell.jsx";
+import { useAuth } from "../../hooks/useAuth.js";
 import Button from "../ui/Button.jsx";
+import Drawer from "../ui/Drawer.jsx";
+import NavIcon from "./NavIcon.jsx";
+import NotificationBell from "./NotificationBell.jsx";
+import UserMenu from "./UserMenu.jsx";
+import { cn } from "../../lib/cn.js";
 
+/** Public site header. Signed-in users get the workspace shell instead. */
 export default function Navbar() {
-  const { user, logout } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
-
-  const links = [
-    {
-      to: "/",
-      label: "Home",
-    },
-    {
-      to: "/projects",
-      label: "Browse projects",
-    },
-    {
-      to: "/search",
-      label: "Search",
-    },
-    {
-      to: "/students",
-      label: "Students",
-    },
-    {
-      to: "/university",
-      label: "University",
-    },
-    {
-      to: "/about",
-      label: "About",
-    },
-
-    ...(user?.role === "client"
-      ? [
-          {
-            to: "/projects/new",
-            label: "Post a project",
-          },
-        ]
-      : []),
-
-    ...(user
-      ? [
-          {
-            to: "/dashboard",
-            label: "Dashboard",
-          },
-          {
-            to: "/wallet",
-            label: "Wallet",
-          },
-        ]
-      : []),
-  ];
+  useEffect(() => setMenuOpen(false), [location.pathname]);
 
   const linkClass = ({ isActive }) =>
-    `text-sm transition-colors ${
-      isActive
-        ? "font-semibold text-brass"
-        : "text-slate-300 hover:text-slate"
-    }`;
+    cn(
+      "rounded-control px-1 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
+      isActive ? "font-semibold text-brass" : "text-slate-300 hover:text-brass"
+    );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-ink-300 bg-ink/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        {/* =================================================
-            LOGO
-        ================================================= */}
-        <Link
-          to="/"
-          className="flex items-center gap-2"
-          aria-label="NexusWork home"
-        >
-          <SealMark className="h-7 w-7 text-brass" />
-
-          <span className="font-display text-lg font-semibold tracking-tight text-slate">
-            NexusWork
-          </span>
+    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
+        <Link to="/" className="flex items-center gap-2">
+          <SealMark className="h-6 w-6 text-brass" />
+          <span className="font-display text-lg text-slate">NexusWork</span>
         </Link>
 
-        {/* =================================================
-            DESKTOP NAVIGATION
-        ================================================= */}
-        <nav
-          aria-label="Main"
-          className="hidden items-center gap-6 md:flex"
-        >
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={
-                link.to === "/" ||
-                link.to === "/projects"
-              }
-              className={linkClass}
-            >
-              {link.label}
+        <nav aria-label="Main" className="hidden items-center gap-6 md:flex">
+          {marketingNav.map((l) => (
+            <NavLink key={l.to} to={l.to} className={linkClass}>
+              {l.label}
             </NavLink>
           ))}
         </nav>
 
-        {/* =================================================
-            DESKTOP AUTH BUTTONS
-        ================================================= */}
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
           {user ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={logout}
-            >
-              Log out
-            </Button>
+            <>
+              <Link to="/dashboard">
+                <Button variant="secondary" size="sm">
+                  Dashboard
+                </Button>
+              </Link>
+              <NotificationBell />
+              <UserMenu />
+            </>
           ) : (
             <>
-              <Link
-                to="/login"
-                className="px-1 text-sm font-medium text-slate-300 transition-colors hover:text-slate"
-              >
-                Log in
-              </Link>
-
-              <Link to="/register">
-                <Button size="sm">
-                  Sign up
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Log in
                 </Button>
+              </Link>
+              <Link to="/register">
+                <Button size="sm">Sign up</Button>
               </Link>
             </>
           )}
         </div>
 
-        {/* =================================================
-            MOBILE MENU BUTTON
-        ================================================= */}
-        <button
-          type="button"
-          className="-mr-2 p-2 text-slate md:hidden"
-          aria-label={
-            mobileOpen
-              ? "Close menu"
-              : "Open menu"
-          }
-          aria-expanded={mobileOpen}
-          onClick={() =>
-            setMobileOpen((value) => !value)
-          }
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          className="md:hidden"
+          aria-label="Open menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
         >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            {mobileOpen ? (
-              <>
-                <path d="M6 6l12 12" />
-                <path d="M6 18L18 6" />
-              </>
-            ) : (
-              <>
-                <path d="M4 7h16" />
-                <path d="M4 12h16" />
-                <path d="M4 17h16" />
-              </>
-            )}
-          </svg>
-        </button>
+          <NavIcon name="menu" className="h-5 w-5" />
+        </Button>
       </div>
 
-      {/* =================================================
-          MOBILE NAVIGATION
-      ================================================= */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.nav
-            aria-label="Mobile"
-            initial={{
-              height: 0,
-              opacity: 0,
-            }}
-            animate={{
-              height: "auto",
-              opacity: 1,
-            }}
-            exit={{
-              height: 0,
-              opacity: 0,
-            }}
-            transition={{
-              duration: 0.2,
-            }}
-            className="overflow-hidden border-t border-ink-300 bg-ink md:hidden"
-          >
-            <div className="flex flex-col gap-3 px-6 py-4 text-sm">
-              {/* Mobile Links */}
-              {links.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={
-                    link.to === "/" ||
-                    link.to === "/projects"
-                  }
-                  className={linkClass}
-                >
-                  {link.label}
-                </NavLink>
-              ))}
+      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" side="right">
+        <nav aria-label="Mobile" className="flex flex-col gap-1">
+          {marketingNav.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "rounded-control px-3 py-2.5 text-sm",
+                  isActive ? "bg-brass/12 font-semibold text-brass" : "text-slate-300 hover:bg-ink-50"
+                )
+              }
+            >
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
 
-              {/* Divider */}
-              <div className="my-1 h-px bg-ink-300" />
-
-              {/* Mobile Authentication */}
-              {user ? (
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="text-left font-medium text-brick"
-                >
-                  Log out
-                </button>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="text-slate-300 transition-colors hover:text-slate"
-                  >
-                    Log in
-                  </Link>
-
-                  <Link
-                    to="/register"
-                    className="font-semibold text-brass"
-                  >
-                    Sign up
-                  </Link>
-                </>
-              )}
-            </div>
-          </motion.nav>
-        )}
-      </AnimatePresence>
+        <div className="mt-6 space-y-2 border-t border-ink-300 pt-6">
+          {user ? (
+            <>
+              <Link to="/dashboard" onClick={() => setMenuOpen(false)}>
+                <Button fullWidth>Go to dashboard</Button>
+              </Link>
+              <Link to="/notifications" onClick={() => setMenuOpen(false)}>
+                <Button variant="secondary" fullWidth>
+                  Notifications
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/register" onClick={() => setMenuOpen(false)}>
+                <Button fullWidth>Create an account</Button>
+              </Link>
+              <Link to="/login" onClick={() => setMenuOpen(false)}>
+                <Button variant="secondary" fullWidth>
+                  Log in
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </Drawer>
     </header>
   );
 }
