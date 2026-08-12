@@ -1,9 +1,13 @@
 import { Router } from "express";
-import { placeholder } from "./analytics.controller.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+import { requireRole } from "../../middleware/role.middleware.js";
+import { ROLES } from "../../shared/enums/roles.enum.js";
+import { postEvent, getPlatform, getMine } from "./analytics.controller.js";
 
 const router = Router();
 
-// TODO: replace with real routes for the "analytics" module.
-router.get("/", placeholder);
+router.post("/events", requireAuth, postEvent);
+router.get("/platform", requireAuth, requireRole(ROLES.ADMIN), getPlatform);
+router.get("/me", requireAuth, getMine);
 
 export default router;
