@@ -1,7 +1,37 @@
-// Business logic for the "notifications" module goes here.
-// Keep controllers thin — controllers parse req/res, services do the work,
-// so services stay testable without an HTTP layer.
+import Notification from "./notifications.model.js";
+import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
-export async function notImplemented() {
-  throw Object.assign(new Error("Notifications module not implemented yet"), { status: 501 });
+export async function createNotification({ userId, type, title, body, data }) {
+  if (!userId) throw new ValidationError("userId is required");
+  if (!type) throw new ValidationError("Notification type is required");
+  if (!title) throw new ValidationError("Notification title is required");
+
+  return Notification.create({ user_id: userId, type, title, body: body || "", data: data || {} });
+}
+
+export async function listNotificationsForUser(userId, { limit = 50, skip = 0, unreadOnly = false } = {}) {
+  const query = { user_id: userId };
+  if (unreadOnly) query.read_at = null;
+
+  const [notifications, unreadCount] = await Promise.all([
+    Notification.find(query).sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)).lean(),
+    Notification.countDocuments({ user_id: userId, read_at: null }),
+  ]);
+
+  return { notifications, unread_count: unreadCount };
+}
+
+export async function markAsRead(userId, notificationId) {
+  const notification = await Notification.findOneAndUpdate(
+    { _id: notificationId, user_id: userId },
+    { read_at: new Date() },
+    { new: true }
+  );
+  if (!notification) throw new NotFoundError("Notification not found");
+  return notification;
+}
+
+export async function markAllAsRead(userId) {
+  const result = await Notification.updateMany({ user_id: userId, read_at: null }, { read_at: new Date() });
+  return { modified_count: result.modifiedCount };
 }

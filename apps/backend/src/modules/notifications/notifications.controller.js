@@ -1,9 +1,21 @@
-import { notImplemented } from "./notifications.service.js";
+import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import { listNotificationsForUser, markAsRead, markAllAsRead } from "./notifications.service.js";
 
-export async function placeholder(req, res, next) {
-  try {
-    await notImplemented();
-  } catch (err) {
-    next(err);
-  }
-}
+export const getNotifications = asyncHandler(async (req, res) => {
+  const result = await listNotificationsForUser(req.user._id, {
+    limit: req.query.limit,
+    skip: req.query.skip,
+    unreadOnly: req.query.unread === "true",
+  });
+  res.json({ success: true, data: result });
+});
+
+export const readNotification = asyncHandler(async (req, res) => {
+  const notification = await markAsRead(req.user._id, req.params.id);
+  res.json({ success: true, data: notification });
+});
+
+export const readAll = asyncHandler(async (req, res) => {
+  const result = await markAllAsRead(req.user._id);
+  res.json({ success: true, data: result });
+});

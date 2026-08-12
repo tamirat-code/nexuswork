@@ -1,2 +1,2 @@
 export { default as NotificationsRoutes } from "./notifications.routes.js";
-export { default as Notifications } from "./notifications.model.js";
+export { default as Notification } from "./notifications.model.js";

@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { placeholder } from "./notifications.controller.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+import { getNotifications, readNotification, readAll } from "./notifications.controller.js";
 
 const router = Router();
 
-// TODO: replace with real routes for the "notifications" module.
-router.get("/", placeholder);
+router.get("/", requireAuth, getNotifications);
+router.patch("/read-all", requireAuth, readAll);
+router.patch("/:id/read", requireAuth, readNotification);
 
 export default router;
