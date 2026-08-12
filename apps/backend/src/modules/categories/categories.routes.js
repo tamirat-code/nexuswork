@@ -1,9 +1,14 @@
 import { Router } from "express";
-import { placeholder } from "./categories.controller.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+import { getCategories, getCategory, postCategory, patchCategory, removeCategory } from "./categories.controller.js";
+import { requireRole } from "../../middleware/role.middleware.js";
 
 const router = Router();
 
-// TODO: replace with real routes for the "categories" module.
-router.get("/", placeholder);
+router.get("/", getCategories);
+router.get("/:id", getCategory);
+router.post("/", requireAuth, requireRole("admin"), postCategory);
+router.put("/:id", requireAuth, requireRole("admin"), patchCategory);
+router.delete("/:id", requireAuth, requireRole("admin"), removeCategory);
 
 export default router;
