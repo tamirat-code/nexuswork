@@ -15,6 +15,9 @@ import ContractDetailPage from "../../features/contracts/ContractDetailPage.jsx"
 import WalletsPage from "../../features/wallets/WalletsPage.jsx";
 import TermsPage from "../../features/legal/TermsPage.jsx";
 import PrivacyPage from "../../features/legal/PrivacyPage.jsx";
+import ProfilePage from "../../features/students/ProfilePage.jsx";
+import StudentsPage from "../../features/students/StudentsPage.jsx";
+import EditProfilePage from "../../features/students/EditProfilePage.jsx";
 
 export default function AppRouter() {
   return (
@@ -61,6 +64,29 @@ export default function AppRouter() {
           </ProtectedRoute>
         }
       />
+<Route path="/students" element={<StudentsPage />} />
+
+<Route
+  path="/profile"
+  element={
+    <ProtectedRoute>
+      <ProfilePage />
+    </ProtectedRoute>
+  }
+/>
+
+
+<Route
+  path="/profile/edit"
+  element={
+    <ProtectedRoute>
+      <EditProfilePage />
+    </ProtectedRoute>
+  }
+/>
+
+
+
     </Routes>
   );
 }
