@@ -1,13 +1,17 @@
 import mongoose from "mongoose";
 
-// TODO: define the real schema for the "admin" module.
-// See docs/database/ for the field list from the project's schema design.
-const adminSchema = new mongoose.Schema(
+const adminActionSchema = new mongoose.Schema(
   {
-    // placeholder field so the model is valid until this module is implemented
-    _placeholder: { type: Boolean, default: true },
+    admin_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    action: { type: String, required: true },
+    target_type: { type: String, default: "" },
+    target_id: { type: mongoose.Schema.Types.ObjectId },
+    details: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Admin", adminSchema);
+adminActionSchema.index({ admin_id: 1, createdAt: -1 });
+adminActionSchema.index({ target_type: 1, target_id: 1 });
+
+export default mongoose.model("AdminAction", adminActionSchema);
