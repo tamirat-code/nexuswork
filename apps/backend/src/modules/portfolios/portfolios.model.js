@@ -1,13 +1,20 @@
 import mongoose from "mongoose";
 
-// TODO: define the real schema for the "portfolios" module.
-// See docs/database/ for the field list from the project's schema design.
-const portfoliosSchema = new mongoose.Schema(
+const portfolioItemSchema = new mongoose.Schema(
   {
-    // placeholder field so the model is valid until this module is implemented
-    _placeholder: { type: Boolean, default: true },
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    project_url: { type: String },
+    image_url: { type: String },
+    file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+    tags: [{ type: String }],
+    is_published: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Portfolios", portfoliosSchema);
+portfolioItemSchema.index({ user_id: 1, createdAt: -1 });
+portfolioItemSchema.index({ is_published: 1, createdAt: -1 });
+
+export default mongoose.model("PortfolioItem", portfolioItemSchema);
