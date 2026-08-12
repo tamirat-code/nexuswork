@@ -3,7 +3,10 @@ import Contract from "../contracts/contracts.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { addSubmission } from "../submissions/submissions.service.js";
+import { createInvoice } from "../invoices/invoices.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
+import { eventBus } from "../../events/index.js";
+import { logger } from "../../shared/logger/logger.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
 
 export async function createMilestone(contractId, requestingUserId, data) {
@@ -50,7 +53,8 @@ export async function confirmFunding(paymentIntentId) {
 export async function submitWork(milestoneId, requestingUserId, { file_url, note } = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
-  if (String(milestone.contract_id.student_id) !== String(requestingUserId)) {
+  const contract = milestone.contract_id;
+  if (String(contract.student_id) !== String(requestingUserId)) {
     throw new ForbiddenError("Only the assigned student can submit work");
   }
   if (milestone.status !== "funded") {
@@ -59,6 +63,9 @@ export async function submitWork(milestoneId, requestingUserId, { file_url, note
   const submission = await addSubmission(milestone._id, { file_url, note });
   milestone.status = "delivered";
   await milestone.save();
+
+  eventBus.emit("milestone.delivered", { milestoneId: milestone._id, clientId: contract.client_id });
+
   return { milestone, submission };
 }
 
@@ -83,5 +90,24 @@ export async function approveMilestone(milestoneId, requestingUserId) {
 
   milestone.status = "released";
   await milestone.save();
+
+  eventBus.emit("milestone.approved", { milestoneId: milestone._id, studentId: contract.student_id, payout });
+
+  
+  try {
+    const invoice = await createInvoice({
+      contractId: contract._id,
+      requestingUserId,
+      milestoneId: milestone._id,
+      amount: milestone.amount,
+      lineItems: [{ description: `Milestone: ${milestone.title}`, quantity: 1, unit_price: milestone.amount }],
+    });
+    invoice.status = "paid";
+    invoice.paid_at = new Date();
+    await invoice.save();
+  } catch (err) {
+    logger.error(`[milestones] failed to auto-create invoice for milestone ${milestone._id}:`, err.message);
+  }
+
   return { milestone, payout };
 }
