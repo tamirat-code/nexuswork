@@ -1,9 +1,8 @@
 import { Router } from "express";
-import { placeholder } from "./search.controller.js";
+import { search } from "./search.controller.js";
 
 const router = Router();
 
-// TODO: replace with real routes for the "search" module.
-router.get("/", placeholder);
+router.get("/", search);
 
 export default router;
