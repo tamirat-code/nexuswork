@@ -1,13 +1,18 @@
 import mongoose from "mongoose";
 
-// TODO: define the real schema for the "categories" module.
-// See docs/database/ for the field list from the project's schema design.
-const categoriesSchema = new mongoose.Schema(
+const categorySchema = new mongoose.Schema(
   {
-    // placeholder field so the model is valid until this module is implemented
-    _placeholder: { type: Boolean, default: true },
+    name: { type: String, required: true, unique: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    description: { type: String, default: "" },
+    icon: { type: String, default: "" },
+    is_active: { type: Boolean, default: true },
+    sort_order: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Categories", categoriesSchema);
+categorySchema.index({ slug: 1 });
+categorySchema.index({ is_active: 1, sort_order: 1 });
+
+export default mongoose.model("Category", categorySchema);
