@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import mongoose from "mongoose";
 
 import { appConfig } from "./config/app.config.js";
 import { corsConfig } from "./config/cors.config.js";
@@ -24,9 +25,10 @@ app.get("/ready", (req, res) => {
  
   try {
  
-    const mongoose = require("mongoose");
     const ready = mongoose.connection?.readyState === 1; // 1 == connected
-    return ready ? res.status(200).json({ ready: true }) : res.status(503).json({ ready: false });
+    return ready 
+    ? res.status(200).json({ ready: true }) 
+    : res.status(503).json({ ready: false });
   } catch (err) {
     return res.status(503).json({ ready: false });
   }

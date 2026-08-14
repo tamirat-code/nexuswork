@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { postInvoice, getInvoices, getInvoice, patchInvoiceStatus } from "./invoices.controller.js";
+import { validateBody } from "../../shared/validators/ZodValidator.js";
+import { createInvoiceSchema, updateInvoiceStatusSchema } from "../../shared/validators/schemas.js";
 
 const router = Router();
 
-router.post("/", requireAuth, postInvoice);
+router.post("/", requireAuth, validateBody(createInvoiceSchema), postInvoice);
 router.get("/", requireAuth, getInvoices);
 router.get("/:id", requireAuth, getInvoice);
-router.patch("/:id", requireAuth, patchInvoiceStatus);
+router.patch("/:id", requireAuth, validateBody(updateInvoiceStatusSchema), patchInvoiceStatus);
 
 export default router;

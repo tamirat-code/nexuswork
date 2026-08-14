@@ -6,7 +6,7 @@ import { appConfig } from "./config/app.config.js";
 import { initSocket } from "./websocket/index.js";
 import { logger } from "./shared/logger/logger.js";
 import { validateEnv } from "./config/env.validation.js";
-
+import mongoose from "mongoose";
 
 validateEnv();
 
@@ -40,7 +40,7 @@ async function start() {
      
       try {
         
-        const mongoose = require("mongoose");
+      
         await mongoose.disconnect();
       } catch (e) {
         logger.error("Error disconnecting mongoose:", e.message);

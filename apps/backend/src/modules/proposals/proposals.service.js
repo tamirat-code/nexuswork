@@ -1,6 +1,7 @@
 import Proposal from "./proposals.model.js";
 import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
+import StudentProfile from "../students/students.model.js";
 
 export async function submitProposal(studentId, data) {
   const project = await Project.findById(data.project_id);
@@ -9,6 +10,15 @@ export async function submitProposal(studentId, data) {
     err.status = 400;
     throw err;
   }
+
+  
+  const profile = await StudentProfile.findOne({ user_id: studentId });
+  if (!profile || profile.verification_status !== "verified") {
+    const err = new Error("Your university verification must be approved before you can submit proposals");
+    err.status = 403;
+    throw err;
+  }
+
   return Proposal.create({ ...data, student_id: studentId });
 }
 
@@ -27,7 +37,7 @@ export async function listForProject(projectId, requestingUser) {
   return Proposal.find({ project_id: projectId }).sort({ createdAt: -1 });
 }
 
-// accepting a proposal closes out the other pending proposals and creates the contract
+
 export async function acceptProposal(proposalId, requestingUser) {
   const proposal = await Proposal.findById(proposalId).populate("project_id");
   if (!proposal) {
