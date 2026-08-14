@@ -1,5 +1,11 @@
 import Stripe from "stripe";
 import { paymentConfig } from "../../config/payment.config.js";
+import { appConfig } from "../../config/app.config.js";
+
+
+if (appConfig.env === "production" && !paymentConfig.stripeSecretKey) {
+  throw new Error("[stripe] STRIPE_SECRET_KEY must be set in production environment");
+}
 
 if (!paymentConfig.stripeSecretKey) {
   console.warn(

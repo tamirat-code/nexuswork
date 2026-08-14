@@ -4,6 +4,7 @@ import { confirmFunding } from "../milestones/milestones.service.js";
 import { markDepositFailed } from "../payments/payments.service.js";
 import { markOnboardingStatus } from "../wallets/wallets.service.js";
 import { logger } from "../../shared/logger/logger.js";
+import WebhookEvent from "./webhookEvent.model.js";
 
 export async function handleStripeWebhook(req, res) {
   const signature = req.headers["stripe-signature"];
@@ -14,6 +15,18 @@ export async function handleStripeWebhook(req, res) {
   } catch (err) {
     logger.error("[webhook] signature verification failed:", err.message);
     return res.status(400).send(`Webhook signature verification failed`);
+  }
+
+  // Idempotency: ignore events we've already processed
+  try {
+    const already = await WebhookEvent.findOne({ event_id: event.id });
+    if (already) {
+      logger.info(`[webhook] already processed event ${event.id} (${event.type}), skipping`);
+      return res.json({ received: true });
+    }
+  } catch (err) {
+
+    logger.error(`[webhook] failed to check stored events for ${event.id}:`, err.message);
   }
 
   try {
@@ -36,6 +49,14 @@ export async function handleStripeWebhook(req, res) {
       }
       default:
         break;
+    }
+
+    
+    try {
+      await WebhookEvent.create({ event_id: event.id, type: event.type });
+    } catch (err) {
+      
+      logger.warn(`[webhook] could not record event ${event.id}:`, err.message);
     }
   } catch (err) {
     logger.error(`[webhook] error handling ${event.type}:`, err.message);
