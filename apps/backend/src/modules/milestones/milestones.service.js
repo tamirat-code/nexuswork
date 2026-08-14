@@ -83,14 +83,48 @@ export async function approveMilestone(milestoneId, requestingUserId) {
   if (milestone.status !== "delivered") {
     throw new ValidationError("Milestone must be delivered before approval");
   }
+  if (milestone.status === "released") {
+    throw new ValidationError("Milestone has already been released");
+  }
 
   const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
   const payout = milestone.amount * (1 - paymentConfig.commissionRate);
-  await releaseToStudent({
-    milestoneId: milestone._id,
-    amount: payout,
-    stripeAccountId: studentWallet?.stripe_account_id,
-  });
+  const commissionAmount = milestone.amount - payout;
+
+  let releasePayment;
+  try {
+    releasePayment = await releaseToStudent({
+      milestoneId: milestone._id,
+      amount: payout,
+      stripeAccountId: studentWallet?.stripe_account_id,
+    });
+  } catch (err) {
+    // Transfer failed; surface as validation for the client action
+    throw new ValidationError(`Failed to release funds to student: ${err.message}`);
+  }
+
+  // Record commission retention as a Payment of type 'commission' for auditing
+  try {
+    await import("../payments/payments.model.js").then(async (mod) => {
+      const PaymentModel = mod.default;
+      await PaymentModel.create({
+        milestone_id: milestone._id,
+        amount: commissionAmount,
+        currency: paymentConfig.currency,
+        direction: "commission",
+        status: "succeeded",
+      });
+    });
+
+    await logAction({
+      action_type: "payment_commission_recorded",
+      entity_type: "milestone",
+      entity_id: milestone._id,
+      details: { commissionAmount, currency: paymentConfig.currency },
+    });
+  } catch (err) {
+    logger.warn(`[milestones] failed to record commission for milestone ${milestone._id}:`, err.message);
+  }
 
   milestone.status = "released";
   await milestone.save();
@@ -113,5 +147,5 @@ export async function approveMilestone(milestoneId, requestingUserId) {
     logger.error(`[milestones] failed to auto-create invoice for milestone ${milestone._id}:`, err.message);
   }
 
-  return { milestone, payout };
+  return { milestone, payout, releasePayment };
 }
