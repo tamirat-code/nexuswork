@@ -78,12 +78,38 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId })
       "This student hasn't completed Stripe Connect onboarding yet, so they can't receive a payout."
     );
   }
-  const transfer = await stripe.transfers.create({
-    amount: toStripeAmount(amount),
-    currency: paymentConfig.currency,
-    destination: stripeAccountId,
-    metadata: { milestone_id: String(milestoneId) },
-  });
+
+  // Idempotency: if we've already successfully released for this milestone, return it
+  const existing = await Payment.findOne({ milestone_id: milestoneId, direction: "release", status: "succeeded" });
+  if (existing) return existing;
+
+  let transfer;
+  try {
+    transfer = await stripe.transfers.create({
+      amount: toStripeAmount(amount),
+      currency: paymentConfig.currency,
+      destination: stripeAccountId,
+      metadata: { milestone_id: String(milestoneId) },
+    });
+  } catch (err) {
+    // Record a failed release attempt so operators can audit and retry
+    await Payment.create({
+      milestone_id: milestoneId,
+      amount,
+      currency: paymentConfig.currency,
+      direction: "release",
+      status: "failed",
+    });
+
+    await logAction({
+      action_type: "payment_release_failed",
+      entity_type: "milestone",
+      entity_id: milestoneId,
+      details: { amount, currency: paymentConfig.currency, error: err.message },
+    });
+
+    throw err; // bubble up so caller can handle (and not mark milestone released)
+  }
 
   const payment = await Payment.create({
     milestone_id: milestoneId,
@@ -94,7 +120,6 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId })
     stripe_transfer_id: transfer.id,
   });
 
-  
   await logAction({
     action_type: "payment_released",
     entity_type: "milestone",
