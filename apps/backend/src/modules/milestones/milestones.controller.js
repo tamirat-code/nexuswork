@@ -9,7 +9,10 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const listByContract = asyncHandler(async (req, res) => {
-  const milestones = await milestonesService.listForContract(req.params.contractId);
+  const milestones = await milestonesService.listForContract(req.params.contractId, {
+    limit: req.query.limit,
+    skip: req.query.skip,
+  });
   res.json({ success: true, data: milestones });
 });
 

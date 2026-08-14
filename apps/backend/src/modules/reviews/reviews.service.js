@@ -17,6 +17,10 @@ export async function submitReview(contractId, reviewerId, { reviewee_id, rating
   return Review.create({ contract_id: contractId, reviewer_id: reviewerId, reviewee_id, rating, text });
 }
 
-export async function listForUser(userId) {
-  return Review.find({ reviewee_id: userId }).sort({ createdAt: -1 });
+export async function listForUser(userId, { limit = 50, skip = 0 } = {}) {
+  const [reviews, total] = await Promise.all([
+    Review.find({ reviewee_id: userId }).sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)).lean(),
+    Review.countDocuments({ reviewee_id: userId }),
+  ]);
+  return { reviews, total, limit: Number(limit), skip: Number(skip) };
 }

@@ -18,8 +18,12 @@ export async function createMilestone(contractId, requestingUserId, data) {
   return Milestone.create({ contract_id: contractId, ...data });
 }
 
-export async function listForContract(contractId) {
-  return Milestone.find({ contract_id: contractId }).sort({ createdAt: 1 });
+export async function listForContract(contractId, { limit = 100, skip = 0 } = {}) {
+  const [milestones, total] = await Promise.all([
+    Milestone.find({ contract_id: contractId }).sort({ createdAt: 1 }).skip(Number(skip)).limit(Number(limit)).lean(),
+    Milestone.countDocuments({ contract_id: contractId }),
+  ]);
+  return { milestones, total, limit: Number(limit), skip: Number(skip) };
 }
 
 export async function getById(id) {

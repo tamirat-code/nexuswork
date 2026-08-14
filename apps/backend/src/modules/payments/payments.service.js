@@ -4,6 +4,7 @@ import Milestone from "../milestones/milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
+import { logAction } from "../audit-logs/audit-logs.service.js";
 
 function toStripeAmount(dollars) {
   return Math.round(dollars * 100);
@@ -27,6 +28,14 @@ export async function createDepositIntent(milestone) {
     stripe_payment_intent_id: intent.id,
   });
 
+  
+  await logAction({
+    action_type: "payment_deposit_initiated",
+    entity_type: "milestone",
+    entity_id: milestone._id,
+    details: { amount: milestone.amount, currency: paymentConfig.currency, payment_intent_id: intent.id },
+  });
+
   return { client_secret: intent.client_secret, payment_intent_id: intent.id };
 }
 export async function markDepositSucceeded(paymentIntentId) {
@@ -35,15 +44,32 @@ export async function markDepositSucceeded(paymentIntentId) {
     { status: "succeeded" },
     { new: true }
   );
+  if (payment) {
+    await logAction({
+      action_type: "payment_deposit_succeeded",
+      entity_type: "milestone",
+      entity_id: payment.milestone_id,
+      details: { amount: payment.amount, currency: payment.currency, payment_intent_id: paymentIntentId },
+    });
+  }
   return payment;
 }
 
 export async function markDepositFailed(paymentIntentId) {
-  return Payment.findOneAndUpdate(
+  const payment = await Payment.findOneAndUpdate(
     { stripe_payment_intent_id: paymentIntentId, direction: "deposit" },
     { status: "failed" },
     { new: true }
   );
+  if (payment) {
+    await logAction({
+      action_type: "payment_deposit_failed",
+      entity_type: "milestone",
+      entity_id: payment.milestone_id,
+      details: { amount: payment.amount, currency: payment.currency, payment_intent_id: paymentIntentId },
+    });
+  }
+  return payment;
 }
 
 export async function releaseToStudent({ milestoneId, amount, stripeAccountId }) {
@@ -59,7 +85,7 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId })
     metadata: { milestone_id: String(milestoneId) },
   });
 
-  return Payment.create({
+  const payment = await Payment.create({
     milestone_id: milestoneId,
     amount,
     currency: paymentConfig.currency,
@@ -67,6 +93,16 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId })
     status: "succeeded",
     stripe_transfer_id: transfer.id,
   });
+
+  
+  await logAction({
+    action_type: "payment_released",
+    entity_type: "milestone",
+    entity_id: milestoneId,
+    details: { amount, currency: paymentConfig.currency, transfer_id: transfer.id },
+  });
+
+  return payment;
 }
 
 export async function refundClient(milestoneId) {
@@ -83,7 +119,7 @@ export async function refundClient(milestoneId) {
     payment_intent: depositPayment.stripe_payment_intent_id,
   });
 
-  return Payment.create({
+  const payment = await Payment.create({
     milestone_id: milestoneId,
     amount: depositPayment.amount,
     currency: paymentConfig.currency,
@@ -91,6 +127,16 @@ export async function refundClient(milestoneId) {
     status: "succeeded",
     stripe_refund_id: refund.id,
   });
+
+  
+  await logAction({
+    action_type: "payment_refunded",
+    entity_type: "milestone",
+    entity_id: milestoneId,
+    details: { amount: depositPayment.amount, currency: paymentConfig.currency, refund_id: refund.id },
+  });
+
+  return payment;
 }
 
 export async function listForUser(userId) {

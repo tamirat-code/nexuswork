@@ -9,6 +9,9 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getForUser = asyncHandler(async (req, res) => {
-  const reviews = await listForUser(req.params.userId);
+  const reviews = await listForUser(req.params.userId, {
+    limit: req.query.limit,
+    skip: req.query.skip,
+  });
   res.json({ success: true, data: reviews });
 });

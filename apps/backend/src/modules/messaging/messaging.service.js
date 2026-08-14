@@ -1,5 +1,6 @@
 import Message from "./messaging.model.js";
 import Contract from "../contracts/contracts.model.js";
+import { emitToContract } from "../../websocket/socket.registry.js";
 
 async function assertParty(contractId, userId) {
   const contract = await Contract.findById(contractId);
@@ -18,10 +19,17 @@ async function assertParty(contractId, userId) {
 
 export async function sendMessage(contractId, senderId, { body, attachments }) {
   await assertParty(contractId, senderId);
-  return Message.create({ contract_id: contractId, sender_id: senderId, body, attachments });
+  const message = await Message.create({ contract_id: contractId, sender_id: senderId, body, attachments });
+  
+  emitToContract(contractId, "message:new", message);
+  return message;
 }
 
-export async function listMessages(contractId, userId) {
+export async function listMessages(contractId, userId, { limit = 100, skip = 0 } = {}) {
   await assertParty(contractId, userId);
-  return Message.find({ contract_id: contractId }).sort({ createdAt: 1 });
+  const [messages, total] = await Promise.all([
+    Message.find({ contract_id: contractId }).sort({ createdAt: 1 }).skip(Number(skip)).limit(Number(limit)).lean(),
+    Message.countDocuments({ contract_id: contractId }),
+  ]);
+  return { messages, total, limit: Number(limit), skip: Number(skip) };
 }

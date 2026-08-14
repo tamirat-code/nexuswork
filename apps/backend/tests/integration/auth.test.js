@@ -12,6 +12,7 @@ describe("Auth module", () => {
     const res = await request(app).post("/v1/auth/register").send({});
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain("Missing required field");
+    expect(res.body.message).toContain("email");
+    expect(res.body.message).toContain("password");
   });
 });
