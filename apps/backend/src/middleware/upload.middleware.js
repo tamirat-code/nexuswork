@@ -1,11 +1,20 @@
 import multer from "multer";
+import path from "path";
+import crypto from "node:crypto";
 import { storageConfig } from "../config/storage.config.js";
 
-// Local-disk storage for development; swap the storage engine for S3 in production
-// without changing controllers, since they just read req.file / req.files.
+
 const storage = multer.diskStorage({
   destination: storageConfig.uploadDir,
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+  filename: (req, file, cb) => {
+  
+    const ext = path.extname(file.originalname) || "";
+    const safeName = `${crypto.randomUUID()}${ext}`;
+    cb(null, safeName);
+  },
 });
 
-export const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+export const upload = multer({
+  storage,
+  limits: { fileSize: Number(storageConfig.maxFileSizeMB || 10) * 1024 * 1024 },
+});

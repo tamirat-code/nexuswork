@@ -16,6 +16,22 @@ const app = express();
 app.use(helmet());
 app.use(cors(corsConfig));
 
+
+app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
+
+
+app.get("/ready", (req, res) => {
+ 
+  try {
+ 
+    const mongoose = require("mongoose");
+    const ready = mongoose.connection?.readyState === 1; // 1 == connected
+    return ready ? res.status(200).json({ ready: true }) : res.status(503).json({ ready: false });
+  } catch (err) {
+    return res.status(503).json({ ready: false });
+  }
+});
+
 app.use("/webhooks", express.raw({ type: "application/json" }), WebhooksRoutes);
 
 app.use(express.json({ limit: "2mb" }));
