@@ -13,10 +13,16 @@ npm run dev
 
 ## Module status
 
-Fully implemented: auth, users, students, clients, universities, projects, proposals,
-contracts, milestones, submissions, payments, wallets, reviews, disputes, messaging,
-recommendation (AI-assisted, falls back to skill-overlap scoring if no AI key is set), health.
+**Fully implemented (30):**
+auth, users, students, clients, universities, projects, proposals, contracts, milestones, 
+submissions, payments, wallets, reviews, disputes, messaging, notifications, recommendation 
+(AI-assisted, falls back to skill-overlap scoring if no AI key is set), portfolios, files, 
+skills, categories, learning, search, analytics, health, verifications, invoices, admin, 
+audit-logs, webhooks.
 
-Scaffolded (model + placeholder route, not yet implemented): verifications, categories,
-skills, files, invoices, notifications, portfolios, learning, search, analytics, admin,
-audit-logs.
+**Special notes:**
+- AI Recommendation module falls back to skill-overlap scoring if no AI API key is configured
+- Payment processing requires Stripe configuration (see config/payment.config.js)
+- Real-time messaging uses Socket.io (see config/socket.config.js)
+- Admin module provides user management, dispute resolution, and dashboard
+- Audit-logs module provides append-only logging for financial and administrative actions
