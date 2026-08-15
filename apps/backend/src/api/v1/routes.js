@@ -51,7 +51,7 @@ router.use("/wallets", WalletsRoutes);
 router.use("/invoices", InvoicesRoutes);
 router.use("/reviews", ReviewsRoutes);
 router.use("/disputes", DisputesRoutes);
-router.use("/messages", MessagingRoutes);
+router.use("/messaging", MessagingRoutes);
 router.use("/notifications", NotificationsRoutes);
 router.use("/portfolios", PortfoliosRoutes);
 router.use("/learning", LearningRoutes);

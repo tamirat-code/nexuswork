@@ -20,4 +20,10 @@ describe("Contracts and Messaging integration (smoke)", () => {
    
     expect([401, 400]).toContain(res.status);
   });
+
+  it("requires auth to sign a contract", async () => {
+    const res = await request(app).post("/v1/contracts/64c8a6f0f0f0f0f0f0f0f0f0/sign");
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
 });

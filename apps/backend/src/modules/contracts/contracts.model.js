@@ -11,6 +11,10 @@ const contractSchema = new mongoose.Schema(
       enum: ["pending_signature", "active", "completed", "terminated"],
       default: "pending_signature",
     },
+    
+    client_signed_at: { type: Date },
+    student_signed_at: { type: Date },
+   
     signed_at: { type: Date },
   },
   { timestamps: true }

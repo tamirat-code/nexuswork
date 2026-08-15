@@ -1,6 +1,12 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { submitVerification, getMyVerifications, listVerifications, reviewVerification } from "./verifications.service.js";
+import {
+  submitVerification,
+  getMyVerifications,
+  listVerifications,
+  reviewVerification,
+  certifyStudentSkill,
+} from "./verifications.service.js";
 
 export const requestVerification = asyncHandler(async (req, res) => {
   requireFields(req.body, ["university_id"]);
@@ -37,4 +43,15 @@ export const review = asyncHandler(async (req, res) => {
     rejectionReason: req.body.rejection_reason,
   });
   res.json({ success: true, data: verification });
+});
+
+export const certifySkill = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["skill_name"]);
+  const profile = await certifyStudentSkill({
+    studentUserId: req.params.userId,
+    skillName: req.body.skill_name,
+    staffUserId: req.user._id,
+    staffRole: req.user.role,
+  });
+  res.json({ success: true, data: profile });
 });

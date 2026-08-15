@@ -4,7 +4,10 @@ import User from "../users/users.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Payment from "../payments/payments.model.js";
+import StudentProfile from "../students/students.model.js";
+import University from "../universities/universities.model.js";
 import * as paymentsService from "../payments/payments.service.js";
+import { ForbiddenError, NotFoundError } from "../../shared/exceptions/AppError.js";
 
 
 export async function trackEvent({ userId, eventType, entityType, entityId, metadata }) {
@@ -95,5 +98,72 @@ export async function getMyAnalytics(userId) {
   return {
     earnings,
     payments_count: payments.length,
+  };
+}
+
+
+export async function getUniversityMetrics(universityId, requestingUser) {
+  const university = await University.findById(universityId);
+  if (!university) throw new NotFoundError("University not found");
+
+  if (requestingUser.role !== "admin") {
+    const isContactStaff = university.contact_staff?.some((id) => String(id) === String(requestingUser._id));
+    if (!isContactStaff) {
+      throw new ForbiddenError("Only staff at this university, or an admin, can view its analytics");
+    }
+  }
+
+  const students = await StudentProfile.find({ university_id: universityId }).lean();
+  const studentUserIds = students.map((s) => s.user_id);
+  const verifiedStudents = students.filter((s) => s.verification_status === "verified");
+  const verifiedUserIds = verifiedStudents.map((s) => s.user_id);
+
+  
+  const studentsWithContracts = verifiedUserIds.length
+    ? await Contract.distinct("student_id", {
+        student_id: { $in: verifiedUserIds },
+        status: { $in: ["active", "completed"] },
+      })
+    : [];
+  const employmentRate = verifiedUserIds.length ? studentsWithContracts.length / verifiedUserIds.length : null;
+
+  
+  const skillCounts = new Map();
+  for (const student of students) {
+    for (const skill of student.skills || []) {
+      const key = skill.name?.trim();
+      if (!key) continue;
+      skillCounts.set(key, (skillCounts.get(key) || 0) + 1);
+    }
+  }
+  const topSkills = [...skillCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([name, count]) => ({ name, count }));
+
+  
+  const contractIds = verifiedUserIds.length
+    ? await Contract.find({ student_id: { $in: verifiedUserIds } }).distinct("_id")
+    : [];
+  const earningsAgg = contractIds.length
+    ? await Milestone.aggregate([
+        { $match: { contract_id: { $in: contractIds }, status: "released" } },
+        { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
+      ])
+    : [];
+  const totalEarnings = earningsAgg[0]?.total || 0;
+  const releasedMilestoneCount = earningsAgg[0]?.count || 0;
+
+  return {
+    university: { id: university._id, name: university.name },
+    total_students: students.length,
+    verified_students: verifiedStudents.length,
+    employment_rate: employmentRate !== null ? Math.round(employmentRate * 1000) / 1000 : null,
+    employed_student_count: studentsWithContracts.length,
+    top_skills: topSkills,
+    aggregate_earnings: totalEarnings,
+    released_milestone_count: releasedMilestoneCount,
+    average_earnings_per_employed_student:
+      studentsWithContracts.length ? Math.round((totalEarnings / studentsWithContracts.length) * 100) / 100 : null,
   };
 }

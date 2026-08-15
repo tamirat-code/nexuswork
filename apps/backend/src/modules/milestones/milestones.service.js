@@ -5,6 +5,7 @@ import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../
 import { addSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
+import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";
 import { logger } from "../../shared/logger/logger.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
@@ -13,7 +14,8 @@ export async function createMilestone(contractId, requestingUserId, data) {
   const contract = await Contract.findById(contractId);
   if (!contract) throw new NotFoundError("Contract not found");
   if (String(contract.client_id) !== String(requestingUserId)) {
-    throw new ForbiddenError("Only the client can define milestones");
+    const allowed = await isOrgMember(contract.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("Only the client can define milestones");
   }
   return Milestone.create({ contract_id: contractId, ...data });
 }
@@ -36,7 +38,11 @@ export async function initiateFunding(milestoneId, requestingUserId) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
   if (String(milestone.contract_id.client_id) !== String(requestingUserId)) {
-    throw new ForbiddenError("Only the client can fund this milestone");
+    const allowed = await isOrgMember(milestone.contract_id.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("Only the client can fund this milestone");
+  }
+  if (milestone.contract_id.status !== "active") {
+    throw new ValidationError("Both parties must sign the contract before a milestone can be funded");
   }
   if (milestone.status !== "not_funded") {
     throw new ValidationError(`Cannot fund a milestone in status ${milestone.status}`);
@@ -78,7 +84,8 @@ export async function approveMilestone(milestoneId, requestingUserId) {
   if (!milestone) throw new NotFoundError("Milestone not found");
   const contract = milestone.contract_id;
   if (String(contract.client_id) !== String(requestingUserId)) {
-    throw new ForbiddenError("Only the client can approve this milestone");
+    const allowed = await isOrgMember(contract.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("Only the client can approve this milestone");
   }
   if (milestone.status !== "delivered") {
     throw new ValidationError("Milestone must be delivered before approval");

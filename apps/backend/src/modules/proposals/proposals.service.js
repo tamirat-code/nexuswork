@@ -2,6 +2,7 @@ import Proposal from "./proposals.model.js";
 import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
 import StudentProfile from "../students/students.model.js";
+import { isOrgMember } from "../clients/clients.service.js";
 
 export async function submitProposal(studentId, data) {
   const project = await Project.findById(data.project_id);
@@ -30,9 +31,12 @@ export async function listForProject(projectId, requestingUser) {
     throw err;
   }
   if (String(project.client_id) !== String(requestingUser._id) && requestingUser.role !== "admin") {
-    const err = new Error("Not authorized to view these proposals");
-    err.status = 403;
-    throw err;
+    const allowed = await isOrgMember(project.client_id, requestingUser._id);
+    if (!allowed) {
+      const err = new Error("Not authorized to view these proposals");
+      err.status = 403;
+      throw err;
+    }
   }
   return Proposal.find({ project_id: projectId }).sort({ createdAt: -1 });
 }
@@ -47,9 +51,12 @@ export async function acceptProposal(proposalId, requestingUser) {
   }
   const project = proposal.project_id;
   if (String(project.client_id) !== String(requestingUser._id)) {
-    const err = new Error("Not authorized to accept this proposal");
-    err.status = 403;
-    throw err;
+    const allowed = await isOrgMember(project.client_id, requestingUser._id);
+    if (!allowed) {
+      const err = new Error("Not authorized to accept this proposal");
+      err.status = 403;
+      throw err;
+    }
   }
   proposal.status = "accepted";
   await proposal.save();

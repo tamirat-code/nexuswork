@@ -7,7 +7,7 @@ export async function submitVerification({ userId, universityId, emailDomain, do
   const university = await University.findById(universityId);
   if (!university) throw new NotFoundError("University not found");
 
-  // If an email domain is provided, it must match the university's domain
+
   if (emailDomain && university.domain && emailDomain.toLowerCase() !== university.domain.toLowerCase()) {
     throw new ValidationError(`Email domain "${emailDomain}" does not match ${university.name}'s domain "${university.domain}"`);
   }
@@ -80,4 +80,31 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
 
   await verification.save();
   return verification;
+}
+
+
+export async function certifyStudentSkill({ studentUserId, skillName, staffUserId, staffRole }) {
+  const profile = await StudentProfile.findOne({ user_id: studentUserId });
+  if (!profile) throw new NotFoundError("Student profile not found");
+
+  if (staffRole !== "admin") {
+    if (!profile.university_id) {
+      throw new ForbiddenError("Student has no associated university to certify a skill against");
+    }
+    const university = await University.findById(profile.university_id);
+    const isContactStaff = university?.contact_staff?.some((id) => String(id) === String(staffUserId));
+    if (!isContactStaff) {
+      throw new ForbiddenError("Only staff at the student's own university, or an admin, can certify this skill");
+    }
+  }
+
+  const skill = profile.skills.find((s) => String(s.name).toLowerCase() === String(skillName).toLowerCase());
+  if (!skill) throw new NotFoundError(`Student does not have a skill named "${skillName}" on their profile`);
+
+  skill.verification_method = "university_certified";
+  skill.certified_by = staffUserId;
+  skill.certified_at = new Date();
+
+  await profile.save();
+  return profile;
 }

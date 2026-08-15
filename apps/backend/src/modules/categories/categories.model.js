@@ -12,7 +12,7 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-categorySchema.index({ slug: 1 });
+
 categorySchema.index({ is_active: 1, sort_order: 1 });
 
 export default mongoose.model("Category", categorySchema);

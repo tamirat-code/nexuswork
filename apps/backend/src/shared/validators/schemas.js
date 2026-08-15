@@ -95,6 +95,15 @@ export const updateClientProfileSchema = z.object({
   contact_email: email.optional(),
 });
 
+export const addPosterSchema = z.object({
+  user_id: objectId,
+});
+
+export const reviewClientVerificationSchema = z.object({
+  decision: z.enum(["approved", "rejected"]),
+  rejection_reason: z.string().trim().max(500).optional(),
+});
+
 // --- Universities ---
 export const createUniversitySchema = z.object({
   name: z.string().trim().min(1, "University name is required").max(200),
@@ -143,6 +152,10 @@ export const createProjectSchema = z.object({
   category: z.string().trim().max(100).optional(),
   experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
   attachments: z.array(objectId).optional().default([]),
+  // If the caller is a designated additional poster (see clients module),
+  // this attributes the project to the org owner's account instead of
+  // their own. Ignored (and unnecessary) when posting for yourself.
+  on_behalf_of_client_id: optionalObjectId,
 });
 
 export const updateProjectSchema = createProjectSchema.partial();
@@ -192,6 +205,10 @@ export const openDisputeSchema = z.object({
   reason: z.string().trim().min(10, "Reason must be at least 10 characters").max(2000),
 });
 
+export const certifySkillSchema = z.object({
+  skill_name: z.string().trim().min(1, "Skill name is required").max(100),
+});
+
 export const resolveDisputeSchema = z.object({
   outcome: z.enum(["refund_client", "release_student"]),
   resolution_summary: z.string().trim().min(10, "Resolution summary must be at least 10 characters").max(2000),
@@ -215,6 +232,10 @@ export const createPortfolioItemSchema = z.object({
 });
 
 export const updatePortfolioItemSchema = createPortfolioItemSchema.partial();
+
+export const milestoneConsentSchema = z.object({
+  decision: z.enum(["approved", "denied"]),
+});
 
 // --- Invoices ---
 export const createInvoiceSchema = z.object({

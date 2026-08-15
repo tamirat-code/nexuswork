@@ -1,5 +1,8 @@
 import PortfolioItem from "./portfolios.model.js";
-import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import Milestone from "../milestones/milestones.model.js";
+import Contract from "../contracts/contracts.model.js";
+import { isOrgMember } from "../clients/clients.service.js";
+import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
 
 export async function createPortfolioItem(userId, data) {
   return PortfolioItem.create({
@@ -43,4 +46,55 @@ export async function deletePortfolioItem(id, userId) {
 
   await item.deleteOne();
   return { deleted: true };
+}
+
+
+export async function addFromMilestone(studentId, milestoneId) {
+  const milestone = await Milestone.findById(milestoneId).populate("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  const contract = milestone.contract_id;
+
+  if (String(contract.student_id) !== String(studentId)) {
+    throw new ForbiddenError("Only the student on this contract can add it to their portfolio");
+  }
+  if (milestone.status !== "released") {
+    throw new ValidationError("Only a completed (released) milestone can be added to your portfolio");
+  }
+
+  const existing = await PortfolioItem.findOne({ milestone_id: milestone._id });
+  if (existing) throw new ValidationError("This milestone has already been added to your portfolio");
+
+  return PortfolioItem.create({
+    user_id: studentId,
+    title: milestone.title,
+    description: `Milestone completed on contract ${contract._id}.`,
+    milestone_id: milestone._id,
+    consent_status: "pending",
+    is_published: false,
+  });
+}
+
+export async function respondToMilestoneConsent(portfolioItemId, requestingUserId, decision) {
+  if (!["approved", "denied"].includes(decision)) {
+    throw new ValidationError("Decision must be 'approved' or 'rejected'");
+  }
+  const item = await PortfolioItem.findById(portfolioItemId);
+  if (!item) throw new NotFoundError("Portfolio item not found");
+  if (!item.milestone_id) throw new ValidationError("This portfolio item is not linked to a milestone");
+
+  const milestone = await Milestone.findById(item.milestone_id).populate("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  const contract = milestone.contract_id;
+
+  if (String(contract.client_id) !== String(requestingUserId)) {
+    const allowed = await isOrgMember(contract.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("Only the client on this contract can grant portfolio consent");
+  }
+
+  item.consent_status = decision;
+  item.consented_by = requestingUserId;
+  item.consented_at = new Date();
+  item.is_published = decision === "approved";
+  await item.save();
+  return item;
 }

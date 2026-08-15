@@ -1,11 +1,30 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { createPortfolioItem, listForUser, getById, updatePortfolioItem, deletePortfolioItem } from "./portfolios.service.js";
+import {
+  createPortfolioItem,
+  listForUser,
+  getById,
+  updatePortfolioItem,
+  deletePortfolioItem,
+  addFromMilestone,
+  respondToMilestoneConsent,
+} from "./portfolios.service.js";
 
 export const postPortfolioItem = asyncHandler(async (req, res) => {
   requireFields(req.body, ["title"]);
   const item = await createPortfolioItem(req.user._id, req.body);
   res.status(201).json({ success: true, data: item });
+});
+
+export const postFromMilestone = asyncHandler(async (req, res) => {
+  const item = await addFromMilestone(req.user._id, req.params.milestoneId);
+  res.status(201).json({ success: true, data: item });
+});
+
+export const patchMilestoneConsent = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["decision"]);
+  const item = await respondToMilestoneConsent(req.params.id, req.user._id, req.body.decision);
+  res.json({ success: true, data: item });
 });
 
 export const getMyPortfolio = asyncHandler(async (req, res) => {

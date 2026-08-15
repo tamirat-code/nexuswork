@@ -1,21 +1,53 @@
 import Dispute from "./disputes.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Wallet from "../wallets/wallets.model.js";
+import Message from "../messaging/messaging.model.js";
+import { listForMilestone as listSubmissionsForMilestone } from "../submissions/submissions.service.js";
 import { refundClient, releaseToStudent } from "../payments/payments.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
-import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
 const VALID_OUTCOMES = ["refund_client", "release_student"];
 
 export async function openDispute(milestoneId, openedBy) {
-  const milestone = await Milestone.findById(milestoneId);
+  const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
+
+  const contract = milestone.contract_id;
+  const isParty = [String(contract.client_id), String(contract.student_id)].includes(String(openedBy));
+  if (!isParty) {
+    throw new ForbiddenError("Only a party to this contract can open a dispute on its milestone");
+  }
+
   if (!["funded", "delivered"].includes(milestone.status)) {
     throw new ValidationError(`Cannot dispute a milestone in status ${milestone.status}`);
   }
   milestone.status = "disputed";
   await milestone.save();
   return Dispute.create({ milestone_id: milestoneId, opened_by: openedBy });
+}
+
+
+export async function getDisputeEvidence(disputeId, requestingUser) {
+  const dispute = await Dispute.findById(disputeId).lean();
+  if (!dispute) throw new NotFoundError("Dispute not found");
+
+  const milestone = await Milestone.findById(dispute.milestone_id).populate("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  const contract = milestone.contract_id;
+
+  const requestingUserId = String(requestingUser._id);
+  const isParty = [String(contract.client_id), String(contract.student_id)].includes(requestingUserId);
+  if (requestingUser.role !== "admin" && !isParty) {
+    throw new ForbiddenError("Not authorized to view this dispute's evidence");
+  }
+
+  const [submissions, messages] = await Promise.all([
+    listSubmissionsForMilestone(milestone._id),
+    Message.find({ contract_id: contract._id }).sort({ createdAt: 1 }).populate({ path: "attachments" }).lean(),
+  ]);
+
+  return { dispute, milestone, contract, submissions, messages };
 }
 
 export async function resolveDispute(disputeId, { resolution_summary, outcome }) {

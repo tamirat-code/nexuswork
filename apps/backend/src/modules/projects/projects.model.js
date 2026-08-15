@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 const projectSchema = new mongoose.Schema(
   {
     client_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     required_skills: [{ type: String }],

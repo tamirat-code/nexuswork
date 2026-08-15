@@ -25,6 +25,9 @@ const studentProfileSchema = new mongoose.Schema(
           enum: ["self_declared", "assessment", "university_certified"],
           default: "self_declared",
         },
+        
+        certified_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        certified_at: { type: Date },
       },
     ],
   },

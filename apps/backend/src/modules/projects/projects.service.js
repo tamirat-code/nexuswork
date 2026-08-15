@@ -1,8 +1,21 @@
 import Project from "./projects.model.js";
 import ClientProfile from "../clients/clients.model.js";
+import { isOrgMember } from "../clients/clients.service.js";
+import { ForbiddenError } from "../../shared/exceptions/AppError.js";
 
-export async function createProject(clientId, data) {
-  return Project.create({ client_id: clientId, ...data });
+export async function createProject(actingUserId, data) {
+  const { on_behalf_of_client_id, ...projectData } = data;
+
+  let ownerId = actingUserId;
+  if (on_behalf_of_client_id && String(on_behalf_of_client_id) !== String(actingUserId)) {
+    const allowed = await isOrgMember(on_behalf_of_client_id, actingUserId);
+    if (!allowed) {
+      throw new ForbiddenError("Not authorized to post projects on behalf of this client account");
+    }
+    ownerId = on_behalf_of_client_id;
+  }
+
+  return Project.create({ client_id: ownerId, created_by: actingUserId, ...projectData });
 }
 
 const SORT_STAGES = {

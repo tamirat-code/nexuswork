@@ -1,6 +1,6 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { submitReview, listForUser } from "./reviews.service.js";
+import { submitReview, listForUser, getReputationScore } from "./reviews.service.js";
 
 export const create = asyncHandler(async (req, res) => {
   requireFields(req.body, ["reviewee_id", "rating"]);
@@ -14,4 +14,9 @@ export const getForUser = asyncHandler(async (req, res) => {
     skip: req.query.skip,
   });
   res.json({ success: true, data: reviews });
+});
+
+export const getReputation = asyncHandler(async (req, res) => {
+  const reputation = await getReputationScore(req.params.userId);
+  res.json({ success: true, data: reputation });
 });
