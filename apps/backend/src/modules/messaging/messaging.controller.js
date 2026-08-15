@@ -9,9 +9,7 @@ export const create = asyncHandler(async (req, res) => {
 });
 
 export const getForContract = asyncHandler(async (req, res) => {
-  const messages = await listMessages(req.params.contractId, req.user._id, {
-    limit: req.query.limit,
-    skip: req.query.skip,
-  });
+  const { limit = 50, skip = 0 } = req.pagination || {};
+  const messages = await listMessages(req.params.contractId, req.user._id, { limit, skip });
   res.json({ success: true, data: messages });
 });

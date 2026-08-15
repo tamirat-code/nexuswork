@@ -17,10 +17,43 @@ async function assertParty(contractId, userId) {
   }
 }
 
+import File from "../files/files.model.js";
+
 export async function sendMessage(contractId, senderId, { body, attachments }) {
   await assertParty(contractId, senderId);
-  const message = await Message.create({ contract_id: contractId, sender_id: senderId, body, attachments });
-  
+
+  const attachmentsInput = attachments || [];
+  const attachmentIds = [];
+
+  for (const att of attachmentsInput) {
+    let file = null;
+    // attachment may be a string ID or an object with url
+    if (typeof att === "string" || (att && att._id)) {
+      const id = typeof att === "string" ? att : att._id;
+      file = await File.findById(id);
+    } else if (att && att.url) {
+      file = await File.findOne({ url: att.url });
+    }
+
+    if (!file) {
+      const err = new Error("Attachment not found");
+      err.status = 400;
+      throw err;
+    }
+
+    if (String(file.owner_id) !== String(senderId)) {
+      const err = new Error("Attachment does not belong to sender");
+      err.status = 403;
+      throw err;
+    }
+
+    attachmentIds.push(file._id);
+  }
+
+  const created = await Message.create({ contract_id: contractId, sender_id: senderId, body, attachments: attachmentIds });
+
+  const message = await Message.findById(created._id).populate({ path: "attachments" }).lean();
+
   emitToContract(contractId, "message:new", message);
   return message;
 }
