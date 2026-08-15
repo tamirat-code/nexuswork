@@ -9,6 +9,4 @@ const webhookEventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-webhookEventSchema.index({ event_id: 1 }, { unique: true });
-
-export default mongoose.model("WebhookEvent", webhookEventSchema);
+export default mongoose.models.WebhookEvent || mongoose.model("WebhookEvent", webhookEventSchema);
