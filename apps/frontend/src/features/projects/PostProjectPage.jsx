@@ -18,13 +18,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
 
 const CATEGORIES = ["Development", "Design", "Data & Research", "Writing", "Video & Motion", "Marketing"];
-const EXPERIENCE_LEVELS = ["entry", "intermediate", "advanced"];
+const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced", "expert"];
 
 const projectSchema = z.object({
   title: z.string().min(8, "Title must be at least 8 characters").max(120),
   description: z.string().min(40, "Describe the work in more detail (min 40 characters)").max(5000),
   category: z.string().min(1, "Choose a category"),
-  experience_level: z.enum(["entry", "intermediate", "advanced"]),
+  experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]),
   budget: z.coerce.number().min(10, "Budget must be at least $10").max(1000000, "Budget looks too high"),
   deadline: z.string().min(1, "Pick a deadline"),
 });

@@ -1,6 +1,6 @@
 import { apiRequest } from "../../lib/http.js";
 
-export const getMyPortfolio = (token) => apiRequest("/portfolios/me", { token });
+export const getMyPortfolio = (token) => apiRequest("/portfolios/mine", { token });
 export const listPortfolios = (query = "") => apiRequest(`/portfolios${query}`);
 export const createPortfolioEntry = (payload, token) =>
   apiRequest("/portfolios", { method: "POST", body: payload, token });
