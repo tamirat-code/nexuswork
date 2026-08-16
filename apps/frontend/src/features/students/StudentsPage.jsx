@@ -1,242 +1,119 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Search,
-  MapPin,
-  GraduationCap,
-  ArrowRight,
-  BadgeCheck,
-  Sparkles,
-} from "lucide-react";
-
-const students = [
-  {
-    id: 1,
-    name: "Abebe Kebede",
-    department: "Computer Science",
-    university: "University Student",
-    location: "Ethiopia",
-    skills: ["React", "Node.js", "MongoDB"],
-    initials: "AK",
-    verified: true,
-    availability: "Available",
-  },
-  {
-    id: 2,
-    name: "Sara Tesfaye",
-    department: "Software Engineering",
-    university: "University Student",
-    location: "Ethiopia",
-    skills: ["UI/UX", "Figma", "React"],
-    initials: "ST",
-    verified: true,
-    availability: "Available",
-  },
-  {
-    id: 3,
-    name: "Daniel Mekonnen",
-    department: "Information Technology",
-    university: "University Student",
-    location: "Ethiopia",
-    skills: ["Networking", "Linux", "Security"],
-    initials: "DM",
-    verified: false,
-    availability: "Busy",
-  },
-  {
-    id: 4,
-    name: "Hanna Alemu",
-    department: "Computer Science",
-    university: "University Student",
-    location: "Ethiopia",
-    skills: ["Python", "AI", "Machine Learning"],
-    initials: "HA",
-    verified: true,
-    availability: "Available",
-  },
-  {
-    id: 5,
-    name: "Yonas Girma",
-    department: "Software Engineering",
-    university: "University Student",
-    location: "Ethiopia",
-    skills: ["Java", "Spring Boot", "SQL"],
-    initials: "YG",
-    verified: true,
-    availability: "Available",
-  },
-  {
-    id: 6,
-    name: "Meron Bekele",
-    department: "Information Systems",
-    university: "University Student",
-    location: "Ethiopia",
-    skills: ["Database", "SQL", "Data Analysis"],
-    initials: "MB",
-    verified: false,
-    availability: "Available",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { BadgeCheck, GraduationCap, MapPin, Search } from "lucide-react";
+import { listStudents } from "../../services/api/students.api.js";
+import { Card, CardContent } from "../../components/ui/shadcn/card.jsx";
+import { Badge } from "../../components/ui/shadcn/badge.jsx";
+import { Input } from "../../components/ui/shadcn/input.jsx";
+import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/avatar.jsx";
+import { Button } from "../../components/ui/shadcn/button.jsx";
+import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
 
 export default function StudentsPage() {
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState("all");
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["students", search, department],
+    queryFn: () => listStudents(`?search=${encodeURIComponent(search)}&department=${department}`),
+  });
+
+  const students = data?.data ?? [];
+
   return (
-    <div className="min-h-screen bg-ink text-slate">
-      {/* Hero */}
-      <section className="border-b border-ink-300">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-          <div className="max-w-3xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-ink-300 bg-ink-50 px-3 py-1.5 text-xs font-medium text-brass">
-              <Sparkles className="h-3.5 w-3.5" />
-              Discover student talent
-            </div>
+    <div className="mx-auto max-w-6xl animate-fade-up">
+      <header className="border-b border-ink-300 pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Student marketplace</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Find verified student talent</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+          Every profile is backed by a real university. Skills are certified or self-reported — always clearly marked.
+        </p>
+      </header>
 
-            <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-              Find skilled students
-              <span className="text-brass"> ready to work.</span>
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300">
-              Discover talented university students, explore their skills,
-              and find the right person for your next project.
-            </p>
-          </div>
-
-          {/* Search */}
-          <div className="mt-10 max-w-3xl">
-            <div className="flex items-center rounded-2xl border border-ink-300 bg-ink-50 px-4 py-3 shadow-card">
-              <Search className="h-5 w-5 shrink-0 text-slate-500" />
-
-              <input
-                type="text"
-                placeholder="Search students by skill, department, or name..."
-                className="ml-3 w-full bg-transparent text-sm text-slate outline-none placeholder:text-slate-500"
-              />
-
-              <button
-                type="button"
-                className="hidden rounded-xl bg-brass px-5 py-2 text-sm font-semibold text-ink transition hover:opacity-90 sm:block"
-              >
-                Search
-              </button>
-            </div>
-          </div>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by skill, department, or name"
+            className="pl-9"
+          />
         </div>
-      </section>
+        <select
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          className="h-11 rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">All departments</option>
+          <option value="cs">Computer Science</option>
+          <option value="software">Software Engineering</option>
+          <option value="it">Information Technology</option>
+          <option value="is">Information Systems</option>
+        </select>
+      </div>
 
-      {/* Main */}
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brass">
-              Student marketplace
-            </p>
+      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {isLoading && [...Array(6)].map((_, i) => <Skeleton key={i} className="h-56 w-full rounded-card" />)}
 
-            <h2 className="mt-2 font-display text-2xl font-semibold">
-              Explore student talent
-            </h2>
+        {error && (
+          <Card className="col-span-full p-8 text-center">
+            <p className="text-sm text-brick">{error.message}</p>
+          </Card>
+        )}
 
-            <p className="mt-2 text-sm text-slate-400">
-              Browse verified students and their professional skills.
-            </p>
-          </div>
+        {!isLoading && !error && students.length === 0 && (
+          <Card className="col-span-full p-12 text-center">
+            <p className="font-display text-lg text-slate">No students found</p>
+            <p className="mt-2 text-sm text-slate-300">Try a broader search or clear your filters.</p>
+          </Card>
+        )}
 
-          <select
-            className="rounded-xl border border-ink-300 bg-ink-50 px-4 py-2.5 text-sm text-slate outline-none"
-            defaultValue="all"
-          >
-            <option value="all">All departments</option>
-            <option value="computer-science">Computer Science</option>
-            <option value="software-engineering">
-              Software Engineering
-            </option>
-            <option value="information-technology">
-              Information Technology
-            </option>
-            <option value="information-systems">
-              Information Systems
-            </option>
-          </select>
-        </div>
-
-        {/* Student cards */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {students.map((student) => (
-            <article
-              key={student.id}
-              className="group rounded-2xl border border-ink-300 bg-ink-50 p-5 transition duration-300 hover:-translate-y-1 hover:border-brass/40 hover:shadow-card"
-            >
-              {/* Profile header */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brass/15 text-sm font-bold text-brass">
-                    {student.initials}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="font-semibold text-slate">
-                        {student.name}
-                      </h3>
-
-                      {student.verified && (
-                        <BadgeCheck className="h-4 w-4 text-emerald-400" />
-                      )}
-                    </div>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {student.department}
-                    </p>
+        {students.map((s) => (
+          <Card key={s._id} className="group transition-shadow hover:shadow-elevated animate-fade-up">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar className="h-12 w-12 rounded-control">
+                    <AvatarImage src={s.avatar} alt="" />
+                    <AvatarFallback>{(s.name || "S").slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate">{s.name}</p>
+                    <p className="truncate text-xs text-slate-300">{s.department}</p>
                   </div>
                 </div>
-
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                    student.availability === "Available"
-                      ? "bg-emerald-400/10 text-emerald-400"
-                      : "bg-slate-400/10 text-slate-400"
-                  }`}
-                >
-                  {student.availability}
-                </span>
+                {s.verification_status === "verified" ? (
+                  <Badge variant="success"><BadgeCheck className="h-3 w-3" /> Verified</Badge>
+                ) : (
+                  <StatusBadge kind="verification" status={s.verification_status || "unverified"} showDot={false} />
+                )}
               </div>
 
-              {/* University */}
-              <div className="mt-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <GraduationCap className="h-4 w-4 text-brass" />
-                  {student.university}
+              <div className="mt-4 space-y-1.5 text-xs text-slate-300">
+                <p className="flex items-center gap-2"><GraduationCap className="h-3.5 w-3.5 text-brass" /> {s.university || "University student"}</p>
+                <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-brass" /> {s.location || "Remote"}</p>
+              </div>
+
+              {s.skills?.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {s.skills.slice(0, 4).map((sk) => (
+                    <Badge key={sk.name || sk} variant="secondary">
+                      {sk.name || sk}
+                      {sk.level && <span className="text-slate-300">· {sk.level}</span>}
+                    </Badge>
+                  ))}
                 </div>
+              )}
 
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <MapPin className="h-4 w-4 text-brass" />
-                  {student.location}
-                </div>
-              </div>
-
-              {/* Skills */}
-              <div className="mt-5 flex flex-wrap gap-2">
-                {student.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-full border border-ink-300 bg-ink px-2.5 py-1 text-[11px] text-slate-300"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              {/* Profile button */}
-              <Link
-                to={`/students/${student.id}`}
-                className="mt-6 flex items-center justify-between border-t border-ink-300 pt-4 text-sm font-semibold text-slate transition-colors group-hover:text-brass"
-              >
-                View profile
-
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <Link to={`/profile/${s._id}`} className="mt-5 block">
+                <Button variant="secondary" size="sm" fullWidth>View profile</Button>
               </Link>
-            </article>
-          ))}
-        </div>
-      </main>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

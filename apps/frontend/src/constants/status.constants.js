@@ -49,20 +49,16 @@ export const MILESTONE_STATUS_META = {
   [MILESTONE_STATUS.RELEASED]: { label: "Paid out", tone: "success", hint: "Funds released to the freelancer" },
 };
 
-/** Proposal lifecycle. Values follow the proposals module enum. */
+/** Proposal lifecycle — these match the backend proposals module enum exactly. */
 export const PROPOSAL_STATUS = {
-  DRAFT: "draft",
-  SUBMITTED: "submitted",
-  UNDER_REVIEW: "under_review",
+  PENDING: "pending",
   ACCEPTED: "accepted",
   REJECTED: "rejected",
   WITHDRAWN: "withdrawn",
 };
 
 export const PROPOSAL_STATUS_META = {
-  [PROPOSAL_STATUS.DRAFT]: { label: "Draft", tone: "neutral", hint: "Not sent to the client yet" },
-  [PROPOSAL_STATUS.SUBMITTED]: { label: "Submitted", tone: "info", hint: "Delivered to the client" },
-  [PROPOSAL_STATUS.UNDER_REVIEW]: { label: "Under review", tone: "warning", hint: "The client is reading it" },
+  [PROPOSAL_STATUS.PENDING]: { label: "Pending", tone: "warning", hint: "Waiting for the client to decide" },
   [PROPOSAL_STATUS.ACCEPTED]: { label: "Accepted", tone: "success", hint: "A contract has been created" },
   [PROPOSAL_STATUS.REJECTED]: { label: "Not selected", tone: "danger", hint: "The client chose someone else" },
   [PROPOSAL_STATUS.WITHDRAWN]: { label: "Withdrawn", tone: "neutral", hint: "You pulled this proposal" },

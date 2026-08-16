@@ -33,6 +33,28 @@
   --success-bg: #052e1a;
   --info: #60a5fa;
   --purple: #7C3AED;
+
+  /* ---- shadcn/ui tokens mapped to the NexusWork brand ---- */
+  --background: 192 100% 5%;
+  --foreground: 180 40% 88%;
+  --card: 198 100% 8%;
+  --card-foreground: 180 40% 88%;
+  --popover: 198 100% 6%;
+  --popover-foreground: 180 40% 88%;
+  --primary: 174 100% 39%;
+  --primary-foreground: 192 100% 5%;
+  --secondary: 198 100% 10%;
+  --secondary-foreground: 180 40% 85%;
+  --muted: 198 100% 10%;
+  --muted-foreground: 180 30% 55%;
+  --accent: 174 100% 39%;
+  --accent-foreground: 192 100% 5%;
+  --destructive: 0 90% 71%;
+  --destructive-foreground: 0 90% 10%;
+  --border: 198 67% 17%;
+  --input: 198 67% 17%;
+  --ring: 174 100% 45%;
+  --radius: 0.625rem;
 }
 
 body {

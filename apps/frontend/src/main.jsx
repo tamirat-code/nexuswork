@@ -7,6 +7,7 @@ import { AuthProvider } from "./app/providers/AuthProvider.jsx";
 import { QueryProvider } from "./app/providers/QueryProvider.jsx";
 import { SocketProvider } from "./app/providers/SocketProvider.jsx";
 import { ToastProvider } from "./components/notifications/ToastProvider.jsx";
+import { Toaster } from "./components/ui/shadcn/sonner.jsx";
 import "./styles/tailwind.css";
 import "./styles/globals.css";
 
@@ -19,6 +20,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <AuthProvider>
               <SocketProvider>
                 <App />
+                <Toaster position="bottom-right" richColors />
               </SocketProvider>
             </AuthProvider>
           </ToastProvider>
