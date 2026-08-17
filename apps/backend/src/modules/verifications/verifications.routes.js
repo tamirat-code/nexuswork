@@ -10,7 +10,7 @@ const router = Router();
 
 router.post("/", requireAuth, validateBody(submitVerificationSchema), requestVerification);
 router.get("/mine", requireAuth, getMine);
-router.get("/", requireAuth, requireRole(ROLES.ADMIN), getAll);
+router.get("/", requireAuth, requireRole(ROLES.ADMIN, ROLES.UNIVERSITY_STAFF), getAll);
 router.patch("/:id/review", requireAuth, validateBody(reviewVerificationSchema), review);
 
 router.post(

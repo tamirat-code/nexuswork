@@ -1,11 +1,59 @@
 import ClientProfile from "./clients.model.js";
 import User from "../users/users.model.js";
+import Project from "../projects/projects.model.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
 export async function getOrCreateProfile(userId) {
   let profile = await ClientProfile.findOne({ user_id: userId });
   if (!profile) profile = await ClientProfile.create({ user_id: userId });
   return profile;
+}
+
+export async function listClientDirectory({ search = "", limit = 24, skip = 0 } = {}) {
+  const userQuery = { role: "client", status: "active" };
+  if (search) {
+    userQuery.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const users = await User.find(userQuery)
+    .select("name email avatarUrl")
+    .sort({ createdAt: -1 })
+    .skip(Number(skip))
+    .limit(Number(limit))
+    .lean();
+
+  const userIds = users.map((u) => u._id);
+  const [profiles, projectCounts] = await Promise.all([
+    ClientProfile.find({ user_id: { $in: userIds } })
+      .select("user_id organization_name organization_type")
+      .lean(),
+    Project.aggregate([
+      { $match: { client_id: { $in: userIds } } },
+      { $group: { _id: "$client_id", count: { $sum: 1 } } },
+    ]),
+  ]);
+  const profileByUserId = new Map(profiles.map((p) => [String(p.user_id), p]));
+  const countByUserId = new Map(projectCounts.map((p) => [String(p._id), p.count]));
+
+  return users.map((u) => {
+    const profile = profileByUserId.get(String(u._id));
+    return {
+      _id: u._id,
+      name: u.name,
+      email: u.email,
+      avatar: u.avatarUrl,
+      client_profile: profile
+        ? {
+            organization_name: profile.organization_name,
+            is_organization: profile.organization_type && profile.organization_type !== "individual",
+          }
+        : undefined,
+      projects_count: countByUserId.get(String(u._id)) || 0,
+    };
+  });
 }
 
 export async function updateProfile(userId, updates) {

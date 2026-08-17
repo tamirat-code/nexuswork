@@ -7,7 +7,13 @@ export const getNotifications = asyncHandler(async (req, res) => {
     skip: req.query.skip,
     unreadOnly: req.query.unread === "true",
   });
-  res.json({ success: true, data: result });
+ 
+  const notifications = result.notifications.map((n) => ({
+    ...n,
+    read: Boolean(n.read_at),
+    message: n.body,
+  }));
+  res.json({ success: true, data: { ...result, notifications } });
 });
 
 export const readNotification = asyncHandler(async (req, res) => {

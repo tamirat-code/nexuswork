@@ -1,12 +1,27 @@
+import { useEffect, useRef, useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 
 export default function GoogleAuthButton({ onCredential, disabled }) {
+  const containerRef = useRef(null);
+  
+  const [width, setWidth] = useState(320);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => setWidth(Math.round(el.getBoundingClientRect().width) || 320);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className={disabled ? "pointer-events-none opacity-50" : ""}>
+    <div ref={containerRef} className={disabled ? "pointer-events-none opacity-50" : ""}>
       <GoogleLogin
         onSuccess={(response) => onCredential(response.credential)}
         onError={() => onCredential(null, new Error("Google sign-in failed. Please try again."))}
-        width="100%"
+        width={width}
         shape="rectangular"
         theme="outline"
         text="continue_with"

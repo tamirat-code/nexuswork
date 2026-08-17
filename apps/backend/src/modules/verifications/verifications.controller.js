@@ -29,6 +29,9 @@ export const getAll = asyncHandler(async (req, res) => {
     status: req.query.status,
     limit: req.query.limit,
     skip: req.query.skip,
+    
+    requesterId: req.user._id,
+    requesterRole: req.user.role,
   });
   res.json({ success: true, data: verifications });
 });

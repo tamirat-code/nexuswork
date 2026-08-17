@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getMyProfile,
   updateMyProfile,
+  listClients,
   requestVerification,
   getVerifications,
   reviewVerification,
@@ -16,9 +17,10 @@ import { updateClientProfileSchema, addPosterSchema, reviewClientVerificationSch
 
 const router = Router();
 
+router.get("/", listClients);
+
 router.get("/me", requireAuth, requireRole("client"), getMyProfile);
 router.patch("/me", requireAuth, requireRole("client"), validateBody(updateClientProfileSchema), updateMyProfile);
-
 
 router.post("/me/verification", requireAuth, requireRole("client"), requestVerification);
 router.get("/verifications", requireAuth, requireRole(ROLES.ADMIN), getVerifications);
@@ -29,7 +31,6 @@ router.patch(
   validateBody(reviewClientVerificationSchema),
   reviewVerification
 );
-
 
 router.post("/me/posters", requireAuth, requireRole("client"), validateBody(addPosterSchema), postAdditionalPoster);
 router.delete("/me/posters/:userId", requireAuth, requireRole("client"), deleteAdditionalPoster);

@@ -38,16 +38,17 @@ export async function getMyVerifications(userId) {
   return Verification.find({ user_id: userId }).populate("university_id", "name domain").sort({ createdAt: -1 }).lean();
 }
 
-export async function listVerifications({ status, limit = 50, skip = 0 }) {
+export async function listVerifications({ status, limit = 50, skip = 0, requesterId, requesterRole }) {
   const query = {};
   if (status && status !== "all") query.status = status;
+
+  if (requesterRole && requesterRole !== "admin") {
+   
+    const university = await University.findOne({ contact_staff: requesterId });
+    query.university_id = university ? university._id : null; // null -> no matches
+  }
+
   return Verification.find(query)
-    .populate("user_id", "name email")
-    .populate("university_id", "name domain")
-    .sort({ createdAt: -1 })
-    .skip(Number(skip))
-    .limit(Number(limit))
-    .lean();
 }
 
 export async function reviewVerification({ verificationId, reviewerId, reviewerRole, decision, rejectionReason }) {

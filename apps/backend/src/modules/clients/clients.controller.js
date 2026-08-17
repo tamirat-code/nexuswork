@@ -3,12 +3,21 @@ import { requireFields } from "../../shared/validators/validate.js";
 import {
   getOrCreateProfile,
   updateProfile,
+  listClientDirectory,
   submitClientVerification,
   listClientVerifications,
   reviewClientVerification,
   addPoster,
   removePoster,
 } from "./clients.service.js";
+export const listClients = asyncHandler(async (req, res) => {
+  const clients = await listClientDirectory({
+    search: req.query.search,
+    limit: req.query.limit,
+    skip: req.query.skip,
+  });
+  res.json({ success: true, data: clients });
+});
 
 export const getMyProfile = asyncHandler(async (req, res) => {
   const profile = await getOrCreateProfile(req.user._id);

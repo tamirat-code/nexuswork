@@ -13,8 +13,11 @@ export default function NotificationsPage() {
   const { token } = useAuth();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["notifications"], queryFn: () => listMyNotifications(token), enabled: !!token });
-  const items = data?.data ?? [];
-
+ const items = Array.isArray(data?.data)
+  ? data.data
+  : Array.isArray(data?.data?.notifications)
+    ? data.data.notifications
+    : [];
   const markOne = useMutation({
     mutationFn: (id) => markNotificationRead(id, token),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),

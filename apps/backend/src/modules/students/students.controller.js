@@ -1,6 +1,15 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
-import { getProfileByUserId, updateProfile } from "./students.service.js";
+import { getProfileByUserId, updateProfile, listStudentDirectory } from "./students.service.js";
 
+export const listStudents = asyncHandler(async (req, res) => {
+  const students = await listStudentDirectory({
+    search: req.query.search,
+    department: req.query.department,
+    limit: req.query.limit,
+    skip: req.query.skip,
+  });
+  res.json({ success: true, data: students });
+});
 export const getMyProfile = asyncHandler(async (req, res) => {
   const profile = await getProfileByUserId(req.user._id);
   res.json({ success: true, data: profile });

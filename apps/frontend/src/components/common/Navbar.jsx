@@ -40,14 +40,9 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+                <div className="hidden items-center gap-2 md:flex">
           {user ? (
             <>
-              <Link to="/dashboard">
-                <Button variant="secondary" size="sm">
-                  Dashboard
-                </Button>
-              </Link>
               <NotificationBell />
               <UserMenu />
             </>
