@@ -43,11 +43,11 @@ export default function WalletsPage() {
             <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
               <div>
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300"><Wallet className="h-4 w-4 text-brass" /> Available balance</p>
-                {wLoading ? <Skeleton className="mt-2 h-10 w-40" /> : <p className="mt-1 font-mono text-4xl font-semibold text-brass">{formatCurrency(wallet?.available_balance ?? 0)}</p>}
+                {wLoading ? <Skeleton className="mt-2 h-10 w-40" /> : <p className="mt-1 font-mono text-4xl font-semibold text-brass">{formatCurrency(wallet?.available ?? 0)}</p>}
               </div>
               <div className="text-right">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">Pending</p>
-                <p className="mt-1 font-mono text-lg text-slate-300">{formatCurrency(wallet?.pending_balance ?? 0)}</p>
+                <p className="mt-1 font-mono text-lg text-slate-300">{formatCurrency(wallet?.pending ?? 0)}</p>
               </div>
               <Dialog>
                 <DialogTrigger asChild><Button>Withdraw</Button></DialogTrigger>

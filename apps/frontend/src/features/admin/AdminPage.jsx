@@ -1,22 +1,101 @@
-import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck, Users, Flag, Briefcase } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus } from "lucide-react";
 import { listAdminStats, listAdminUsers, listAdminDisputes } from "../../services/api/admin.api.js";
+import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
+import { Button } from "../../components/ui/shadcn/button.jsx";
+import { Input } from "../../components/ui/shadcn/input.jsx";
+import { Label } from "../../components/ui/shadcn/label.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/shadcn/dialog.jsx";
+
+function CreateUniversityDialog({ token }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [domain, setDomain] = useState("");
+
+  const create = useMutation({
+    mutationFn: () => createUniversity({ name: name.trim(), domain: domain.trim() }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["universities"] });
+      toast.success("University created");
+      setName("");
+      setDomain("");
+      setOpen(false);
+    },
+    onError: (err) => toast.error(err.message || "Could not create university"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="h-4 w-4" /> Add university
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add a university</DialogTitle>
+          <DialogDescription>
+            Students with a matching email domain can request identity verification against this institution.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="uni-name">Name</Label>
+            <Input id="uni-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Addis Ababa University" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="uni-domain">Email domain</Label>
+            <Input id="uni-domain" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="aau.edu.et" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            loading={create.isPending}
+            disabled={!name.trim() || !domain.trim()}
+            onClick={() => create.mutate()}
+          >
+            Create university
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function AdminPage() {
   const { token } = useAuth();
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
   const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => listAdminUsers("?limit=10", token), enabled: !!token });
   const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes("?limit=10", token), enabled: !!token });
+  const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
 
   const stats = statsData?.data ?? {};
-  const users = usersData?.data ?? [];
-  const disputes = disputesData?.data ?? [];
+const users = Array.isArray(usersData?.data)
+  ? usersData.data
+  : usersData?.data?.users ?? [];
+
+const disputes = Array.isArray(disputesData?.data)
+  ? disputesData.data
+  : disputesData?.data?.disputes ?? [];
+
+const universities = universitiesData?.data ?? [];
 
   const statCards = [
     { label: "Active projects", value: stats.active_projects ?? 0, icon: Briefcase },
@@ -79,6 +158,30 @@ export default function AdminPage() {
                     <TableCell className="text-sm text-slate-300">{d.milestone_id?.title || "Milestone"}</TableCell>
                     <TableCell><StatusBadge kind="dispute" status={d.status} showDot /></TableCell>
                     <TableCell className="text-right font-mono text-brass">${(d.amount ?? 0).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg">Universities</CardTitle>
+            <CreateUniversityDialog token={token} />
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Domain</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {universitiesLoading && <TableRow><TableCell colSpan={2}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
+                {!universitiesLoading && universities.length === 0 && (
+                  <TableRow><TableCell colSpan={2} className="py-8 text-center text-slate-300">No universities yet — add one to enable student verification.</TableCell></TableRow>
+                )}
+                {universities.map((u) => (
+                  <TableRow key={u._id}>
+                    <TableCell className="flex items-center gap-2 font-semibold text-slate"><GraduationCap className="h-4 w-4 text-brass" /> {u.name}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-300">{u.domain}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

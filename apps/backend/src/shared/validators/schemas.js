@@ -104,6 +104,10 @@ export const reviewClientVerificationSchema = z.object({
   rejection_reason: z.string().trim().max(500).optional(),
 });
 
+export const requestWithdrawalSchema = z.object({
+  amount: positiveNumber,
+});
+
 // --- Universities ---
 export const createUniversitySchema = z.object({
   name: z.string().trim().min(1, "University name is required").max(200),
@@ -201,7 +205,6 @@ export const createReviewSchema = z.object({
 
 // --- Disputes ---
 export const openDisputeSchema = z.object({
-  milestone_id: objectId,
   reason: z.string().trim().min(10, "Reason must be at least 10 characters").max(2000),
 });
 

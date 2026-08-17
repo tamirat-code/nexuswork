@@ -152,33 +152,17 @@ export default function RegisterPage() {
           "You must accept the Terms of Service and Privacy Policy",
       }));
 
+      show(
+        "You must accept the Terms of Service and Privacy Policy",
+        { variant: "error" }
+      );
+
       return;
     }
 
-    // Student validation for Google registration
-    if (role === "student") {
-      const studentErrors = {};
-
-      if (!university) {
-        studentErrors.university =
-          "Please select your university";
-      }
-
-      if (!department) {
-        studentErrors.department =
-          "Please select your department";
-      }
-
-      if (Object.keys(studentErrors).length > 0) {
-        setErrors((prev) => ({
-          ...prev,
-          ...studentErrors,
-        }));
-
-        return;
-      }
-    }
-
+    // University/department are collected into the student profile
+    // *after* the account is created — never block the Google popup
+    // on them or the button appears dead.
     setGoogleLoading(true);
 
     try {

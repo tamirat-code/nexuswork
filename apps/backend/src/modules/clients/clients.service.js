@@ -57,7 +57,6 @@ export async function reviewClientVerification({ clientUserId, reviewerId, decis
   return profile;
 }
 
-
 export async function addPoster(ownerUserId, posterUserId) {
   if (String(ownerUserId) === String(posterUserId)) {
     throw new ValidationError("You are already the owner of this client account");

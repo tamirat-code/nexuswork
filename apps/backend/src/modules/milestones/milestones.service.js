@@ -1,9 +1,11 @@
 import Milestone from "./milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Wallet from "../wallets/wallets.model.js";
+import Payment from "../payments/payments.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { addSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
+import { logAction } from "../audit-logs/audit-logs.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";

@@ -6,6 +6,7 @@ import UserMenu from "../common/UserMenu.jsx";
 import NavIcon from "../common/NavIcon.jsx";
 import Button from "../ui/Button.jsx";
 import Drawer from "../ui/Drawer.jsx";
+import CommandPalette from "../common/CommandPalette.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 
 
@@ -54,6 +55,8 @@ export default function AppLayout({ children }) {
       <Drawer open={navOpen} onClose={() => setNavOpen(false)} title="Navigate" side="left">
         <Sidebar role={user?.role} onNavigate={() => setNavOpen(false)} className="px-0 py-0" />
       </Drawer>
+
+      <CommandPalette />
     </div>
   );
 }

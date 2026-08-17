@@ -21,7 +21,7 @@ function VerificationQueue({ token }) {
     enabled: !!token,
   });
   const review = useMutation({
-    mutationFn: ({ id, status }) => reviewVerification(id, { status }, token),
+    mutationFn: ({ id, decision }) => reviewVerification(id, { decision }, token),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["verifications"] }); toast.success("Decision saved"); },
     onError: (err) => toast.error(err.message),
   });
@@ -55,8 +55,8 @@ function VerificationQueue({ token }) {
               <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brass" /> ID: <span className="font-mono">{v.id_document_number || "—"}</span></p>
             </div>
             <div className="mt-4 flex gap-2">
-              <Button size="sm" loading={review.isPending} onClick={() => review.mutate({ id: v._id, status: "verified" })}><BadgeCheck className="h-4 w-4" /> Approve</Button>
-              <Button size="sm" variant="danger" onClick={() => review.mutate({ id: v._id, status: "rejected" })}><XCircle className="h-4 w-4" /> Reject</Button>
+              <Button size="sm" loading={review.isPending} onClick={() => review.mutate({ id: v._id, decision: "approved" })}><BadgeCheck className="h-4 w-4" /> Approve</Button>
+              <Button size="sm" variant="danger" onClick={() => review.mutate({ id: v._id, decision: "rejected" })}><XCircle className="h-4 w-4" /> Reject</Button>
             </div>
           </CardContent>
         </Card>
