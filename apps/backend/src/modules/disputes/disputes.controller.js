@@ -1,9 +1,10 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { openDispute, resolveDispute, listOpen, getDisputeEvidence } from "./disputes.service.js";
+import { openDispute, resolveDispute, listOpen, listForUser, getDisputeEvidence } from "./disputes.service.js";
 
 export const create = asyncHandler(async (req, res) => {
-  const dispute = await openDispute(req.params.milestoneId, req.user._id);
+  requireFields(req.body, ["reason"]);
+  const dispute = await openDispute(req.params.milestoneId, req.user._id, req.body.reason);
   res.status(201).json({ success: true, data: dispute });
 });
 
@@ -20,5 +21,10 @@ export const resolve = asyncHandler(async (req, res) => {
 
 export const getOpen = asyncHandler(async (req, res) => {
   const disputes = await listOpen();
+  res.json({ success: true, data: disputes });
+});
+
+export const getMine = asyncHandler(async (req, res) => {
+  const disputes = await listForUser(req.user._id);
   res.json({ success: true, data: disputes });
 });

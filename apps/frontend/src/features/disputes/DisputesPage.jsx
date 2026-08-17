@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Flag } from "lucide-react";
-import { listDisputes } from "../../services/api/disputes.api.js";
+import { listMyDisputes } from "../../services/api/disputes.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
@@ -11,7 +11,7 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 
 export default function DisputesPage() {
   const { token } = useAuth();
-  const { data, isLoading } = useQuery({ queryKey: ["disputes"], queryFn: () => listDisputes(token), enabled: !!token });
+  const { data, isLoading } = useQuery({ queryKey: ["disputes-mine"], queryFn: () => listMyDisputes(token), enabled: !!token });
   const disputes = data?.data ?? [];
 
   return (
@@ -44,7 +44,7 @@ export default function DisputesPage() {
                 <StatusBadge kind="dispute" status={d.status} showDot />
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ink-300 pt-3 text-xs text-slate-300">
-                <span className="font-mono text-brass">{formatCurrency(d.amount ?? 0)}</span>
+                <span className="font-mono text-brass">{formatCurrency(d.milestone_id?.amount ?? 0)}</span>
                 <span>Opened {formatDate(d.createdAt)}</span>
                 {d.resolved_at && <span>Resolved {formatDate(d.resolved_at)}</span>}
               </div>

@@ -1,5 +1,6 @@
 import Dispute from "./disputes.model.js";
 import Milestone from "../milestones/milestones.model.js";
+import Contract from "../contracts/contracts.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import Message from "../messaging/messaging.model.js";
 import { listForMilestone as listSubmissionsForMilestone } from "../submissions/submissions.service.js";
@@ -9,7 +10,7 @@ import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exc
 
 const VALID_OUTCOMES = ["refund_client", "release_student"];
 
-export async function openDispute(milestoneId, openedBy) {
+export async function openDispute(milestoneId, openedBy, reason) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -24,7 +25,7 @@ export async function openDispute(milestoneId, openedBy) {
   }
   milestone.status = "disputed";
   await milestone.save();
-  return Dispute.create({ milestone_id: milestoneId, opened_by: openedBy });
+  return Dispute.create({ milestone_id: milestoneId, opened_by: openedBy, reason });
 }
 
 
@@ -86,5 +87,25 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome })
 }
 
 export async function listOpen() {
-  return Dispute.find({ status: { $ne: "resolved" } }).sort({ createdAt: -1 });
+  return Dispute.find({ status: { $ne: "resolved" } })
+    .populate("milestone_id", "title amount status")
+    .sort({ createdAt: -1 });
+}
+
+// Disputes on contracts the requesting user is actually a party to — what a
+// student or client should see, as opposed to the admin-only platform-wide
+// listOpen() view.
+export async function listForUser(userId) {
+  const contractIds = await Contract.find({
+    $or: [{ client_id: userId }, { student_id: userId }],
+  }).distinct("_id");
+
+  if (!contractIds.length) return [];
+
+  const milestoneIds = await Milestone.find({ contract_id: { $in: contractIds } }).distinct("_id");
+  if (!milestoneIds.length) return [];
+
+  return Dispute.find({ milestone_id: { $in: milestoneIds } })
+    .populate("milestone_id", "title amount status")
+    .sort({ createdAt: -1 });
 }

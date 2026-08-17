@@ -20,6 +20,12 @@ describe("Disputes module", () => {
     expect(res.body.success).toBe(false);
   });
 
+  it("requires auth to list my own disputes", async () => {
+    const res = await request(app).get("/v1/disputes/mine");
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
   it("requires auth to resolve a dispute", async () => {
     const res = await request(app)
       .post("/v1/disputes/000000000000000000000003/resolve")

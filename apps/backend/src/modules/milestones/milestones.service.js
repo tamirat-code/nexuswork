@@ -114,15 +114,12 @@ export async function approveMilestone(milestoneId, requestingUserId) {
 
   // Record commission retention as a Payment of type 'commission' for auditing
   try {
-    await import("../payments/payments.model.js").then(async (mod) => {
-      const PaymentModel = mod.default;
-      await PaymentModel.create({
-        milestone_id: milestone._id,
-        amount: commissionAmount,
-        currency: paymentConfig.currency,
-        direction: "commission",
-        status: "succeeded",
-      });
+    await Payment.create({
+      milestone_id: milestone._id,
+      amount: commissionAmount,
+      currency: paymentConfig.currency,
+      direction: "commission",
+      status: "succeeded",
     });
 
     await logAction({

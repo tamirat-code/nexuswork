@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ArrowLeft, MessageSquare, Paperclip, ShieldCheck, Flag, Clock } from "lucide-react";
 import { getContract, signContract, listContractMilestones } from "../../services/api/contracts.api.js";
 import { fundMilestone, submitMilestoneWork, approveMilestone } from "../../services/api/milestones.api.js";
+import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages } from "../../services/api/messages.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -306,6 +307,15 @@ export default function ContractDetailPage() {
     onError: (err) => toast.error(err.message || "Could not approve milestone"),
   });
 
+  const disputeMutation = useMutation({
+    mutationFn: ({ milestoneId, reason }) => openDispute(milestoneId, { reason }, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["milestones", id] });
+      toast.success("Dispute opened — our team will review it.");
+    },
+    onError: (err) => toast.error(err.message || "Could not open dispute"),
+  });
+
   function handleAction(action, milestone, payload = {}) {
     switch (action) {
       case "fund":
@@ -319,7 +329,11 @@ export default function ContractDetailPage() {
         approveMutation.mutate({ milestoneId: milestone._id });
         break;
       case "dispute":
-        toast.info("Dispute flow opened — evidence panel is being compiled.");
+        if (!payload.reason || payload.reason.trim().length < 10) {
+          toast.error("Please describe the issue in at least 10 characters.");
+          break;
+        }
+        disputeMutation.mutate({ milestoneId: milestone._id, reason: payload.reason.trim() });
         break;
       default:
         break;
