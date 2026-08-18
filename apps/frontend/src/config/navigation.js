@@ -59,11 +59,12 @@ export function navForRole(role) {
     .filter((group) => group.items.length > 0);
 }
 
-/** Paths that render inside the signed-in workspace shell (sidebar + topbar). */
+
 export const WORKSPACE_PATHS = [
   "/dashboard",
   "/notifications",
   "/chat",
+  "/projects",
   "/proposals",
   "/contracts",
   "/disputes",
@@ -81,7 +82,7 @@ export const WORKSPACE_PATHS = [
   "/recommendations",
 ];
 
-/** Auth screens own the full viewport — no header, no footer. */
+
 export const STANDALONE_PATHS = [
   "/login",
   "/register",
@@ -89,4 +90,3 @@ export const STANDALONE_PATHS = [
   "/reset-password",
   "/verify-email",
 ];
-

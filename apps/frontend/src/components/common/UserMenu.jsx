@@ -27,7 +27,7 @@ export default function UserMenu({ compact = false }) {
           aria-label="Account menu"
           className="flex items-center gap-2 rounded-control p-1 pr-2 transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
         >
-          <Avatar name={user.name || user.email} src={user.avatar_url} size="sm" decorative />
+          <Avatar name={user.name || user.email} src={user.avatarUrl} size="sm" decorative />
           {!compact && (
             <span className="hidden max-w-[9rem] truncate text-sm text-slate sm:inline">
               {user.name || user.email}

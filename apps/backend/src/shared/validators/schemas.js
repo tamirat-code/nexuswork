@@ -37,6 +37,9 @@ export const loginSchema = z.object({
 
 export const googleAuthSchema = z.object({
   credential: z.string().min(1, "Google credential is required"),
+  role: z.string().optional(),
+  termsAccepted: z.boolean().optional(),
+  organizationName: z.string().optional(),
 });
 
 export const changePasswordSchema = z.object({

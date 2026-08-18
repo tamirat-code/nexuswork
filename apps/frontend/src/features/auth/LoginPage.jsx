@@ -63,10 +63,15 @@ export default function LoginPage() {
       return;
     }
     setGoogleLoading(true);
-    try {
-      await loginWithGoogle(pendingGoogleCredential, { role: pendingRole, termsAccepted: pendingTerms });
-      show("Account created with Google.");
-      navigate("/dashboard");
+try {
+  const result = await loginWithGoogle(pendingGoogleCredential, { role: pendingRole, termsAccepted: pendingTerms });
+  if (result.needsRole) {
+    
+    show("Something went wrong creating your account. Please try again.", { variant: "error" });
+    return;
+  }
+  show("Account created with Google.");
+  navigate("/dashboard");
     } catch (err) {
       show(err.message, { variant: "error" });
     } finally {

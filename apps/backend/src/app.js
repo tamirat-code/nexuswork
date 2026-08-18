@@ -14,9 +14,9 @@ import { WebhooksRoutes } from "./modules/webhooks/index.js";
 
 const app = express();
 
-app.use(helmet());
-app.use(cors(corsConfig));
 
+app.use(helmet({ crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" } }));
+app.use(cors(corsConfig));
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 
