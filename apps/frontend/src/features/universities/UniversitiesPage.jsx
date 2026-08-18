@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BadgeCheck, GraduationCap, ShieldCheck, XCircle } from "lucide-react";
-import { getVerifications, reviewVerification } from "../../services/api/verifications.api.js";
-import { listUniversities } from "../../services/api/universities.api.js";
+import { BadgeCheck, GraduationCap, ShieldCheck, XCircle, FileText } from "lucide-react";
+import { getVerifications, getVerificationStats, reviewVerification } from "../../services/api/verifications.api.js";
+import { listUniversities, getMyUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
@@ -12,17 +12,69 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/avatar.jsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/shadcn/tabs.jsx";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../../components/ui/shadcn/dialog.jsx";
+import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
+
+function RejectDialog({ open, onOpenChange, onConfirm, loading }) {
+  const [reason, setReason] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reject verification</DialogTitle>
+          <DialogDescription>
+            Let the student know why, so they can fix it and resubmit.
+          </DialogDescription>
+        </DialogHeader>
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. Uploaded document doesn't match the name on file"
+          rows={3}
+        />
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            loading={loading}
+            onClick={() => {
+              onConfirm(reason.trim());
+              setReason("");
+            }}
+          >
+            Confirm rejection
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function VerificationQueue({ token }) {
   const qc = useQueryClient();
+  const [rejectTarget, setRejectTarget] = useState(null);
   const { data, isLoading, error } = useQuery({
     queryKey: ["verifications"],
     queryFn: () => getVerifications("?status=pending", token),
     enabled: !!token,
   });
   const review = useMutation({
-    mutationFn: ({ id, decision }) => reviewVerification(id, { decision }, token),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["verifications"] }); toast.success("Decision saved"); },
+    mutationFn: ({ id, decision, rejection_reason }) =>
+      reviewVerification(id, { decision, rejection_reason }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["verifications"] });
+      toast.success("Decision saved");
+      setRejectTarget(null);
+    },
     onError: (err) => toast.error(err.message),
   });
   const items = data?.data ?? [];
@@ -42,25 +94,55 @@ function VerificationQueue({ token }) {
           <CardContent className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
-                <Avatar><AvatarImage src={v.student_id?.avatar} alt="" /><AvatarFallback>{(v.student_id?.name || "S").slice(0, 2)}</AvatarFallback></Avatar>
+                <Avatar><AvatarImage src={v.user_id?.avatarUrl} alt="" /><AvatarFallback>{(v.user_id?.name || "S").slice(0, 2)}</AvatarFallback></Avatar>
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-slate">{v.student_id?.name || "Student"}</p>
-                  <p className="truncate text-xs text-slate-300">{v.student_id?.email}</p>
-                  <Badge variant="secondary" className="mt-1"><GraduationCap className="h-3 w-3" /> {v.student_id?.department || "Student"}</Badge>
+                  <p className="truncate font-semibold text-slate">{v.user_id?.name || "Unknown student"}</p>
+                  <p className="truncate text-xs text-slate-300">{v.user_id?.email || "—"}</p>
+                  <Badge variant="secondary" className="mt-1"><GraduationCap className="h-3 w-3" /> {v.university_id?.name || "This institution"}</Badge>
                 </div>
               </div>
               <StatusBadge kind="verification" status={v.status} showDot />
             </div>
-            <div className="mt-4 rounded-control border border-ink-300 bg-ink-700 p-3 text-sm text-slate-300">
-              <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brass" /> ID: <span className="font-mono">{v.id_document_number || "—"}</span></p>
+            <div className="mt-4 space-y-2 rounded-control border border-ink-300 bg-ink-700 p-3 text-sm text-slate-300">
+              <p className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-brass" /> Claimed email domain:{" "}
+                <span className="font-mono">{v.email_domain || "—"}</span>
+                {v.university_id?.domain && v.email_domain?.toLowerCase() === v.university_id.domain.toLowerCase() && (
+                  <Badge variant="secondary" className="ml-1">Matches institution domain</Badge>
+                )}
+              </p>
+              <p className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-brass" />
+                {v.document_file_id?.url ? (
+                  <a
+                    href={v.document_file_id.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-brass underline-offset-2 hover:underline"
+                  >
+                    View uploaded document ({v.document_file_id.original_name || "file"})
+                  </a>
+                ) : (
+                  <span>No document submitted — verifying by email domain only</span>
+                )}
+              </p>
             </div>
             <div className="mt-4 flex gap-2">
               <Button size="sm" loading={review.isPending} onClick={() => review.mutate({ id: v._id, decision: "approved" })}><BadgeCheck className="h-4 w-4" /> Approve</Button>
-              <Button size="sm" variant="danger" onClick={() => review.mutate({ id: v._id, decision: "rejected" })}><XCircle className="h-4 w-4" /> Reject</Button>
+              <Button size="sm" variant="danger" onClick={() => setRejectTarget(v._id)}><XCircle className="h-4 w-4" /> Reject</Button>
             </div>
           </CardContent>
         </Card>
       ))}
+
+      <RejectDialog
+        open={!!rejectTarget}
+        onOpenChange={(open) => !open && setRejectTarget(null)}
+        loading={review.isPending}
+        onConfirm={(reason) =>
+          review.mutate({ id: rejectTarget, decision: "rejected", rejection_reason: reason || undefined })
+        }
+      />
     </div>
   );
 }
@@ -68,8 +150,26 @@ function VerificationQueue({ token }) {
 export default function UniversitiesPage() {
   const { token, user } = useAuth();
   const isStaff = user?.role === "university_staff";
-  const { data } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities("?limit=5") });
-  const unis = data?.data ?? [];
+
+  const { data: publicUnis } = useQuery({
+    queryKey: ["universities"],
+    queryFn: () => listUniversities("?limit=5"),
+    enabled: !isStaff,
+  });
+  const { data: myUni } = useQuery({
+    queryKey: ["my-university"],
+    queryFn: () => getMyUniversity(token),
+    enabled: isStaff && !!token,
+  });
+  const { data: verificationStats } = useQuery({
+    queryKey: ["verification-stats"],
+    queryFn: () => getVerificationStats(token),
+    enabled: isStaff && !!token,
+  });
+
+  const unis = publicUnis?.data ?? [];
+  const university = myUni?.data;
+  const stats = verificationStats?.data ?? { pending: 0, approved: 0, rejected: 0 };
 
   return (
     <div className="mx-auto max-w-6xl animate-fade-up">
@@ -102,14 +202,29 @@ export default function UniversitiesPage() {
           <Card>
             <CardHeader><CardTitle className="text-lg">Institution</CardTitle></CardHeader>
             <CardContent>
-              {unis.length === 0 ? <p className="text-sm text-slate-300">No universities registered yet.</p> : (
+              {isStaff ? (
+                university ? (
+                  <p className="flex items-center gap-2 text-sm text-slate-300">
+                    <GraduationCap className="h-4 w-4 text-brass" /> {university.name}
+                    <span className="text-slate-300/70">({university.domain})</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-300">
+                    You aren't listed as contact staff for a university yet. Ask an admin to add you.
+                  </p>
+                )
+              ) : unis.length === 0 ? (
+                <p className="text-sm text-slate-300">No universities registered yet.</p>
+              ) : (
                 <ul className="space-y-2">{unis.map((u) => <li key={u._id} className="flex items-center gap-2 text-sm text-slate-300"><GraduationCap className="h-4 w-4 text-brass" /> {u.name}</li>)}</ul>
               )}
-              <div className="mt-5 grid grid-cols-3 gap-3">
-                <div className="rounded-control bg-ink-700 p-3 text-center"><p className="font-mono text-lg text-brass">23</p><p className="text-xs text-slate-300">Verified</p></div>
-                <div className="rounded-control bg-ink-700 p-3 text-center"><p className="font-mono text-lg text-brass">4</p><p className="text-xs text-slate-300">Certified</p></div>
-                <div className="rounded-control bg-ink-700 p-3 text-center"><p className="font-mono text-lg text-brass">98%</p><p className="text-xs text-slate-300">On-time</p></div>
-              </div>
+              {isStaff && (
+                <div className="mt-5 grid grid-cols-3 gap-3">
+                  <div className="rounded-control bg-ink-700 p-3 text-center"><p className="font-mono text-lg text-brass">{stats.approved}</p><p className="text-xs text-slate-300">Verified</p></div>
+                  <div className="rounded-control bg-ink-700 p-3 text-center"><p className="font-mono text-lg text-brass">{stats.pending}</p><p className="text-xs text-slate-300">Pending</p></div>
+                  <div className="rounded-control bg-ink-700 p-3 text-center"><p className="font-mono text-lg text-brass">{stats.rejected}</p><p className="text-xs text-slate-300">Rejected</p></div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </aside>

@@ -4,6 +4,7 @@ import {
   submitVerification,
   getMyVerifications,
   listVerifications,
+  getVerificationStats,
   reviewVerification,
   certifyStudentSkill,
 } from "./verifications.service.js";
@@ -29,11 +30,19 @@ export const getAll = asyncHandler(async (req, res) => {
     status: req.query.status,
     limit: req.query.limit,
     skip: req.query.skip,
-    
+
     requesterId: req.user._id,
     requesterRole: req.user.role,
   });
   res.json({ success: true, data: verifications });
+});
+
+export const stats = asyncHandler(async (req, res) => {
+  const result = await getVerificationStats({
+    requesterId: req.user._id,
+    requesterRole: req.user.role,
+  });
+  res.json({ success: true, data: result });
 });
 
 export const review = asyncHandler(async (req, res) => {

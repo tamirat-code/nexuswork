@@ -30,7 +30,27 @@ const proposalSchema = z.object({
   cover_note: z.string().min(40, "Explain your experience and plan (min 40 characters)").max(2000),
 });
 
-function ProposalSubmitDialog({ projectId, token }) {
+function VerificationRequiredNotice() {
+  return (
+    <div className="rounded-control border border-brass/20 bg-brass/5 p-4">
+      <p className="flex items-start gap-2 text-sm font-semibold text-slate">
+        <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
+        Verify your university first
+      </p>
+      <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
+        Clients only see proposals from verified students. Submit your university details from your profile — most
+        requests are reviewed within a couple of days.
+      </p>
+      <Link to="/profile" className="mt-3 block">
+        <Button variant="outline" className="w-full" size="sm">
+          Get verified
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function ProposalSubmitDialog({ projectId, token, verified }) {
   const queryClient = useQueryClient();
   const form = useForm({
     resolver: zodResolver(proposalSchema),
@@ -45,6 +65,8 @@ function ProposalSubmitDialog({ projectId, token }) {
     },
     onError: (err) => toast.error(err.message || "Could not submit proposal"),
   });
+
+  if (!verified) return <VerificationRequiredNotice />;
 
   return (
     <Dialog>
@@ -240,7 +262,7 @@ export default function ProjectDetailPage() {
               <p className="text-xs text-slate-300">Fixed price</p>
 
               {isStudent ? (
-                <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} /></div>
+                <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} verified={Boolean(user?.universityVerified)} /></div>
               ) : !isClientOwner && !user ? (
                 <>
                   <p className="mt-6 text-sm leading-relaxed text-slate-300">Sign in with your university email to submit a proposal.</p>

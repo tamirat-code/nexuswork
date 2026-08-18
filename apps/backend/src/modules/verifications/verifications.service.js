@@ -1,6 +1,7 @@
 import Verification from "./verifications.model.js";
 import University from "../universities/universities.model.js";
 import StudentProfile from "../students/students.model.js";
+import User from "../users/users.model.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
 export async function submitVerification({ userId, universityId, emailDomain, documentFileId }) {
@@ -38,17 +39,39 @@ export async function getMyVerifications(userId) {
   return Verification.find({ user_id: userId }).populate("university_id", "name domain").sort({ createdAt: -1 }).lean();
 }
 
+async function scopedUniversityFilter(requesterId, requesterRole) {
+  if (!requesterRole || requesterRole === "admin") return {};
+
+  const university = await University.findOne({ contact_staff: requesterId });
+  return { university_id: university ? university._id : null }; // null -> no matches
+}
+
 export async function listVerifications({ status, limit = 50, skip = 0, requesterId, requesterRole }) {
-  const query = {};
+  const query = await scopedUniversityFilter(requesterId, requesterRole);
   if (status && status !== "all") query.status = status;
 
-  if (requesterRole && requesterRole !== "admin") {
-   
-    const university = await University.findOne({ contact_staff: requesterId });
-    query.university_id = university ? university._id : null; // null -> no matches
-  }
-
   return Verification.find(query)
+    .populate("user_id", "name email avatarUrl")
+    .populate("university_id", "name domain")
+    .populate("document_file_id", "url original_name mimetype")
+    .sort({ createdAt: -1 })
+    .skip(Number(skip))
+    .limit(Number(limit))
+    .lean();
+}
+
+export async function getVerificationStats({ requesterId, requesterRole }) {
+  const scope = await scopedUniversityFilter(requesterId, requesterRole);
+  const counts = await Verification.aggregate([
+    { $match: scope },
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+  const byStatus = Object.fromEntries(counts.map((c) => [c._id, c.count]));
+  return {
+    pending: byStatus.pending || 0,
+    approved: byStatus.approved || 0,
+    rejected: byStatus.rejected || 0,
+  };
 }
 
 export async function reviewVerification({ verificationId, reviewerId, reviewerRole, decision, rejectionReason }) {
@@ -76,6 +99,14 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
       { user_id: verification.user_id },
       { verification_status: "verified" },
       { new: true }
+    );
+    
+    await User.findByIdAndUpdate(verification.user_id, { universityVerified: true });
+  } else {
+
+    await StudentProfile.findOneAndUpdate(
+      { user_id: verification.user_id },
+      { verification_status: "rejected" }
     );
   }
 

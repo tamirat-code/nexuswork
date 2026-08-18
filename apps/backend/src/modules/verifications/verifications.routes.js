@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { requireRole } from "../../middleware/role.middleware.js";
 import { ROLES } from "../../shared/enums/roles.enum.js";
-import { requestVerification, getMine, getAll, review, certifySkill } from "./verifications.controller.js";
+import { requestVerification, getMine, getAll, stats, review, certifySkill } from "./verifications.controller.js";
 import { validateBody } from "../../shared/validators/ZodValidator.js";
 import { submitVerificationSchema, reviewVerificationSchema, certifySkillSchema } from "../../shared/validators/schemas.js";
 
@@ -10,6 +10,7 @@ const router = Router();
 
 router.post("/", requireAuth, validateBody(submitVerificationSchema), requestVerification);
 router.get("/mine", requireAuth, getMine);
+router.get("/stats", requireAuth, requireRole(ROLES.ADMIN, ROLES.UNIVERSITY_STAFF), stats);
 router.get("/", requireAuth, requireRole(ROLES.ADMIN, ROLES.UNIVERSITY_STAFF), getAll);
 router.patch("/:id/review", requireAuth, validateBody(reviewVerificationSchema), review);
 

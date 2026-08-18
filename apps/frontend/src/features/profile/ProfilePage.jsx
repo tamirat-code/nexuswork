@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Badge,
@@ -11,12 +11,15 @@ import {
   Input,
   PageHeader,
   ProgressBar,
+  Select,
   Textarea,
 } from "../../components/ui/index.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
+import { listUniversities } from "../../services/api/universities.api.js";
+import { getMyVerifications, requestVerification } from "../../services/api/verifications.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
 import { PROFILE_LIMITS, profileCompleteness, validateProfile } from "./profile.utils.js";
 
@@ -234,6 +237,8 @@ export default function ProfilePage() {
             </div>
           </Card>
 
+          {user?.role === "student" && <UniversityVerificationCard user={user} token={token} />}
+
           <Card as="section">
             <CardHeader title="About you" description="Context that helps clients judge fit quickly." />
             <CardDivider className="my-5" />
@@ -355,6 +360,110 @@ export default function ProfilePage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+function UniversityVerificationCard({ user, token }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [universityId, setUniversityId] = useState("");
+
+  const { data: universitiesRes, isLoading: universitiesLoading } = useQuery({
+    queryKey: ["universities-all"],
+    queryFn: () => listUniversities("?limit=200"),
+  });
+  const { data: verificationsRes, isLoading: verificationsLoading } = useQuery({
+    queryKey: ["my-verifications"],
+    queryFn: () => getMyVerifications(token),
+    enabled: !!token,
+  });
+
+  const universities = universitiesRes?.data ?? [];
+  const verifications = verificationsRes?.data ?? [];
+  // Backend returns these newest-first.
+  const latest = verifications[0];
+
+  const submit = useMutation({
+    mutationFn: () => requestVerification({ university_id: universityId }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-verifications"] });
+      toast.show("Verification request submitted. Your university will review it shortly.");
+      setUniversityId("");
+    },
+    onError: (err) => {
+      toast.show(err?.message || "We couldn't submit that request. Please try again.", { variant: "error" });
+    },
+  });
+
+  const loading = universitiesLoading || verificationsLoading;
+
+  return (
+    <Card as="section">
+      <CardHeader
+        title="University verification"
+        description="Verified students get a badge on their profile and proposals, and are required to be verified before submitting a proposal."
+      />
+      <CardDivider className="my-5" />
+
+      {loading ? (
+        <p className="text-sm text-slate-300">Loading verification status…</p>
+      ) : user?.universityVerified ? (
+        <Alert variant="success" title="You're verified">
+          {latest?.status === "approved" && latest?.university_id?.name
+            ? `Confirmed by ${latest.university_id.name}. Your proposals now show a verified badge.`
+            : "Your university has confirmed your enrollment. Your proposals now show a verified badge."}
+        </Alert>
+      ) : latest?.status === "pending" ? (
+        <Alert variant="warning" title="Verification pending">
+          Your request to {latest.university_id?.name || "your university"} was submitted on{" "}
+          {new Date(latest.createdAt).toLocaleDateString()} and is awaiting review. You'll be notified once it's
+          decided — you can't submit proposals until it's approved.
+        </Alert>
+      ) : (
+        <>
+          {latest?.status === "rejected" && (
+            <Alert variant="danger" title="Your last request was declined" className="mb-4">
+              {latest.university_id?.name ? `${latest.university_id.name}: ` : ""}
+              {latest.rejection_reason || "No reason was given."} You can fix the details and submit again below.
+            </Alert>
+          )}
+
+          <p className="text-sm leading-relaxed text-slate-300">
+            Submitting proposals requires an approved university verification. Select your school below — we'll
+            check that your account email matches its domain, then a staff member confirms your enrollment.
+          </p>
+
+          {/* Not a <form>: this card is nested inside the page's main profile
+              <form>, and HTML doesn't allow forms inside forms. */}
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Select
+              id="verification-university"
+              label="Your university"
+              placeholder="Select your university"
+              value={universityId}
+              onChange={(event) => setUniversityId(event.target.value)}
+              options={universities.map((u) => ({ value: u._id, label: `${u.name} (${u.domain})` }))}
+              wrapperClassName="flex-1"
+              hint={
+                universities.length === 0
+                  ? "No universities are registered yet — check back soon."
+                  : "Not listed? Ask your university to register on the admin side."
+              }
+            />
+            <Button
+              type="button"
+              onClick={() => {
+                if (universityId) submit.mutate();
+              }}
+              loading={submit.isPending}
+              disabled={!universityId || universities.length === 0}
+            >
+              Submit for review
+            </Button>
+          </div>
+        </>
+      )}
+    </Card>
   );
 }
 
