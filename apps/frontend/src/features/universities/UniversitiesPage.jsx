@@ -104,11 +104,26 @@ function VerificationQueue({ token }) {
               <StatusBadge kind="verification" status={v.status} showDot />
             </div>
             <div className="mt-4 space-y-2 rounded-control border border-ink-300 bg-ink-700 p-3 text-sm text-slate-300">
-              <p className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-brass" /> Claimed email domain:{" "}
+              <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                <p>
+                  <span className="text-slate-300/70">Declared name:</span>{" "}
+                  <span className="font-medium text-slate">{v.full_name || "—"}</span>
+                </p>
+                <p>
+                  <span className="text-slate-300/70">Student ID number:</span>{" "}
+                  <span className="font-mono">{v.student_id_number || "—"}</span>
+                </p>
+                <p className="sm:col-span-2">
+                  <span className="text-slate-300/70">Program:</span> {v.program || "—"}
+                </p>
+              </div>
+              <p className="flex flex-wrap items-center gap-2 pt-1">
+                <ShieldCheck className="h-4 w-4 text-brass" /> Account email domain:{" "}
                 <span className="font-mono">{v.email_domain || "—"}</span>
-                {v.university_id?.domain && v.email_domain?.toLowerCase() === v.university_id.domain.toLowerCase() && (
-                  <Badge variant="secondary" className="ml-1">Matches institution domain</Badge>
+                {v.email_domain_matched ? (
+                  <Badge variant="secondary">Matches institution domain</Badge>
+                ) : (
+                  <Badge variant="warning">Doesn't match — check the document instead</Badge>
                 )}
               </p>
               <p className="flex items-center gap-2">
@@ -123,12 +138,20 @@ function VerificationQueue({ token }) {
                     View uploaded document ({v.document_file_id.original_name || "file"})
                   </a>
                 ) : (
-                  <span>No document submitted — verifying by email domain only</span>
+                  <span className="font-medium text-brick">No document on file — do not approve without evidence</span>
                 )}
               </p>
             </div>
             <div className="mt-4 flex gap-2">
-              <Button size="sm" loading={review.isPending} onClick={() => review.mutate({ id: v._id, decision: "approved" })}><BadgeCheck className="h-4 w-4" /> Approve</Button>
+              <Button
+                size="sm"
+                loading={review.isPending}
+                disabled={!v.document_file_id}
+                title={!v.document_file_id ? "No document on file — reject or ask the student to resubmit with evidence" : undefined}
+                onClick={() => review.mutate({ id: v._id, decision: "approved" })}
+              >
+                <BadgeCheck className="h-4 w-4" /> Approve
+              </Button>
               <Button size="sm" variant="danger" onClick={() => setRejectTarget(v._id)}><XCircle className="h-4 w-4" /> Reject</Button>
             </div>
           </CardContent>

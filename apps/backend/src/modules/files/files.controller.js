@@ -18,7 +18,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
 });
 
 export const getOne = asyncHandler(async (req, res) => {
-  const file = await filesService.getById(req.params.id);
+  const file = await filesService.getById(req.params.id, req.user);
   res.json({ success: true, data: file });
 });
 

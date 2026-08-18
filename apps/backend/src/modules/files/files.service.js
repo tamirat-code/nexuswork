@@ -17,10 +17,39 @@ export async function createFileRecord({ ownerId, multerFile, baseUrl, related_t
   });
 }
 
-export async function getById(id) {
+export async function getById(id, requestingUser) {
   const file = await File.findById(id);
   if (!file) throw new NotFoundError("File not found");
+
+  
+  if (file.related_type === "verification_document") {
+    await assertCanViewVerificationDocument(file, requestingUser);
+  }
+
   return file;
+}
+
+async function assertCanViewVerificationDocument(file, requestingUser) {
+  if (!requestingUser) throw new ForbiddenError("You don't have access to this document");
+  if (String(file.owner_id) === String(requestingUser._id)) return;
+  if (requestingUser.role === "admin") return;
+
+  if (requestingUser.role === "university_staff") {
+    const [{ default: Verification }, { default: University }] = await Promise.all([
+      import("../verifications/verifications.model.js"),
+      import("../universities/universities.model.js"),
+    ]);
+    const verification = await Verification.findOne({ document_file_id: file._id });
+    if (verification) {
+      const university = await University.findById(verification.university_id);
+      const isContactStaff = university?.contact_staff?.some(
+        (staffId) => String(staffId) === String(requestingUser._id)
+      );
+      if (isContactStaff) return;
+    }
+  }
+
+  throw new ForbiddenError("You don't have access to this document");
 }
 
 export async function deleteFile(id, requestingUserId) {

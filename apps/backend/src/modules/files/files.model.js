@@ -11,7 +11,7 @@ const fileSchema = new mongoose.Schema(
     // Optional link back to whatever this file belongs to.
     related_type: {
       type: String,
-      enum: ["project_attachment", "submission", "portfolio", "message_attachment", "other"],
+      enum: ["project_attachment", "submission", "portfolio", "message_attachment", "verification_document", "other"],
       default: "other",
     },
     related_id: { type: mongoose.Schema.Types.ObjectId },

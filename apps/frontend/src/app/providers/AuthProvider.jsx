@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import * as authApi from "../../services/api/auth.api.js";
 import { storage } from "../../utils/storage.utils.js";
 
@@ -75,6 +75,27 @@ export function AuthProvider({ children }) {
     if (nextUser) storage.set("nw_user", JSON.stringify(nextUser));
     else storage.remove("nw_user");
   }, []);
+
+  
+  const lastRefreshRef = useRef(0);
+  const REFRESH_THROTTLE_MS = 30_000;
+
+  useEffect(() => {
+    if (!token) return;
+
+    const maybeRefresh = () => {
+      const now = Date.now();
+      if (now - lastRefreshRef.current < REFRESH_THROTTLE_MS) return;
+      lastRefreshRef.current = now;
+      refreshMe().catch(() => {
+        /* best-effort — the cached user object just stays as-is until the next attempt */
+      });
+    };
+
+    maybeRefresh();
+    window.addEventListener("focus", maybeRefresh);
+    return () => window.removeEventListener("focus", maybeRefresh);
+  }, [token, refreshMe]);
 
   return (
     <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, logout, refreshMe, setLocalUser }}>

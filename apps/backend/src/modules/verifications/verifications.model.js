@@ -9,10 +9,19 @@ const verificationSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    // For email-based verification: the domain the user claims to belong to
+    
     email_domain: { type: String, required: true, lowercase: true, trim: true },
-    // For document-based verification: uploaded proof
-    document_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+    // Whether email_domain matched the university's registered domain at submission time.
+    email_domain_matched: { type: Boolean, default: false },
+
+    // Identity/enrollment evidence supplied by the student, as declared on submission.
+    full_name: { type: String, required: true, trim: true },
+    student_id_number: { type: String, required: true, trim: true },
+    program: { type: String, required: true, trim: true },
+
+    // Uploaded proof (student ID card, enrollment letter, transcript, etc.) — required.
+    document_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File", required: true },
+
     reviewed_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     reviewed_at: { type: Date },
     rejection_reason: { type: String },

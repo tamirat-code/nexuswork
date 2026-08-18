@@ -10,11 +10,15 @@ import {
 } from "./verifications.service.js";
 
 export const requestVerification = asyncHandler(async (req, res) => {
-  requireFields(req.body, ["university_id"]);
+  requireFields(req.body, ["university_id", "full_name", "student_id_number", "program", "document_file_id"]);
   const verification = await submitVerification({
     userId: req.user._id,
+    
+    userEmail: req.user.email,
     universityId: req.body.university_id,
-    emailDomain: req.body.email_domain,
+    fullName: req.body.full_name,
+    studentIdNumber: req.body.student_id_number,
+    program: req.body.program,
     documentFileId: req.body.document_file_id,
   });
   res.status(201).json({ success: true, data: verification });

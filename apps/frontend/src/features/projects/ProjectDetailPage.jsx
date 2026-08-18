@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -177,8 +177,18 @@ function ClientProposalList({ projectId, token }) {
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
-  const { user, token } = useAuth();
+  const { user, token, refreshMe } = useAuth();
   const { data, isLoading, error } = useQuery({ queryKey: ["project", id], queryFn: () => getProject(id) });
+
+
+  useEffect(() => {
+    if (user?.role === "student" && !user?.universityVerified) {
+      refreshMe().catch(() => {
+        /* best-effort — falls back to whatever's cached */
+      });
+    }
+    
+  }, [user?._id]);
 
   if (isLoading) {
     return (

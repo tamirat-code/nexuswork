@@ -14,6 +14,9 @@ const studentProfileSchema = new mongoose.Schema(
       enum: ["pending", "verified", "rejected"],
       default: "pending",
     },
+   
+    student_id_number: { type: String, trim: true, default: "" },
+    program: { type: String, trim: true, default: "" },
     bio: { type: String, default: "" },
     skills: [
       {

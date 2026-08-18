@@ -119,10 +119,23 @@ export const createUniversitySchema = z.object({
 });
 
 // --- Verifications ---
+// Identity/enrollment evidence a student must supply for university staff to review.
+// email_domain is intentionally NOT accepted from the client — it's derived server-side
+// from the authenticated user's own account email so it can't be spoofed.
 export const submitVerificationSchema = z.object({
   university_id: objectId,
-  email_domain: z.string().trim().max(200).optional(),
-  document_file_id: optionalObjectId,
+  full_name: z
+    .string()
+    .trim()
+    .min(2, "Full legal name (as it appears on your ID) is required")
+    .max(150),
+  student_id_number: z
+    .string()
+    .trim()
+    .min(1, "Student ID number is required")
+    .max(50),
+  program: z.string().trim().min(1, "Program / field of study is required").max(150),
+  document_file_id: objectId, // required: identity/enrollment evidence must be uploaded first via /files/upload
 });
 
 export const reviewVerificationSchema = z.object({

@@ -23,4 +23,12 @@ describe("Verifications module", () => {
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
+
+  
+  it("rejects unauthenticated submission missing the new required identity fields the same way (401 first)", async () => {
+    const res = await request(app)
+      .post("/v1/verifications")
+      .send({ university_id: "000000000000000000000001" }); // missing full_name/student_id_number/program/document_file_id
+    expect(res.status).toBe(401);
+  });
 });

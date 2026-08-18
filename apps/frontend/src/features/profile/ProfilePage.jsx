@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -8,6 +8,7 @@ import {
   Card,
   CardDivider,
   CardHeader,
+  FileUpload,
   Input,
   PageHeader,
   ProgressBar,
@@ -20,6 +21,7 @@ import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
 import { listUniversities } from "../../services/api/universities.api.js";
 import { getMyVerifications, requestVerification } from "../../services/api/verifications.api.js";
+import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
 import { PROFILE_LIMITS, profileCompleteness, validateProfile } from "./profile.utils.js";
 
@@ -363,10 +365,19 @@ export default function ProfilePage() {
   );
 }
 
+const VERIFICATION_DOC_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+const VERIFICATION_DOC_MAX_MB = 10;
+
 function UniversityVerificationCard({ user, token }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const { refreshMe } = useAuth();
   const [universityId, setUniversityId] = useState("");
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [studentIdNumber, setStudentIdNumber] = useState("");
+  const [program, setProgram] = useState("");
+  const [uploadedDoc, setUploadedDoc] = useState(null); // { _id, original_name, size }
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const { data: universitiesRes, isLoading: universitiesLoading } = useQuery({
     queryKey: ["universities-all"],
@@ -383,19 +394,84 @@ function UniversityVerificationCard({ user, token }) {
   // Backend returns these newest-first.
   const latest = verifications[0];
 
+  
+  const isApproved = latest?.status === "approved" || Boolean(user?.universityVerified);
+
+  useEffect(() => {
+    if (latest?.status === "approved" && !user?.universityVerified) {
+      refreshMe().catch(() => {
+        /* best-effort resync — the card already reflects the correct state either way */
+      });
+    }
+  }, [latest?.status, user?.universityVerified, refreshMe]);
+
+  function resetForm() {
+    setUniversityId("");
+    setStudentIdNumber("");
+    setProgram("");
+    setUploadedDoc(null);
+    setFieldErrors({});
+  }
+
+  const uploadDoc = useMutation({
+    mutationFn: (file) => uploadFile(file, { relatedType: "verification_document", token }),
+    onSuccess: (res) => {
+      setUploadedDoc(res.data);
+      setFieldErrors((prev) => ({ ...prev, document: undefined }));
+    },
+    onError: (err) => {
+      toast.show(err?.message || "That file couldn't be uploaded. Please try again.", { variant: "error" });
+    },
+  });
+
+  const removeDoc = useMutation({
+    mutationFn: () => deleteFile(uploadedDoc._id, token),
+    onSuccess: () => setUploadedDoc(null),
+    onError: (err) => {
+      toast.show(err?.message || "Couldn't remove that file — try again.", { variant: "error" });
+    },
+  });
+
   const submit = useMutation({
-    mutationFn: () => requestVerification({ university_id: universityId }, token),
+    mutationFn: () =>
+      requestVerification(
+        {
+          university_id: universityId,
+          full_name: fullName.trim(),
+          student_id_number: studentIdNumber.trim(),
+          program: program.trim(),
+          document_file_id: uploadedDoc._id,
+        },
+        token
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-verifications"] });
       toast.show("Verification request submitted. Your university will review it shortly.");
-      setUniversityId("");
+      resetForm();
     },
     onError: (err) => {
       toast.show(err?.message || "We couldn't submit that request. Please try again.", { variant: "error" });
     },
   });
 
+  function validate() {
+    const errors = {};
+    if (!universityId) errors.university = "Select your university.";
+    if (!fullName.trim()) errors.fullName = "Enter your full legal name, as it appears on your ID.";
+    if (!studentIdNumber.trim()) errors.studentIdNumber = "Enter your student ID number.";
+    if (!program.trim()) errors.program = "Enter your program or field of study.";
+    if (!uploadedDoc) errors.document = "Upload a photo of your student ID or an enrollment letter.";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function handleSubmit() {
+    if (!validate()) return;
+    submit.mutate();
+  }
+
   const loading = universitiesLoading || verificationsLoading;
+  const busy = uploadDoc.isPending || removeDoc.isPending || submit.isPending;
 
   return (
     <Card as="section">
@@ -407,7 +483,7 @@ function UniversityVerificationCard({ user, token }) {
 
       {loading ? (
         <p className="text-sm text-slate-300">Loading verification status…</p>
-      ) : user?.universityVerified ? (
+      ) : isApproved ? (
         <Alert variant="success" title="You're verified">
           {latest?.status === "approved" && latest?.university_id?.name
             ? `Confirmed by ${latest.university_id.name}. Your proposals now show a verified badge.`
@@ -429,13 +505,15 @@ function UniversityVerificationCard({ user, token }) {
           )}
 
           <p className="text-sm leading-relaxed text-slate-300">
-            Submitting proposals requires an approved university verification. Select your school below — we'll
-            check that your account email matches its domain, then a staff member confirms your enrollment.
+            Submitting proposals requires an approved university verification. This goes to a real staff member at
+            your school, so give them enough to confirm you're enrolled: your name as it appears on your ID, your
+            student ID number, your program, your university, and a photo of your student ID or an enrollment
+            letter.
           </p>
 
           {/* Not a <form>: this card is nested inside the page's main profile
               <form>, and HTML doesn't allow forms inside forms. */}
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Select
               id="verification-university"
               label="Your university"
@@ -443,21 +521,64 @@ function UniversityVerificationCard({ user, token }) {
               value={universityId}
               onChange={(event) => setUniversityId(event.target.value)}
               options={universities.map((u) => ({ value: u._id, label: `${u.name} (${u.domain})` }))}
-              wrapperClassName="flex-1"
+              error={fieldErrors.university}
               hint={
                 universities.length === 0
                   ? "No universities are registered yet — check back soon."
                   : "Not listed? Ask your university to register on the admin side."
               }
+              wrapperClassName="sm:col-span-2"
             />
-            <Button
-              type="button"
-              onClick={() => {
-                if (universityId) submit.mutate();
-              }}
-              loading={submit.isPending}
-              disabled={!universityId || universities.length === 0}
-            >
+            <Input
+              id="verification-full-name"
+              label="Full legal name"
+              hint="As it appears on your student ID."
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              error={fieldErrors.fullName}
+              maxLength={150}
+            />
+            <Input
+              id="verification-student-id"
+              label="Student ID number"
+              value={studentIdNumber}
+              onChange={(event) => setStudentIdNumber(event.target.value)}
+              error={fieldErrors.studentIdNumber}
+              maxLength={50}
+            />
+            <Input
+              id="verification-program"
+              label="Program / field of study"
+              placeholder="e.g. B.Sc. Computer Science"
+              value={program}
+              onChange={(event) => setProgram(event.target.value)}
+              error={fieldErrors.program}
+              maxLength={150}
+              wrapperClassName="sm:col-span-2"
+            />
+
+            <div className="sm:col-span-2">
+              <FileUpload
+                label="Proof of enrollment"
+                hint={`Student ID card, enrollment letter, or transcript · JPG, PNG or PDF · up to ${VERIFICATION_DOC_MAX_MB} MB`}
+                accept={VERIFICATION_DOC_ACCEPT}
+                maxSizeMb={VERIFICATION_DOC_MAX_MB}
+                disabled={busy}
+                files={uploadedDoc ? [{ id: uploadedDoc._id, name: uploadedDoc.original_name, size: uploadedDoc.size }] : []}
+                onFilesSelected={(files) => files[0] && uploadDoc.mutate(files[0])}
+                onRemove={() => removeDoc.mutate()}
+              />
+              {uploadDoc.isPending && <ProgressBar className="mt-2" value={60} label="Uploading document" showValue={false} />}
+              {fieldErrors.document && !uploadDoc.isPending && (
+                <p className="mt-2 text-xs text-brick" role="alert">
+                  {fieldErrors.document}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <Button type="button" onClick={handleSubmit} loading={submit.isPending} disabled={busy || universities.length === 0}>
               Submit for review
             </Button>
           </div>

@@ -2,15 +2,29 @@ import Verification from "./verifications.model.js";
 import University from "../universities/universities.model.js";
 import StudentProfile from "../students/students.model.js";
 import User from "../users/users.model.js";
+import File from "../files/files.model.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
-export async function submitVerification({ userId, universityId, emailDomain, documentFileId }) {
+export async function submitVerification({
+  userId,
+  userEmail,
+  universityId,
+  fullName,
+  studentIdNumber,
+  program,
+  documentFileId,
+}) {
   const university = await University.findById(universityId);
   if (!university) throw new NotFoundError("University not found");
 
+  if (!documentFileId) {
+    throw new ValidationError("Upload a photo of your student ID or an enrollment letter before submitting");
+  }
 
-  if (emailDomain && university.domain && emailDomain.toLowerCase() !== university.domain.toLowerCase()) {
-    throw new ValidationError(`Email domain "${emailDomain}" does not match ${university.name}'s domain "${university.domain}"`);
+  const file = await File.findById(documentFileId);
+  if (!file) throw new ValidationError("The uploaded document could not be found — please upload it again");
+  if (String(file.owner_id) !== String(userId)) {
+    throw new ValidationError("That document was not uploaded by you");
   }
 
   const existing = await Verification.findOne({ user_id: userId, university_id: universityId });
@@ -19,12 +33,29 @@ export async function submitVerification({ userId, universityId, emailDomain, do
     if (existing.status === "approved") throw new ValidationError("Already verified for this university");
   }
 
+  // Derived from the account's own email — this is a supporting trust signal for staff,
+  // never a gate on submission, since students may legitimately sign up with a personal
+  // email address. The uploaded document is the actual identity/enrollment evidence.
+  const emailDomain = String(userEmail || "").split("@")[1]?.toLowerCase() || "";
+  const emailDomainMatched = Boolean(
+    emailDomain && university.domain && emailDomain === university.domain.toLowerCase()
+  );
+
+  await File.findByIdAndUpdate(documentFileId, {
+    related_type: "verification_document",
+    related_id: userId,
+  });
+
   return Verification.findOneAndUpdate(
     { user_id: userId, university_id: universityId },
     {
       user_id: userId,
       university_id: universityId,
-      email_domain: emailDomain || university.domain,
+      email_domain: emailDomain,
+      email_domain_matched: emailDomainMatched,
+      full_name: fullName,
+      student_id_number: studentIdNumber,
+      program,
       document_file_id: documentFileId,
       status: "pending",
       reviewed_by: undefined,
@@ -94,13 +125,18 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
   verification.rejection_reason = decision === "rejected" ? (rejectionReason || "Not approved") : undefined;
 
   if (decision === "approved") {
-    // Mark the student profile as verified
+    
     await StudentProfile.findOneAndUpdate(
       { user_id: verification.user_id },
-      { verification_status: "verified" },
-      { new: true }
+      {
+        verification_status: "verified",
+        university_id: verification.university_id,
+        student_id_number: verification.student_id_number,
+        program: verification.program,
+      },
+      { new: true, upsert: true }
     );
-    
+
     await User.findByIdAndUpdate(verification.user_id, { universityVerified: true });
   } else {
 
