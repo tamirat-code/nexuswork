@@ -1,105 +1,696 @@
 import Proposal from "./proposals.model.js";
 import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
-import StudentProfile from "../students/students.model.js";
-import { isOrgMember } from "../clients/clients.service.js";
-import { createNotification } from "../notifications/notifications.service.js";
+import User from "../users/users.model.js";
 
-export async function submitProposal(studentId, data) {
-  const project = await Project.findById(data.project_id);
-  if (!project || project.status !== "open") {
-    const err = new Error("Project is not open for proposals");
-    err.status = 400;
-    throw err;
+import {
+  isOrgMember,
+} from "../clients/clients.service.js";
+
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "../../shared/exceptions/AppError.js";
+
+import {
+  createNotification,
+} from "../notifications/notifications.service.js";
+
+
+export async function submitProposal(
+  studentId,
+  data
+) {
+
+  const project =
+    await Project.findById(
+      data.project_id
+    );
+
+  if (
+    !project ||
+    project.status !== "open"
+  ) {
+
+    throw new ValidationError(
+      "Project is not open for proposals"
+    );
+
   }
 
-  
-  const profile = await StudentProfile.findOne({ user_id: studentId });
-  if (!profile || profile.verification_status !== "verified") {
-    const err = new Error("Your university verification must be approved before you can submit proposals");
-    err.status = 403;
-    throw err;
+  const student =
+    await User.findById(studentId)
+      .select(
+        "name email university universityVerified"
+      )
+      .lean();
+
+
+  if (
+    !student ||
+    !student.universityVerified
+  ) {
+
+    throw new ForbiddenError(
+      "Your university verification must be approved before you can submit proposals"
+    );
+
   }
 
-  const proposal = await Proposal.create({ ...data, student_id: studentId });
 
-  // Notify only the project's client — never broadcast to everyone.
-  try {
-    await createNotification({
-      userId: project.client_id,
-      type: "proposal_received",
-      title: "New proposal received",
-      body: `A student submitted a proposal for "${project.title}".`,
-      data: { project_id: project._id, proposal_id: proposal._id },
+  const proposal =
+    await Proposal.create({
+      ...data,
+      student_id: studentId,
     });
-  } catch (err) {
-    // Notification failure must not block the proposal submission.
-    console.error("[proposals] failed to notify client:", err.message);
-  }
+
+
+  await createNotification({
+
+    userId: project.client_id,
+
+    type: "proposal_received",
+
+    title: "New proposal received",
+
+    body:
+      `${student.name} submitted a ` +
+      `$${Number(data.price).toFixed(2)} proposal ` +
+      `for "${project.title}".`,
+
+    data: {
+
+      proposal_id:
+        proposal._id,
+
+      project_id:
+        project._id,
+
+      action:
+        "review_proposal",
+
+    },
+
+  });
+
 
   return proposal;
 }
 
-export async function listForUser(userId, role) {
-  // Students see the proposals they submitted.
-  if (role === "student") {
-    return Proposal.find({ student_id: userId }).sort({ createdAt: -1 });
-  }
+export async function listForProject(
+  projectId,
+  requestingUser
+) {
 
-  // Clients see proposals on projects they own (or org members).
-  const ownedProjects = await Project.find({ client_id: userId }).select("_id");
-  const projectIds = ownedProjects.map((p) => p._id);
-  return Proposal.find({ project_id: { $in: projectIds } }).sort({ createdAt: -1 });
-}
+  const project =
+    await Project.findById(
+      projectId
+    );
 
-export async function listForProject(projectId, requestingUser) {
-  const project = await Project.findById(projectId);
   if (!project) {
-    const err = new Error("Project not found");
-    err.status = 404;
-    throw err;
+    throw new NotFoundError(
+      "Project not found"
+    );
   }
-  if (String(project.client_id) !== String(requestingUser._id) && requestingUser.role !== "admin") {
-    const allowed = await isOrgMember(project.client_id, requestingUser._id);
+
+
+  if (
+    String(project.client_id) !==
+      String(requestingUser._id) &&
+    requestingUser.role !== "admin"
+  ) {
+
+    const allowed =
+      await isOrgMember(
+        project.client_id,
+        requestingUser._id
+      );
+
     if (!allowed) {
-      const err = new Error("Not authorized to view these proposals");
-      err.status = 403;
-      throw err;
+
+      throw new ForbiddenError(
+        "Not authorized to view these proposals"
+      );
+
     }
+
   }
-  return Proposal.find({ project_id: projectId }).sort({ createdAt: -1 });
+
+
+  return Proposal.find({
+    project_id: projectId,
+  })
+
+    .populate(
+      "student_id",
+      [
+        "name",
+        "email",
+        "headline",
+        "bio",
+        "location",
+        "university",
+        "skills",
+        "avatarUrl",
+        "universityVerified",
+      ].join(" ")
+    )
+
+    .populate(
+      "project_id",
+      [
+        "title",
+        "description",
+        "budget",
+        "deadline",
+        "status",
+      ].join(" ")
+    )
+
+    .sort({
+      createdAt: -1,
+    })
+
+    .lean();
+}
+
+export async function listForClient(
+  requestingUser
+) {
+
+  let projectQuery;
+
+
+  if (
+    requestingUser.role === "admin"
+  ) {
+
+    projectQuery = {};
+
+  } else {
+
+    const ownedProjectIds =
+      await Project.find({
+        client_id:
+          requestingUser._id,
+      }).distinct("_id");
+
+    const clientProfiles =
+      await Project.find({
+        client_id: {
+          $exists: true,
+        },
+      })
+        .select("client_id")
+        .lean();
+
+
+    const ownerIds = [
+      ...new Set(
+        clientProfiles.map(
+          (item) =>
+            String(item.client_id)
+        )
+      ),
+    ];
+
+
+    const memberOwnerIds = [];
+
+    for (const ownerId of ownerIds) {
+
+      const allowed =
+        await isOrgMember(
+          ownerId,
+          requestingUser._id
+        );
+
+      if (allowed) {
+        memberOwnerIds.push(
+          ownerId
+        );
+      }
+
+    }
+
+
+    const projectIds =
+      await Project.find({
+        client_id: {
+          $in: [
+            requestingUser._id,
+            ...memberOwnerIds,
+          ],
+        },
+      }).distinct("_id");
+
+
+    projectQuery = {
+      _id: {
+        $in: [
+          ...new Set([
+            ...ownedProjectIds.map(String),
+            ...projectIds.map(String),
+          ]),
+        ],
+      },
+    };
+
+  }
+
+
+  const projects =
+    await Project.find(
+      projectQuery
+    )
+      .select(
+        "_id title description budget deadline status client_id"
+      )
+      .lean();
+
+
+  const projectIds =
+    projects.map(
+      (project) =>
+        project._id
+    );
+
+
+  if (!projectIds.length) {
+    return [];
+  }
+
+
+  return Proposal.find({
+    project_id: {
+      $in: projectIds,
+    },
+  })
+
+    .populate(
+      "student_id",
+      [
+        "name",
+        "email",
+        "headline",
+        "bio",
+        "location",
+        "university",
+        "skills",
+        "avatarUrl",
+        "universityVerified",
+      ].join(" ")
+    )
+
+    .populate(
+      "project_id",
+      [
+        "title",
+        "description",
+        "budget",
+        "deadline",
+        "status",
+      ].join(" ")
+    )
+
+    .sort({
+      createdAt: -1,
+    })
+
+    .lean();
 }
 
 
-export async function acceptProposal(proposalId, requestingUser) {
-  const proposal = await Proposal.findById(proposalId).populate("project_id");
+
+async function assertCanManageProposal(
+  proposal,
+  requestingUser
+) {
+
+  const project =
+    proposal.project_id;
+
+  if (!project) {
+    throw new NotFoundError(
+      "Project not found"
+    );
+  }
+
+
+  if (
+    String(project.client_id) ===
+    String(requestingUser._id)
+  ) {
+    return;
+  }
+
+
+  if (
+    requestingUser.role === "admin"
+  ) {
+    return;
+  }
+
+
+  const allowed =
+    await isOrgMember(
+      project.client_id,
+      requestingUser._id
+    );
+
+
+  if (!allowed) {
+
+    throw new ForbiddenError(
+      "You are not authorized to manage this proposal"
+    );
+
+  }
+
+}
+
+
+
+export async function acceptProposal(
+  proposalId,
+  requestingUser
+) {
+
+  const proposal =
+    await Proposal.findById(
+      proposalId
+    )
+      .populate("project_id")
+      .populate(
+        "student_id",
+        "name email"
+      );
+
+
   if (!proposal) {
-    const err = new Error("Proposal not found");
-    err.status = 404;
-    throw err;
+    throw new NotFoundError(
+      "Proposal not found"
+    );
   }
-  const project = proposal.project_id;
-  if (String(project.client_id) !== String(requestingUser._id)) {
-    const allowed = await isOrgMember(project.client_id, requestingUser._id);
-    if (!allowed) {
-      const err = new Error("Not authorized to accept this proposal");
-      err.status = 403;
-      throw err;
-    }
-  }
-  proposal.status = "accepted";
-  await proposal.save();
-  project.status = "in_progress";
-  await project.save();
-  await Proposal.updateMany(
-    { project_id: project._id, _id: { $ne: proposal._id }, status: "pending" },
-    { status: "rejected" }
+
+
+  await assertCanManageProposal(
+    proposal,
+    requestingUser
   );
-  const contract = await Contract.create({
-    proposal_id: proposal._id,
-    project_id: project._id,
-    client_id: project.client_id,
-    student_id: proposal.student_id,
+
+
+  if (
+    proposal.status !== "pending"
+  ) {
+
+    throw new ValidationError(
+      `Cannot accept a proposal with status "${proposal.status}"`
+    );
+
+  }
+
+
+  const project =
+    proposal.project_id;
+
+
+  if (
+    project.status !== "open"
+  ) {
+
+    throw new ValidationError(
+      "This project is no longer accepting proposals"
+    );
+
+  }
+
+
+  
+  const existingContract =
+    await Contract.findOne({
+      proposal_id:
+        proposal._id,
+    });
+
+
+  if (existingContract) {
+
+    throw new ValidationError(
+      "A contract already exists for this proposal"
+    );
+
+  }
+
+
+  proposal.status =
+    "accepted";
+
+  await proposal.save();
+
+
+  project.status =
+    "in_progress";
+
+  await project.save();
+
+
+  const competingProposals =
+    await Proposal.find({
+      project_id:
+        project._id,
+
+      _id: {
+        $ne:
+          proposal._id,
+      },
+
+      status:
+        "pending",
+    })
+      .select(
+        "_id student_id"
+      )
+      .lean();
+
+
+  await Proposal.updateMany(
+
+    {
+      project_id:
+        project._id,
+
+      _id: {
+        $ne:
+          proposal._id,
+      },
+
+      status:
+        "pending",
+    },
+
+    {
+      status:
+        "rejected",
+    }
+
+  );
+
+
+ 
+  const contract =
+    await Contract.create({
+
+      proposal_id:
+        proposal._id,
+
+      project_id:
+        project._id,
+
+      client_id:
+        project.client_id,
+
+      student_id:
+        proposal.student_id._id,
+
+      status:
+        "pending_signature",
+
+    });
+
+
+ 
+  await createNotification({
+
+    userId:
+      proposal.student_id._id,
+
+    type:
+      "proposal_accepted",
+
+    title:
+      "Your proposal was accepted",
+
+    body:
+      `Your proposal for "${project.title}" ` +
+      `was accepted. A contract is ready for signatures.`,
+
+    data: {
+
+      proposal_id:
+        proposal._id,
+
+      project_id:
+        project._id,
+
+      contract_id:
+        contract._id,
+
+      action:
+        "view_contract",
+
+    },
+
   });
-  return { proposal, contract };
+
+
+
+  await Promise.all(
+
+    competingProposals.map(
+      (item) =>
+        createNotification({
+
+          userId:
+            item.student_id,
+
+          type:
+            "proposal_rejected",
+
+          title:
+            "Proposal not selected",
+
+          body:
+            `The client selected another proposal ` +
+            `for "${project.title}".`,
+
+          data: {
+
+            proposal_id:
+              item._id,
+
+            project_id:
+              project._id,
+
+            action:
+              "view_proposal",
+
+          },
+
+        })
+    )
+
+  );
+
+
+  return {
+
+    proposal,
+
+    contract,
+
+    rejected_count:
+      competingProposals.length,
+
+  };
+}
+
+export async function rejectProposal(
+  proposalId,
+  requestingUser
+) {
+
+  const proposal =
+    await Proposal.findById(
+      proposalId
+    )
+      .populate("project_id")
+      .populate(
+        "student_id",
+        "name email"
+      );
+
+
+  if (!proposal) {
+
+    throw new NotFoundError(
+      "Proposal not found"
+    );
+
+  }
+
+
+  await assertCanManageProposal(
+    proposal,
+    requestingUser
+  );
+
+
+  if (
+    proposal.status !== "pending"
+  ) {
+
+    throw new ValidationError(
+      `Cannot reject a proposal with status "${proposal.status}"`
+    );
+
+  }
+
+
+  proposal.status =
+    "rejected";
+
+  await proposal.save();
+
+
+  const project =
+    proposal.project_id;
+
+
+  /*
+   * Tell the student.
+   */
+  await createNotification({
+
+    userId:
+      proposal.student_id._id,
+
+    type:
+      "proposal_rejected",
+
+    title:
+      "Proposal not selected",
+
+    body:
+      `Your proposal for "${project.title}" ` +
+      `was not selected by the client.`,
+
+    data: {
+
+      proposal_id:
+        proposal._id,
+
+      project_id:
+        project._id,
+
+      action:
+        "view_proposal",
+
+    },
+
+  });
+
+
+  return proposal;
 }
