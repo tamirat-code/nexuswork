@@ -7,7 +7,7 @@ import { initSocket } from "./websocket/index.js";
 import { logger } from "./shared/logger/logger.js";
 import { validateEnv } from "./config/env.validation.js";
 import mongoose from "mongoose";
-
+import "./events/handlers/index.js";
 validateEnv();
 
 async function start() {

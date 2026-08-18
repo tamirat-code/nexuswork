@@ -1,7 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
 import { ForbiddenError } from "../../shared/exceptions/AppError.js";
-import { submitProposal, listForProject, acceptProposal } from "./proposals.service.js";
+import { submitProposal, listForUser, listForProject, acceptProposal } from "./proposals.service.js";
 
 export const createProposal = asyncHandler(async (req, res) => {
   if (req.user.role !== "student") throw new ForbiddenError("Only students can submit proposals");
@@ -16,6 +16,11 @@ export const createProposal = asyncHandler(async (req, res) => {
     }
     throw err;
   }
+});
+
+export const getMyProposals = asyncHandler(async (req, res) => {
+  const proposals = await listForUser(req.user._id, req.user.role);
+  res.json({ success: true, data: proposals });
 });
 
 export const getProjectProposals = asyncHandler(async (req, res) => {

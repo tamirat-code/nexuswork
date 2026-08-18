@@ -180,15 +180,21 @@ export default function ProjectDetailPage() {
   const { user, token, refreshMe } = useAuth();
   const { data, isLoading, error } = useQuery({ queryKey: ["project", id], queryFn: () => getProject(id) });
 
-
+  // The "submit proposal" gate below reads user.universityVerified from the cached auth
+  // object, which is only set at login and doesn't track server-side changes on its own.
+  // AuthProvider re-syncs it opportunistically (on app load, on tab focus), but a student
+  // who gets approved and then navigates straight here via an in-app link — without the
+  // window ever losing focus — would still see a stale "not verified" gate. Refresh right
+  // where it's actually checked, so the one place this matters is always correct on load.
   useEffect(() => {
     if (user?.role === "student" && !user?.universityVerified) {
       refreshMe().catch(() => {
         /* best-effort — falls back to whatever's cached */
       });
     }
-    
-  }, [user?._id]);
+    // Only re-run when the student identity changes, not on every refreshMe/user re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   if (isLoading) {
     return (

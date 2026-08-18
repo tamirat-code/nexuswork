@@ -3,6 +3,7 @@ import University from "../universities/universities.model.js";
 import StudentProfile from "../students/students.model.js";
 import User from "../users/users.model.js";
 import File from "../files/files.model.js";
+import { createNotification } from "../notifications/notifications.service.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
 export async function submitVerification({
@@ -33,9 +34,7 @@ export async function submitVerification({
     if (existing.status === "approved") throw new ValidationError("Already verified for this university");
   }
 
-  // Derived from the account's own email — this is a supporting trust signal for staff,
-  // never a gate on submission, since students may legitimately sign up with a personal
-  // email address. The uploaded document is the actual identity/enrollment evidence.
+  
   const emailDomain = String(userEmail || "").split("@")[1]?.toLowerCase() || "";
   const emailDomainMatched = Boolean(
     emailDomain && university.domain && emailDomain === university.domain.toLowerCase()
@@ -46,7 +45,7 @@ export async function submitVerification({
     related_id: userId,
   });
 
-  return Verification.findOneAndUpdate(
+  const verification = await Verification.findOneAndUpdate(
     { user_id: userId, university_id: universityId },
     {
       user_id: userId,
@@ -64,6 +63,26 @@ export async function submitVerification({
     },
     { upsert: true, new: true }
   );
+
+  // Notify each staff member at this university so they can review the queue.
+  try {
+    const staffIds = university.contact_staff || [];
+    await Promise.all(
+      staffIds.map((staffId) =>
+        createNotification({
+          userId: staffId,
+          type: "system",
+          title: "New verification request",
+          body: `${fullName} requested verification at ${university.name}.`,
+          data: { verification_id: verification._id, university_id: universityId },
+        })
+      )
+    );
+  } catch (err) {
+    console.error("[verifications] failed to notify staff:", err.message);
+  }
+
+  return verification;
 }
 
 export async function getMyVerifications(userId) {
@@ -147,6 +166,24 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
   }
 
   await verification.save();
+
+  // Notify the student of the review outcome.
+  const type = decision === "approved" ? "verification_approved" : "verification_rejected";
+  try {
+    await createNotification({
+      userId: verification.user_id,
+      type,
+      title: decision === "approved" ? "University verification approved" : "Verification update",
+      body:
+        decision === "approved"
+          ? "Your university has confirmed your identity — you can now submit proposals."
+          : `Your verification was not approved: ${verification.rejection_reason || "Please try again."}`,
+      data: { verification_id: verification._id },
+    });
+  } catch (err) {
+    console.error("[verifications] failed to notify student:", err.message);
+  }
+
   return verification;
 }
 

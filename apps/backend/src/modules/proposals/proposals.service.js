@@ -3,6 +3,7 @@ import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
 import StudentProfile from "../students/students.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
+import { createNotification } from "../notifications/notifications.service.js";
 
 export async function submitProposal(studentId, data) {
   const project = await Project.findById(data.project_id);
@@ -20,7 +21,35 @@ export async function submitProposal(studentId, data) {
     throw err;
   }
 
-  return Proposal.create({ ...data, student_id: studentId });
+  const proposal = await Proposal.create({ ...data, student_id: studentId });
+
+  // Notify only the project's client — never broadcast to everyone.
+  try {
+    await createNotification({
+      userId: project.client_id,
+      type: "proposal_received",
+      title: "New proposal received",
+      body: `A student submitted a proposal for "${project.title}".`,
+      data: { project_id: project._id, proposal_id: proposal._id },
+    });
+  } catch (err) {
+    // Notification failure must not block the proposal submission.
+    console.error("[proposals] failed to notify client:", err.message);
+  }
+
+  return proposal;
+}
+
+export async function listForUser(userId, role) {
+  // Students see the proposals they submitted.
+  if (role === "student") {
+    return Proposal.find({ student_id: userId }).sort({ createdAt: -1 });
+  }
+
+  // Clients see proposals on projects they own (or org members).
+  const ownedProjects = await Project.find({ client_id: userId }).select("_id");
+  const projectIds = ownedProjects.map((p) => p._id);
+  return Proposal.find({ project_id: { $in: projectIds } }).sort({ createdAt: -1 });
 }
 
 export async function listForProject(projectId, requestingUser) {
