@@ -254,7 +254,14 @@ export default function ContractDetailPage() {
   });
 
   const contract = data?.data;
-  const milestones = milestonesQuery.data?.data ?? [];
+  // The milestones endpoint returns { success: true, data: { milestones, total, limit, skip } }.
+  // Normalize the response here so the UI always works with an array.
+  const milestonesResponse = milestonesQuery.data?.data;
+  const milestones = Array.isArray(milestonesResponse)
+    ? milestonesResponse
+    : Array.isArray(milestonesResponse?.milestones)
+      ? milestonesResponse.milestones
+      : [];
   const isClient = contract && user && String(contract.client_id) === String(user._id);
   const isStudent = contract && user && String(contract.student_id) === String(user._id);
   const role = user?.role;

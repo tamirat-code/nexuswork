@@ -13,6 +13,7 @@ export const PROPOSAL_STATUS = Object.freeze({
 });
 
 export const CONTRACT_STATUS = Object.freeze({
+  PENDING_REVIEW: "pending_review",
   PENDING_SIGNATURE: "pending_signature",
   ACTIVE: "active",
   COMPLETED: "completed",

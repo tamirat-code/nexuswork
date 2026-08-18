@@ -1,6 +1,7 @@
 import Proposal from "./proposals.model.js";
 import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
+import { buildContractTerms } from "../contracts/contracts.service.js";
 import User from "../users/users.model.js";
 
 import {
@@ -499,25 +500,21 @@ export async function acceptProposal(
 
 
  
-  const contract =
-    await Contract.create({
+  const { terms, terms_fingerprint } = buildContractTerms({
+    project,
+    proposal,
+  });
 
-      proposal_id:
-        proposal._id,
-
-      project_id:
-        project._id,
-
-      client_id:
-        project.client_id,
-
-      student_id:
-        proposal.student_id._id,
-
-      status:
-        "pending_signature",
-
-    });
+  const contract = await Contract.create({
+    proposal_id: proposal._id,
+    project_id: project._id,
+    client_id: project.client_id,
+    student_id: proposal.student_id._id,
+    status: "pending_review",
+    version: 1,
+    terms,
+    terms_fingerprint,
+  });
 
 
  
@@ -534,7 +531,7 @@ export async function acceptProposal(
 
     body:
       `Your proposal for "${project.title}" ` +
-      `was accepted. A contract is ready for signatures.`,
+      `was accepted. A contract is ready for review. Both parties must review and sign it before work can begin.`,
 
     data: {
 

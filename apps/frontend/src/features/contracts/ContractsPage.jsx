@@ -50,26 +50,47 @@ export default function ContractsPage() {
 
       {contracts.length > 0 && (
         <ul className="space-y-4">
-          {contracts.map((contract) => (
-            <li key={contract._id}>
-              <Card as="article" className="transition-colors hover:border-brass/40">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h2 className="font-display text-lg text-slate">
-                      <Link to={`/contracts/${contract._id}`} className="hover:text-brass">
-                        {contract.project_id?.title || contract.title || "Contract"}
-                      </Link>
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-300">
-                      {formatCurrency(contract.total_amount ?? contract.amount ?? 0)} · started{" "}
-                      {formatTimeAgo(contract.createdAt)}
-                    </p>
+          {contracts.map((contract) => {
+            const title = contract.project_id?.title || contract.title || "Contract";
+            const amount =
+              contract.total_amount ??
+              contract.amount ??
+              contract.terms?.total_amount ??
+              0;
+
+            return (
+              <li key={contract._id}>
+                <Card
+                  as={Link}
+                  to={`/contracts/${contract._id}`}
+                  aria-label={`Open contract ${title}`}
+                  className="block cursor-pointer transition-colors hover:border-brass/50 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brass/70"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h2 className="font-display text-lg text-slate transition-colors hover:text-brass">
+                        {title}
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-300">
+                        {formatCurrency(amount)} · started {formatTimeAgo(contract.createdAt)}
+                      </p>
+                      {contract.status === "pending_review" && (
+                        <p className="mt-2 text-xs font-medium text-brass">
+                          Click to review and sign this contract
+                        </p>
+                      )}
+                      {contract.status === "pending_signature" && (
+                        <p className="mt-2 text-xs font-medium text-brass">
+                          Click to review your signature status
+                        </p>
+                      )}
+                    </div>
+                    <StatusBadge status={contract.status} />
                   </div>
-                  <StatusBadge status={contract.status} />
-                </div>
-              </Card>
-            </li>
-          ))}
+                </Card>
+              </li>
+            );
+          })}
         </ul>
       )}
     </>
