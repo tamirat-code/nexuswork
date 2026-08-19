@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 
-// Append-only audit log for tracking administrative and financial actions.
-// Once created, entries are immutable — see audit-logs.service.js for append-only enforcement.
+
 const auditLogsSchema = new mongoose.Schema(
   {
-    actor_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    actor_role: { type: String, enum: ["admin", "moderator", "university_staff"], required: true },
+    
+    actor_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    actor_role: { type: String, enum: ["admin", "moderator", "university_staff", "system"], default: "system" },
     action_type: {
       type: String,
       enum: [
@@ -24,12 +24,20 @@ const auditLogsSchema = new mongoose.Schema(
         "fraud_reported",
         "login_via_admin",
         "settings_changed",
+        // Financial / escrow lifecycle events (system-triggered, no human actor)
+        "payment_deposit_initiated",
+        "payment_deposit_succeeded",
+        "payment_deposit_failed",
+        "payment_released",
+        "payment_release_failed",
+        "payment_refunded",
+        "payment_commission_recorded",
       ],
       required: true,
     },
     entity_type: {
       type: String,
-      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal"],
+      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone"],
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId },

@@ -17,11 +17,11 @@ export function useNotifications() {
     enabled: !!token,
   });
 
-  useEffect(() => {
-    const socket = notificationSocket?.current;
+    useEffect(() => {
+    const socket = notificationSocket;
 
-    if (!socket) return;
-
+    if (!socket) return undefined;
+    
     const handleNewNotification = (notification) => {
       console.log(
         "[notifications] new notification:",

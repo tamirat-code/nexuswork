@@ -26,6 +26,16 @@ export const fund = asyncHandler(async (req, res) => {
   res.json({ success: true, data: result });
 });
 
+export const confirmFundingResult = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["payment_intent_id"]);
+  const milestone = await milestonesService.confirmFundingForMilestone(
+    req.params.id,
+    req.user._id,
+    req.body.payment_intent_id
+  );
+  res.json({ success: true, data: milestone });
+});
+
 export const submit = asyncHandler(async (req, res) => {
   const result = await milestonesService.submitWork(req.params.id, req.user._id, req.body);
   res.json({ success: true, data: result });

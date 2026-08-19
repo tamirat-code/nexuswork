@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { create, listByContract, getOne, fund, submit, approve } from "./milestones.controller.js";
+import { create, listByContract, getOne, fund, confirmFundingResult, submit, approve } from "./milestones.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { validateBody } from "../../shared/validators/ZodValidator.js";
 import { createMilestoneSchema, submitWorkSchema } from "../../shared/validators/schemas.js";
@@ -10,6 +10,7 @@ router.post("/contract/:contractId", requireAuth, validateBody(createMilestoneSc
 router.get("/contract/:contractId", requireAuth, listByContract);
 router.get("/:id", requireAuth, getOne);
 router.post("/:id/fund", requireAuth, fund);
+router.post("/:id/fund/confirm", requireAuth, confirmFundingResult);
 router.post("/:id/submit", requireAuth, validateBody(submitWorkSchema), submit);
 router.post("/:id/approve", requireAuth, approve);
 

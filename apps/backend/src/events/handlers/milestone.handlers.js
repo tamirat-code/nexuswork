@@ -38,6 +38,34 @@ eventBus.on("milestone.approved", async ({ milestoneId, studentId, payout }) => 
   }
 });
 
+eventBus.on("milestone.funded", async ({ milestoneId, studentId, amount }) => {
+  logger.info(`[event] milestone.funded: ${milestoneId} -> student ${studentId}`);
+  try {
+    await createNotification({
+      userId: studentId,
+      type: "milestone_funded",
+      title: "Milestone funded — you can start work",
+      body: `The client funded this milestone ($${amount}). It's held in escrow until you deliver and the client approves it.`,
+      data: { milestone_id: milestoneId, amount },
+    });
+  } catch (err) {
+    logger.error("[event] failed to create milestone.funded notification:", err.message);
+  }
+
+  try {
+    const email = await getEmail(studentId);
+    if (email) {
+      await sendNotificationEmail({
+        to: email,
+        subject: "Milestone funded — you can start work",
+        body: `The client funded this milestone ($${amount}). It's held in escrow until you deliver and the client approves it.`,
+      });
+    }
+  } catch (err) {
+    logger.error("[event] failed to send milestone.funded email:", err.message);
+  }
+});
+
 eventBus.on("milestone.delivered", async ({ milestoneId, clientId }) => {
   logger.info(`[event] milestone.delivered: ${milestoneId} -> client ${clientId}`);
   try {

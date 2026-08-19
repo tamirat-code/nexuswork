@@ -2,7 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
-  useRef,
+  useState,
 } from "react";
 
 import {
@@ -17,80 +17,61 @@ const SocketContext = createContext(null);
 export function SocketProvider({ children }) {
   const { token } = useAuth();
 
-  const contractSocketRef = useRef(null);
-  const notificationSocketRef = useRef(null);
+  
+  const [contractSocket, setContractSocket] = useState(null);
+  const [notificationSocket, setNotificationSocket] = useState(null);
 
   useEffect(() => {
     if (!token) {
-      contractSocketRef.current?.disconnect();
-      notificationSocketRef.current?.disconnect();
-
-      contractSocketRef.current = null;
-      notificationSocketRef.current = null;
-
-      return;
+      setContractSocket(null);
+      setNotificationSocket(null);
+      return undefined;
     }
 
-   
-    const contractSocket = createContractSocket(token);
+    const contractSock = createContractSocket(token);
 
-    contractSocket.on("connect", () => {
-      console.log("[socket] contracts connected:", contractSocket.id);
+    contractSock.on("connect", () => {
+      console.log("[socket] contracts connected:", contractSock.id);
     });
 
-    contractSocket.on("connect_error", (error) => {
-      console.error(
-        "[socket] contracts connection error:",
-        error.message
-      );
+    contractSock.on("connect_error", (error) => {
+      console.error("[socket] contracts connection error:", error.message);
     });
 
-    contractSocket.connect();
+    contractSock.connect();
+    setContractSocket(contractSock);
 
-    contractSocketRef.current = contractSocket;
+    const notificationSock = createNotificationSocket(token);
 
-   
-    const notificationSocket = createNotificationSocket(token);
-
-    notificationSocket.on("connect", () => {
-      console.log(
-        "[socket] notifications connected:",
-        notificationSocket.id
-      );
+    notificationSock.on("connect", () => {
+      console.log("[socket] notifications connected:", notificationSock.id);
     });
 
-    notificationSocket.on("notification:connected", (payload) => {
-      console.log(
-        "[socket] notification channel ready:",
-        payload
-      );
+    notificationSock.on("notification:connected", (payload) => {
+      console.log("[socket] notification channel ready:", payload);
     });
 
-    notificationSocket.on("connect_error", (error) => {
-      console.error(
-        "[socket] notifications connection error:",
-        error.message
-      );
+    notificationSock.on("connect_error", (error) => {
+      console.error("[socket] notifications connection error:", error.message);
     });
 
-    notificationSocket.connect();
-
-    notificationSocketRef.current = notificationSocket;
+    notificationSock.connect();
+    setNotificationSocket(notificationSock);
 
     return () => {
-      contractSocket.disconnect();
-      notificationSocket.disconnect();
+      contractSock.disconnect();
+      notificationSock.disconnect();
 
-      contractSocketRef.current = null;
-      notificationSocketRef.current = null;
+      setContractSocket(null);
+      setNotificationSocket(null);
     };
   }, [token]);
 
   return (
     <SocketContext.Provider
       value={{
-        contractSocket: contractSocketRef,
-        notificationSocket: notificationSocketRef,
+        contractSocket,
+        notificationSocket,
       }}
     >
       {children}

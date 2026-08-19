@@ -5,7 +5,7 @@ import Contract from "../contracts/contracts.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
-
+import { eventBus } from "../../events/index.js";
 function toStripeAmount(dollars) {
   return Math.round(dollars * 100);
 }
@@ -67,6 +67,14 @@ export async function markDepositFailed(paymentIntentId) {
       entity_type: "milestone",
       entity_id: payment.milestone_id,
       details: { amount: payment.amount, currency: payment.currency, payment_intent_id: paymentIntentId },
+    });
+
+    const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
+    eventBus.emit("milestone.funding_failed", {
+      milestoneId: payment.milestone_id,
+      contractId: milestone?.contract_id?._id,
+      clientId: milestone?.contract_id?.client_id,
+      amount: payment.amount,
     });
   }
   return payment;
