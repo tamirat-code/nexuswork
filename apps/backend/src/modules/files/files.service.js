@@ -40,6 +40,20 @@ export async function listForContract(contractId, requestingUserId) {
     .lean();
 }
 
+export async function assertSubmissionParty(submissionId, requestingUserId) {
+  const Submission = (await import("../submissions/submissions.model.js")).default;
+  const submission = await Submission.findById(submissionId).select("milestone_id");
+  if (!submission) throw new NotFoundError("Submission not found");
+
+  const milestone = await (await import("../milestones/milestones.model.js")).default
+    .findById(submission.milestone_id)
+    .select("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+
+  await assertContractParty(milestone.contract_id, requestingUserId);
+  return submission;
+}
+
 export async function getById(id, requestingUser) {
   const file = await File.findById(id);
   if (!file) throw new NotFoundError("File not found");
@@ -50,6 +64,10 @@ export async function getById(id, requestingUser) {
 
   if (file.related_type === "contract") {
     await assertContractParty(file.related_id, requestingUser?._id);
+  }
+
+  if (file.related_type === "submission") {
+    await assertSubmissionParty(file.related_id, requestingUser?._id);
   }
 
   return file;
@@ -84,6 +102,10 @@ export async function deleteFile(id, requestingUserId) {
 
   if (file.related_type === "contract") {
     await assertContractParty(file.related_id, requestingUserId);
+  }
+
+  if (file.related_type === "submission") {
+    await assertSubmissionParty(file.related_id, requestingUserId);
   }
 
   if (String(file.owner_id) !== String(requestingUserId)) {

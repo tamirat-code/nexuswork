@@ -33,13 +33,22 @@ export const MILESTONE_STATUS_META = {
     tone: "info",
     hint: "Money is held in escrow and work can begin",
   },
-  in_progress: { label: "In progress", tone: "info", hint: "Work has started" },
+  [MILESTONE_STATUS.IN_PROGRESS]: {
+    label: "In progress",
+    tone: "info",
+    hint: "The student is working on this milestone",
+  },
+  [MILESTONE_STATUS.SUBMITTED]: {
+    label: "Awaiting review",
+    tone: "warning",
+    hint: "Work was submitted and is waiting for client review",
+  },
   [MILESTONE_STATUS.DELIVERED]: {
     label: "Delivered",
     tone: "warning",
     hint: "Waiting for the client to review",
   },
-  revision_requested: {
+  [MILESTONE_STATUS.REVISION_REQUESTED]: {
     label: "Revision requested",
     tone: "warning",
     hint: "The client asked for changes",

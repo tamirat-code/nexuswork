@@ -94,3 +94,31 @@ eventBus.on("milestone.delivered", async ({ milestoneId, clientId }) => {
     logger.error("[event] failed to send milestone.delivered email:", err.message);
   }
 });
+
+eventBus.on("milestone.revision_requested", async ({ milestoneId, studentId, version, reason, revisionCount, maxRevisions }) => {
+  logger.info(`[event] milestone.revision_requested: ${milestoneId} -> student ${studentId}`);
+  try {
+    await createNotification({
+      userId: studentId,
+      type: "milestone_revision_requested",
+      title: "Revision requested",
+      body: `The client requested changes to submission v${version}. ${revisionCount} of ${maxRevisions} revisions used.`,
+      data: { milestone_id: milestoneId, submission_version: version, reason, revision_count: revisionCount, max_revisions: maxRevisions },
+    });
+  } catch (err) {
+    logger.error("[event] failed to create milestone.revision_requested notification:", err.message);
+  }
+
+  try {
+    const email = await getEmail(studentId);
+    if (email) {
+      await sendNotificationEmail({
+        to: email,
+        subject: "Revision requested on your milestone",
+        body: `The client requested changes to submission v${version}. ${reason}`,
+      });
+    }
+  } catch (err) {
+    logger.error("[event] failed to send milestone.revision_requested email:", err.message);
+  }
+});

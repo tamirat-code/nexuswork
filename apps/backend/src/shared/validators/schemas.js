@@ -199,17 +199,20 @@ export const createMilestoneSchema = z.object({
   amount: positiveNumber,
   due_date: z.coerce.date("Invalid due date"),
   description: z.string().trim().max(2000).optional().default(""),
+  max_revisions: z.coerce.number().int().min(0).max(20).optional().default(3),
 });
 
 export const submitWorkSchema = z.object({
-  file_url: url,
-  note: z.string().trim().max(2000).optional(),
+  file_url: url.optional(),
+  file_ids: z.array(objectId).max(10, "A submission can contain at most 10 files").optional().default([]),
+  note: z.string().trim().max(5000).optional().default(""),
 });
 
 // --- Submissions ---
 export const createSubmissionSchema = z.object({
-  file_url: url,
-  note: z.string().trim().max(2000).optional(),
+  file_url: url.optional(),
+  file_ids: z.array(objectId).max(10, "A submission can contain at most 10 files").optional().default([]),
+  note: z.string().trim().max(5000).optional().default(""),
 });
 
 export const requestRevisionSchema = z.object({
@@ -237,7 +240,7 @@ export const certifySkillSchema = z.object({
 });
 
 export const resolveDisputeSchema = z.object({
-  outcome: z.enum(["refund_client", "release_student"]),
+  outcome: z.enum(["refund_client", "release_student", "resume_work"]),
   resolution_summary: z.string().trim().min(10, "Resolution summary must be at least 10 characters").max(2000),
 });
 

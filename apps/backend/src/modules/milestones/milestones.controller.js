@@ -36,9 +36,23 @@ export const confirmFundingResult = asyncHandler(async (req, res) => {
   res.json({ success: true, data: milestone });
 });
 
+export const startWork = asyncHandler(async (req, res) => {
+  const milestone = await milestonesService.startWork(req.params.id, req.user._id);
+  res.json({ success: true, data: milestone });
+});
+
 export const submit = asyncHandler(async (req, res) => {
   const result = await milestonesService.submitWork(req.params.id, req.user._id, req.body);
   res.json({ success: true, data: result });
+});
+
+export const requestRevision = asyncHandler(async (req, res) => {
+  const submission = await milestonesService.requestRevision(
+    req.params.id,
+    req.user._id,
+    req.body?.reason || ""
+  );
+  res.json({ success: true, data: submission });
 });
 
 export const approve = asyncHandler(async (req, res) => {

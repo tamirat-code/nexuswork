@@ -9,8 +9,18 @@ export const confirmMilestoneFunding = (id, paymentIntentId, token) =>
     body: { payment_intent_id: paymentIntentId },
     token,
   });
+export const startMilestoneWork = (id, token) =>
+  apiRequest(`/milestones/${id}/start`, { method: "POST", token });
+
 export const submitMilestoneWork = (id, payload, token) =>
   apiRequest(`/milestones/${id}/submit`, { method: "POST", body: payload, token });
+
+export const requestMilestoneRevision = (id, reason, token) =>
+  apiRequest(`/milestones/${id}/request-revision`, {
+    method: "POST",
+    body: { reason },
+    token,
+  });
 export const approveMilestone = (id, token) => apiRequest(`/milestones/${id}/approve`, { method: "POST", token });
 export const getMilestone = (id, token) => apiRequest(`/milestones/${id}`, { token });
 

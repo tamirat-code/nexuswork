@@ -4,7 +4,7 @@ import Wallet from "../wallets/wallets.model.js";
 import Payment from "../payments/payments.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { stripe } from "../payments/stripe.client.js";
-import { addSubmission } from "../submissions/submissions.service.js";
+import { addSubmission, requestRevision as requestSubmissionRevision, approveSubmission, getLatestForMilestone } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
@@ -20,7 +20,28 @@ export async function createMilestone(contractId, requestingUserId, data) {
     const allowed = await isOrgMember(contract.client_id, requestingUserId);
     if (!allowed) throw new ForbiddenError("Only the client can define milestones");
   }
-  return Milestone.create({ contract_id: contractId, ...data });
+  if (contract.status !== "active") {
+    throw new ValidationError("Milestones can only be created for an active contract");
+  }
+
+  const lastMilestone = await Milestone.findOne({ contract_id: contractId })
+    .sort({ sequence: -1 })
+    .select({ sequence: 1 })
+    .lean();
+
+  const sequence = Number(lastMilestone?.sequence || 0) + 1;
+  const maxRevisions = data.max_revisions == null ? 3 : Number(data.max_revisions);
+
+  if (!Number.isInteger(maxRevisions) || maxRevisions < 0 || maxRevisions > 20) {
+    throw new ValidationError("max_revisions must be an integer between 0 and 20");
+  }
+
+  return Milestone.create({
+    contract_id: contractId,
+    ...data,
+    sequence,
+    max_revisions: maxRevisions,
+  });
 }
 
 export async function listForContract(contractId, { limit = 100, skip = 0 } = {}) {
@@ -79,6 +100,7 @@ export async function confirmFunding(paymentIntentId) {
   const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
   if (!milestone) return null;
   milestone.status = "funded";
+  milestone.funded_at = milestone.funded_at || new Date();
   await milestone.save();
 
   eventBus.emit("milestone.funded", {
@@ -122,23 +144,46 @@ export async function confirmFundingForMilestone(milestoneId, requestingUserId, 
   return confirmFunding(paymentIntentId);
 }
 
-export async function submitWork(milestoneId, requestingUserId, { file_url, note } = {}) {
+export async function startWork(milestoneId, requestingUserId) {
+  const milestone = await Milestone.findById(milestoneId).populate("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  const contract = milestone.contract_id;
+  if (String(contract.student_id) !== String(requestingUserId)) {
+    throw new ForbiddenError("Only the assigned student can start this milestone");
+  }
+  if (!["funded", "revision_requested"].includes(milestone.status)) {
+    throw new ValidationError(`Work can only be started on a funded or revision-requested milestone (current: ${milestone.status})`);
+  }
+  milestone.status = "in_progress";
+  milestone.started_at = milestone.started_at || new Date();
+  await milestone.save();
+  return milestone;
+}
+
+export async function submitWork(milestoneId, requestingUserId, { file_ids = [], file_url, note } = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
   const contract = milestone.contract_id;
   if (String(contract.student_id) !== String(requestingUserId)) {
     throw new ForbiddenError("Only the assigned student can submit work");
   }
-  if (milestone.status !== "funded") {
-    throw new ValidationError("Milestone must be funded before work is submitted");
+  if (!["funded", "in_progress", "revision_requested"].includes(milestone.status)) {
+    throw new ValidationError("Milestone must be funded, in progress, or awaiting revision before work can be submitted");
   }
-  const submission = await addSubmission(milestone._id, { file_url, note });
-  milestone.status = "delivered";
+  if (!milestone.started_at) milestone.started_at = new Date();
+
+  const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note });
+  milestone.status = "submitted";
+  milestone.delivered_at = new Date();
   await milestone.save();
 
-  eventBus.emit("milestone.delivered", { milestoneId: milestone._id, clientId: contract.client_id });
-
   return { milestone, submission };
+}
+
+export async function requestRevision(milestoneId, requestingUserId, reason) {
+  const latest = await getLatestForMilestone(milestoneId);
+  if (!latest) throw new ValidationError("No submission exists for this milestone");
+  return requestSubmissionRevision(latest._id, requestingUserId, reason);
 }
 
 export async function approveMilestone(milestoneId, requestingUserId) {
@@ -149,8 +194,8 @@ export async function approveMilestone(milestoneId, requestingUserId) {
     const allowed = await isOrgMember(contract.client_id, requestingUserId);
     if (!allowed) throw new ForbiddenError("Only the client can approve this milestone");
   }
-  if (milestone.status !== "delivered") {
-    throw new ValidationError("Milestone must be delivered before approval");
+  if (!["submitted", "delivered"].includes(milestone.status)) {
+    throw new ValidationError("Milestone must have submitted work before approval");
   }
   if (milestone.status === "released") {
     throw new ValidationError("Milestone has already been released");
@@ -192,7 +237,11 @@ export async function approveMilestone(milestoneId, requestingUserId) {
     logger.warn(`[milestones] failed to record commission for milestone ${milestone._id}:`, err.message);
   }
 
+  const latestSubmission = await approveSubmission(milestone._id, requestingUserId);
+
   milestone.status = "released";
+  milestone.approved_at = new Date();
+  milestone.released_at = new Date();
   await milestone.save();
 
   eventBus.emit("milestone.approved", { milestoneId: milestone._id, studentId: contract.student_id, payout });
@@ -213,5 +262,5 @@ export async function approveMilestone(milestoneId, requestingUserId) {
     logger.error(`[milestones] failed to auto-create invoice for milestone ${milestone._id}:`, err.message);
   }
 
-  return { milestone, payout, releasePayment };
+  return { milestone, payout, releasePayment, submission: latestSubmission };
 }

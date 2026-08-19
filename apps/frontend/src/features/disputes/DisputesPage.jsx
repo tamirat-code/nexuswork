@@ -47,6 +47,9 @@ export default function DisputesPage() {
                 <span className="font-mono text-brass">{formatCurrency(d.milestone_id?.amount ?? 0)}</span>
                 <span>Opened {formatDate(d.createdAt)}</span>
                 {d.resolved_at && <span>Resolved {formatDate(d.resolved_at)}</span>}
+                {d.outcome && d.status === "resolved" && (
+                  <span className="capitalize">Outcome: {d.outcome.replace("_", " ")}</span>
+                )}
               </div>
             </CardContent>
           </Card>

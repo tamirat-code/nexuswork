@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus } from "lucide-react";
-import { listAdminStats, listAdminUsers, listAdminDisputes } from "../../services/api/admin.api.js";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale } from "lucide-react";
+import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
@@ -10,6 +10,7 @@ import { Badge } from "../../components/ui/shadcn/badge.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
 import { Label } from "../../components/ui/shadcn/label.jsx";
+import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
@@ -22,6 +23,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/shadcn/dialog.jsx";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "../../components/ui/shadcn/select.jsx";
 
 function CreateUniversityDialog({ token }) {
   const qc = useQueryClient();
@@ -79,6 +83,90 @@ function CreateUniversityDialog({ token }) {
   );
 }
 
+const RESOLUTION_OUTCOMES = [
+  { value: "resume_work", label: "Return to work", hint: "Restore the milestone and let both parties continue." },
+  { value: "release_student", label: "Release funds to student", hint: "Student keeps the milestone payment." },
+  { value: "refund_client", label: "Refund client", hint: "Return the milestone funds to the client." },
+];
+
+function ResolveDisputeDialog({ dispute, token }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [resolution, setResolution] = useState("");
+  const [outcome, setOutcome] = useState("resume_work");
+
+  const resolve = useMutation({
+    mutationFn: () =>
+      resolveAdminDispute(dispute._id, { resolution: resolution.trim(), outcome }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-disputes"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success("Dispute resolved");
+      setResolution("");
+      setOutcome("resume_work");
+      setOpen(false);
+    },
+    onError: (err) => toast.error(err.message || "Could not resolve dispute"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="secondary" className="h-8 gap-1.5">
+          <Scale className="h-3.5 w-3.5" /> Resolve
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Resolve dispute</DialogTitle>
+          <DialogDescription>
+            {dispute.milestone_id?.title || "Milestone"} — {dispute.reason || "No reason provided"}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor={`outcome-${dispute._id}`}>Decision</Label>
+            <Select value={outcome} onValueChange={setOutcome}>
+              <SelectTrigger id={`outcome-${dispute._id}`}>
+                <SelectValue placeholder="Choose outcome" />
+              </SelectTrigger>
+              <SelectContent>
+                {RESOLUTION_OUTCOMES.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-300">
+              {RESOLUTION_OUTCOMES.find((o) => o.value === outcome)?.hint}
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`resolution-${dispute._id}`}>Resolution summary</Label>
+            <Textarea
+              id={`resolution-${dispute._id}`}
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value)}
+              placeholder="Explain the decision and next steps for both parties…"
+              rows={4}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            loading={resolve.isPending}
+            disabled={resolution.trim().length < 10}
+            onClick={() => resolve.mutate()}
+          >
+            Resolve dispute
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminPage() {
   const { token } = useAuth();
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
@@ -87,15 +175,15 @@ export default function AdminPage() {
   const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
 
   const stats = statsData?.data ?? {};
-const users = Array.isArray(usersData?.data)
-  ? usersData.data
-  : usersData?.data?.users ?? [];
+  const users = Array.isArray(usersData?.data)
+    ? usersData.data
+    : usersData?.data?.users ?? [];
 
-const disputes = Array.isArray(disputesData?.data)
-  ? disputesData.data
-  : disputesData?.data?.disputes ?? [];
+  const disputes = Array.isArray(disputesData?.data)
+    ? disputesData.data
+    : disputesData?.data?.disputes ?? [];
 
-const universities = universitiesData?.data ?? [];
+  const universities = universitiesData?.data ?? [];
 
   const statCards = [
     { label: "Active projects", value: stats.active_projects ?? 0, icon: Briefcase },
@@ -149,15 +237,29 @@ const universities = universitiesData?.data ?? [];
           <CardHeader><CardTitle className="text-lg">Dispute queue</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Milestone</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Milestone</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
-                {disputesLoading && <TableRow><TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
-                {!disputesLoading && disputes.length === 0 && <TableRow><TableCell colSpan={3} className="py-8 text-center text-slate-300">No disputes</TableCell></TableRow>}
+                {disputesLoading && <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
+                {!disputesLoading && disputes.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">No disputes</TableCell></TableRow>}
                 {disputes.map((d) => (
                   <TableRow key={d._id}>
-                    <TableCell className="text-sm text-slate-300">{d.milestone_id?.title || "Milestone"}</TableCell>
+                    <TableCell className="text-sm font-medium text-slate">{d.milestone_id?.title || "Milestone"}</TableCell>
+                    <TableCell className="max-w-[220px] truncate text-xs text-slate-300" title={d.reason}>{d.reason || "—"}</TableCell>
                     <TableCell><StatusBadge kind="dispute" status={d.status} showDot /></TableCell>
-                    <TableCell className="text-right font-mono text-brass">${(d.amount ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      {d.status !== "resolved" ? (
+                        <ResolveDisputeDialog dispute={d} token={token} />
+                      ) : (
+                        <Badge variant="success">Resolved</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

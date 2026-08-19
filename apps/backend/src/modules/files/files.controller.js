@@ -24,10 +24,15 @@ export const uploadFile = asyncHandler(async (req, res) => {
     throw new ValidationError("Invalid related_type");
   }
 
-  if (relatedType === "contract") {
-    if (!relatedId) throw new ValidationError("related_id is required for contract files");
-    // Authorize before creating a file record.
-    await filesService.listForContract(relatedId, req.user._id);
+  if (["contract", "submission"].includes(relatedType)) {
+    if (!relatedId) throw new ValidationError(`related_id is required for ${relatedType} files`);
+    // Submission files are normally attached atomically after upload by the submission service.
+    // Direct submission attachment is still authorized by the file service.
+    if (relatedType === "contract") {
+      await filesService.listForContract(relatedId, req.user._id);
+    } else {
+      await filesService.assertSubmissionParty(relatedId, req.user._id);
+    }
   }
 
   const baseUrl = `${req.protocol}://${req.get("host")}`;

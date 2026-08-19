@@ -1,5 +1,6 @@
 import User from "../users/users.model.js";
 import Dispute from "../disputes/disputes.model.js";
+import Milestone from "../milestones/milestones.model.js";
 import AdminAction from "./admin.model.js";
 import AuditLog from "../audit-logs/audit-logs.model.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
@@ -208,11 +209,20 @@ export async function resolveDispute(admin_id, admin_role, dispute_id, resolutio
   const dispute = await Dispute.findById(dispute_id);
   if (!dispute) throw new NotFoundError("Dispute not found");
 
+  
+  if (outcome === "resume_work") {
+    const milestone = await Milestone.findById(dispute.milestone_id);
+    if (milestone && milestone.status === "disputed") {
+      milestone.status = dispute.pre_dispute_status || "funded";
+      await milestone.save();
+    }
+  }
+
   dispute.status = "resolved";
   dispute.resolution_summary = resolution;
   dispute.resolved_by = admin_id;
   dispute.resolved_at = new Date();
-  dispute.outcome = outcome; // e.g., 'client_favored', 'freelancer_favored', 'split'
+  dispute.outcome = outcome; // e.g., 'client_favored', 'freelancer_favored', 'split', 'resume_work'
   await dispute.save();
 
   await logAction({

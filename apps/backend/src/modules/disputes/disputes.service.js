@@ -8,7 +8,7 @@ import { refundClient, releaseToStudent } from "../payments/payments.service.js"
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
-const VALID_OUTCOMES = ["refund_client", "release_student"];
+const VALID_OUTCOMES = ["refund_client", "release_student", "resume_work"];
 
 export async function openDispute(milestoneId, openedBy, reason) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
@@ -20,12 +20,13 @@ export async function openDispute(milestoneId, openedBy, reason) {
     throw new ForbiddenError("Only a party to this contract can open a dispute on its milestone");
   }
 
-  if (!["funded", "delivered"].includes(milestone.status)) {
+  if (!["funded", "in_progress", "submitted", "delivered", "revision_requested"].includes(milestone.status)) {
     throw new ValidationError(`Cannot dispute a milestone in status ${milestone.status}`);
   }
+  const preDisputeStatus = milestone.status;
   milestone.status = "disputed";
   await milestone.save();
-  return Dispute.create({ milestone_id: milestoneId, opened_by: openedBy, reason });
+  return Dispute.create({ milestone_id: milestoneId, opened_by: openedBy, reason, pre_dispute_status: preDisputeStatus });
 }
 
 
@@ -44,7 +45,7 @@ export async function getDisputeEvidence(disputeId, requestingUser) {
   }
 
   const [submissions, messages] = await Promise.all([
-    listSubmissionsForMilestone(milestone._id),
+    listSubmissionsForMilestone(milestone._id, requestingUser._id),
     Message.find({ contract_id: contract._id }).sort({ createdAt: 1 }).populate({ path: "attachments" }).lean(),
   ]);
 
@@ -68,7 +69,7 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome })
   if (outcome === "refund_client") {
     await refundClient(milestone._id);
     milestone.status = "not_funded";
-  } else {
+  } else if (outcome === "release_student") {
     const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
     const payout = milestone.amount * (1 - paymentConfig.commissionRate);
     await releaseToStudent({
@@ -77,11 +78,16 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome })
       stripeAccountId: studentWallet?.stripe_account_id,
     });
     milestone.status = "released";
+  } else {
+   
+    milestone.status = dispute.pre_dispute_status || "funded";
   }
   await milestone.save();
 
   dispute.status = "resolved";
   dispute.resolution_summary = resolution_summary;
+  dispute.outcome = outcome;
+  dispute.resolved_at = new Date();
   await dispute.save();
   return dispute;
 }
@@ -92,17 +98,16 @@ export async function listOpen() {
     .sort({ createdAt: -1 });
 }
 
-// Disputes on contracts the requesting user is actually a party to — what a
-// student or client should see, as opposed to the admin-only platform-wide
-// listOpen() view.
+
 export async function listForUser(userId) {
-  const contractIds = await Contract.find({
+  
+  const contractIds = await Contract.distinct("_id", {
     $or: [{ client_id: userId }, { student_id: userId }],
-  }).distinct("_id");
+  });
 
   if (!contractIds.length) return [];
 
-  const milestoneIds = await Milestone.find({ contract_id: { $in: contractIds } }).distinct("_id");
+  const milestoneIds = await Milestone.distinct("_id", { contract_id: { $in: contractIds } });
   if (!milestoneIds.length) return [];
 
   return Dispute.find({ milestone_id: { $in: milestoneIds } })
