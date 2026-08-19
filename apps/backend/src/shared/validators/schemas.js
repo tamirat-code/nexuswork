@@ -212,6 +212,14 @@ export const createSubmissionSchema = z.object({
   note: z.string().trim().max(2000).optional(),
 });
 
+export const requestRevisionSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Revision reason must be at least 3 characters")
+    .max(2000, "Revision reason is too long"),
+});
+
 // --- Reviews ---
 export const createReviewSchema = z.object({
   reviewee_id: objectId,

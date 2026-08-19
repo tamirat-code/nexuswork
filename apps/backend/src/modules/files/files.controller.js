@@ -2,19 +2,49 @@ import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 import * as filesService from "./files.service.js";
 
+const VALID_RELATED_TYPES = new Set([
+  "project_attachment",
+  "submission",
+  "portfolio",
+  "message_attachment",
+  "contract",
+  "verification_document",
+  "other",
+]);
+
 export const uploadFile = asyncHandler(async (req, res) => {
-  if (!req.file) throw new ValidationError("No file was uploaded (expected field name \"file\")");
+  if (!req.file) {
+    throw new ValidationError('No file was uploaded (expected field name "file")');
+  }
+
+  const relatedType = req.body.related_type || "other";
+  const relatedId = req.body.related_id;
+
+  if (!VALID_RELATED_TYPES.has(relatedType)) {
+    throw new ValidationError("Invalid related_type");
+  }
+
+  if (relatedType === "contract") {
+    if (!relatedId) throw new ValidationError("related_id is required for contract files");
+    // Authorize before creating a file record.
+    await filesService.listForContract(relatedId, req.user._id);
+  }
 
   const baseUrl = `${req.protocol}://${req.get("host")}`;
   const file = await filesService.createFileRecord({
     ownerId: req.user._id,
     multerFile: req.file,
     baseUrl,
-    related_type: req.body.related_type,
-    related_id: req.body.related_id,
+    related_type: relatedType,
+    related_id: relatedId,
   });
 
   res.status(201).json({ success: true, data: file });
+});
+
+export const getForContract = asyncHandler(async (req, res) => {
+  const files = await filesService.listForContract(req.params.contractId, req.user._id);
+  res.json({ success: true, data: files });
 });
 
 export const getOne = asyncHandler(async (req, res) => {

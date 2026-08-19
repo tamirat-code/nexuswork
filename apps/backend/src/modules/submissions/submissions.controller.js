@@ -7,6 +7,10 @@ export const getForMilestone = asyncHandler(async (req, res) => {
 });
 
 export const flagRevision = asyncHandler(async (req, res) => {
-  const submission = await requestRevision(req.params.id);
+  const submission = await requestRevision(
+    req.params.id,
+    req.user._id,
+    req.body?.reason || ""
+  );
   res.json({ success: true, data: submission });
 });

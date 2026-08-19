@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import File from "./files.model.js";
+import Contract from "../contracts/contracts.model.js";
 import { storageConfig } from "../../config/storage.config.js";
 import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
@@ -17,13 +18,38 @@ export async function createFileRecord({ ownerId, multerFile, baseUrl, related_t
   });
 }
 
+async function assertContractParty(contractId, userId) {
+  const contract = await Contract.findById(contractId).select("client_id student_id");
+  if (!contract) throw new NotFoundError("Contract not found");
+
+  const allowed = [String(contract.client_id), String(contract.student_id)].includes(String(userId));
+  if (!allowed) throw new ForbiddenError("You are not a party to this contract");
+
+  return contract;
+}
+
+export async function listForContract(contractId, requestingUserId) {
+  await assertContractParty(contractId, requestingUserId);
+
+  return File.find({
+    related_type: "contract",
+    related_id: contractId,
+  })
+    .sort({ createdAt: -1 })
+    .populate("owner_id", "name email")
+    .lean();
+}
+
 export async function getById(id, requestingUser) {
   const file = await File.findById(id);
   if (!file) throw new NotFoundError("File not found");
 
-  
   if (file.related_type === "verification_document") {
     await assertCanViewVerificationDocument(file, requestingUser);
+  }
+
+  if (file.related_type === "contract") {
+    await assertContractParty(file.related_id, requestingUser?._id);
   }
 
   return file;
@@ -55,12 +81,17 @@ async function assertCanViewVerificationDocument(file, requestingUser) {
 export async function deleteFile(id, requestingUserId) {
   const file = await File.findById(id);
   if (!file) throw new NotFoundError("File not found");
+
+  if (file.related_type === "contract") {
+    await assertContractParty(file.related_id, requestingUserId);
+  }
+
   if (String(file.owner_id) !== String(requestingUserId)) {
     throw new ForbiddenError("Only the uploader can delete this file");
   }
 
   const diskPath = path.join(storageConfig.absoluteUploadDir, file.filename);
-  fs.unlink(diskPath, () => {}); // best-effort — don't fail the request if this errors
+  fs.unlink(diskPath, () => {});
 
   await file.deleteOne();
   return { deleted: true };

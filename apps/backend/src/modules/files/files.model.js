@@ -3,15 +3,22 @@ import mongoose from "mongoose";
 const fileSchema = new mongoose.Schema(
   {
     owner_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    filename: { type: String, required: true }, // name on disk
-    original_name: { type: String, required: true }, // name the user uploaded
+    filename: { type: String, required: true },
+    original_name: { type: String, required: true },
     mimetype: { type: String, required: true },
-    size: { type: Number, required: true }, // bytes
+    size: { type: Number, required: true },
     url: { type: String, required: true },
-    // Optional link back to whatever this file belongs to.
     related_type: {
       type: String,
-      enum: ["project_attachment", "submission", "portfolio", "message_attachment", "verification_document", "other"],
+      enum: [
+        "project_attachment",
+        "submission",
+        "portfolio",
+        "message_attachment",
+        "contract",
+        "verification_document",
+        "other",
+      ],
       default: "other",
     },
     related_id: { type: mongoose.Schema.Types.ObjectId },
@@ -20,5 +27,6 @@ const fileSchema = new mongoose.Schema(
 );
 
 fileSchema.index({ owner_id: 1, createdAt: -1 });
+fileSchema.index({ related_type: 1, related_id: 1, createdAt: -1 });
 
 export default mongoose.model("File", fileSchema);
