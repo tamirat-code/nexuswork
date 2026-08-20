@@ -1,29 +1,73 @@
 import { apiRequest } from "../../lib/http.js";
 
+
 export const createMilestone = (contractId, payload, token) =>
-  apiRequest(`/milestones/contract/${contractId}`, { method: "POST", body: payload, token });
-export const fundMilestone = (id, token) => apiRequest(`/milestones/${id}/fund`, { method: "POST", token });
-export const confirmMilestoneFunding = (id, paymentIntentId, token) =>
-  apiRequest(`/milestones/${id}/fund/confirm`, {
+  apiRequest(`/milestones/contract/${contractId}`, {
+    method: "POST",
+    body: payload,
+    token,
+  });
+
+export const listMilestones = (contractId, token) =>
+  apiRequest(`/milestones/contract/${contractId}`, {
+    token,
+  });
+
+export const listContractMilestones = listMilestones;
+
+export const getMilestone = (milestoneId, token) =>
+  apiRequest(`/milestones/${milestoneId}`, {
+    token,
+  });
+
+export const fundMilestone = (milestoneId, token) =>
+  apiRequest(`/milestones/${milestoneId}/fund`, {
+    method: "POST",
+    token,
+  });
+
+export const confirmMilestoneFunding = (paymentIntentId, token) =>
+  apiRequest("/milestones/fund/confirm", {
     method: "POST",
     body: { payment_intent_id: paymentIntentId },
     token,
   });
-export const startMilestoneWork = (id, token) =>
-  apiRequest(`/milestones/${id}/start`, { method: "POST", token });
 
-export const submitMilestoneWork = (id, payload, token) =>
-  apiRequest(`/milestones/${id}/submit`, { method: "POST", body: payload, token });
 
-export const requestMilestoneRevision = (id, reason, token) =>
-  apiRequest(`/milestones/${id}/request-revision`, {
+export const startMilestoneWork = (milestoneId, payload = {}, token) =>
+  apiRequest(`/milestones/${milestoneId}/submit`, {
     method: "POST",
-    body: { reason },
+    body: payload,
     token,
   });
-export const approveMilestone = (id, token) => apiRequest(`/milestones/${id}/approve`, { method: "POST", token });
-export const getMilestone = (id, token) => apiRequest(`/milestones/${id}`, { token });
+
+export const submitMilestoneWork = startMilestoneWork;
 
 
-  export const listContractMilestones = (contractId, token) =>
-  apiRequest(`/milestones/contract/${contractId}`, { token });
+export const requestMilestoneRevision = (milestoneId, payload = {}, token) =>
+  apiRequest(`/milestones/${milestoneId}/revision`, {
+    method: "POST",
+    body: payload,
+    token,
+  });
+
+export const approveMilestone = (milestoneId, token) =>
+  apiRequest(`/milestones/${milestoneId}/approve`, {
+    method: "POST",
+    token,
+  });
+
+export const retryMilestoneRelease = (milestoneId, token) =>
+  apiRequest(`/milestones/${milestoneId}/release`, {
+    method: "POST",
+    token,
+  });
+
+export const releaseMilestone = retryMilestoneRelease;
+
+export const openMilestoneDispute = (milestoneId, payload, token) =>
+  apiRequest(`/milestones/${milestoneId}/dispute`, {
+    method: "POST",
+    body: payload,
+    token,
+  });

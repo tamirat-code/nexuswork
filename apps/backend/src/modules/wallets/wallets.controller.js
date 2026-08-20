@@ -1,10 +1,21 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { getBalance, startOnboarding, listTransactions, requestWithdrawal } from "./wallets.service.js";
+import {
+  getBalance,
+  getPayoutStatus,
+  startOnboarding,
+  listTransactions,
+  requestWithdrawal,
+} from "./wallets.service.js";
 
 export const getMyWallet = asyncHandler(async (req, res) => {
   const balance = await getBalance(req.user._id);
   res.json({ success: true, data: balance });
+});
+
+export const getMyPayoutStatus = asyncHandler(async (req, res) => {
+  const status = await getPayoutStatus(req.user._id);
+  res.json({ success: true, data: status });
 });
 
 export const connectOnboarding = asyncHandler(async (req, res) => {

@@ -11,52 +11,53 @@ export async function handleStripeWebhook(req, res) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, signature, paymentConfig.stripeWebhookSecret);
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      signature,
+      paymentConfig.stripeWebhookSecret
+    );
   } catch (err) {
     logger.error("[webhook] signature verification failed:", err.message);
-    return res.status(400).send(`Webhook signature verification failed`);
+    return res.status(400).send("Webhook signature verification failed");
   }
 
-  // Idempotency: ignore events we've already processed
   try {
     const already = await WebhookEvent.findOne({ event_id: event.id });
-    if (already) {
-      logger.info(`[webhook] already processed event ${event.id} (${event.type}), skipping`);
-      return res.json({ received: true });
-    }
+    if (already) return res.json({ received: true });
   } catch (err) {
-
-    logger.error(`[webhook] failed to check stored events for ${event.id}:`, err.message);
+    logger.error("[webhook] failed to check stored event:", err.message);
   }
 
   try {
     switch (event.type) {
-      case "payment_intent.succeeded": {
-        const intent = event.data.object;
-        await confirmFunding(intent.id);
+      case "payment_intent.succeeded":
+        await confirmFunding(event.data.object.id);
         break;
-      }
-      case "payment_intent.payment_failed": {
-        const intent = event.data.object;
-        await markDepositFailed(intent.id);
+
+      case "payment_intent.payment_failed":
+        await markDepositFailed(event.data.object.id);
         break;
-      }
+
       case "account.updated": {
         const account = event.data.object;
-        const isComplete = Boolean(account.charges_enabled && account.payouts_enabled);
+        const isComplete = Boolean(
+          account.charges_enabled && account.payouts_enabled
+        );
         await markOnboardingStatus(account.id, isComplete);
         break;
       }
+
       default:
         break;
     }
 
-    
     try {
-      await WebhookEvent.create({ event_id: event.id, type: event.type });
+      await WebhookEvent.create({
+        event_id: event.id,
+        type: event.type,
+      });
     } catch (err) {
-      
-      logger.warn(`[webhook] could not record event ${event.id}:`, err.message);
+      logger.warn("[webhook] could not record event:", err.message);
     }
   } catch (err) {
     logger.error(`[webhook] error handling ${event.type}:`, err.message);

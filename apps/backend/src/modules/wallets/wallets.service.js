@@ -8,6 +8,36 @@ import Payment from "../payments/payments.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
+async function syncStripeAccountStatus(wallet) {
+  if (!wallet?.stripe_account_id) {
+    return {
+      onboarding_complete: false,
+      payouts_enabled: false,
+      charges_enabled: false,
+      details_submitted: false,
+      requirements_due: [],
+      disabled_reason: null,
+    };
+  }
+
+  const account = await stripe.accounts.retrieve(wallet.stripe_account_id);
+  const complete = Boolean(account.charges_enabled && account.payouts_enabled);
+
+  if (wallet.stripe_onboarding_complete !== complete) {
+    wallet.stripe_onboarding_complete = complete;
+    await wallet.save();
+  }
+
+  return {
+    onboarding_complete: complete,
+    payouts_enabled: Boolean(account.payouts_enabled),
+    charges_enabled: Boolean(account.charges_enabled),
+    details_submitted: Boolean(account.details_submitted),
+    requirements_due: account.requirements?.currently_due || [],
+    disabled_reason: account.requirements?.disabled_reason || null,
+  };
+}
+
 export async function getWallet(userId) {
   return Wallet.findOne({ user_id: userId });
 }
@@ -15,18 +45,39 @@ export async function getWallet(userId) {
 export async function getBalance(userId) {
   const wallet = await Wallet.findOne({ user_id: userId });
   if (!wallet) throw new NotFoundError("Wallet not found");
-  if (!wallet.stripe_account_id || !wallet.stripe_onboarding_complete) {
-    return { available: 0, pending: 0, currency: paymentConfig.currency, onboarding_complete: false };
+
+  const payoutStatus = await syncStripeAccountStatus(wallet);
+
+  if (!wallet.stripe_account_id || !payoutStatus.payouts_enabled) {
+    return {
+      available: 0,
+      pending: 0,
+      currency: paymentConfig.currency,
+      ...payoutStatus,
+    };
   }
-  const balance = await stripe.balance.retrieve({ stripeAccount: wallet.stripe_account_id });
-  const available = balance.available.find((b) => b.currency === paymentConfig.currency)?.amount || 0;
-  const pending = balance.pending.find((b) => b.currency === paymentConfig.currency)?.amount || 0;
+
+  const balance = await stripe.balance.retrieve({
+    stripeAccount: wallet.stripe_account_id,
+  });
+
+  const available =
+    balance.available.find((b) => b.currency === paymentConfig.currency)?.amount || 0;
+  const pending =
+    balance.pending.find((b) => b.currency === paymentConfig.currency)?.amount || 0;
+
   return {
     available: available / 100,
     pending: pending / 100,
     currency: paymentConfig.currency,
-    onboarding_complete: true,
+    ...payoutStatus,
   };
+}
+
+export async function getPayoutStatus(userId) {
+  const wallet = await Wallet.findOne({ user_id: userId });
+  if (!wallet) throw new NotFoundError("Wallet not found");
+  return syncStripeAccountStatus(wallet);
 }
 
 export async function startOnboarding(userId) {
@@ -42,8 +93,20 @@ export async function startOnboarding(userId) {
       email: user.email,
       capabilities: { transfers: { requested: true } },
     });
+
     wallet.stripe_account_id = account.id;
     await wallet.save();
+  }
+
+  const status = await syncStripeAccountStatus(wallet);
+
+  if (status.onboarding_complete) {
+    const loginLink = await stripe.accounts.createLoginLink(wallet.stripe_account_id);
+    return {
+      onboarding_url: loginLink.url,
+      already_complete: true,
+      ...status,
+    };
   }
 
   const accountLink = await stripe.accountLinks.create({
@@ -53,7 +116,11 @@ export async function startOnboarding(userId) {
     type: "account_onboarding",
   });
 
-  return { onboarding_url: accountLink.url };
+  return {
+    onboarding_url: accountLink.url,
+    already_complete: false,
+    ...status,
+  };
 }
 
 export async function markOnboardingStatus(stripeAccountId, isComplete) {
@@ -64,7 +131,6 @@ export async function markOnboardingStatus(stripeAccountId, isComplete) {
   );
 }
 
-
 export async function listTransactions(userId, { limit = 50 } = {}) {
   const contractIds = await Contract.find({ student_id: userId }).distinct("_id");
   const milestoneIds = contractIds.length
@@ -73,7 +139,11 @@ export async function listTransactions(userId, { limit = 50 } = {}) {
 
   const [releases, withdrawals] = await Promise.all([
     milestoneIds.length
-      ? Payment.find({ milestone_id: { $in: milestoneIds }, direction: "release", status: "succeeded" })
+      ? Payment.find({
+          milestone_id: { $in: milestoneIds },
+          direction: "release",
+          status: "succeeded",
+        })
           .populate("milestone_id", "title")
           .sort({ createdAt: -1 })
           .limit(Number(limit))
@@ -93,7 +163,10 @@ export async function listTransactions(userId, { limit = 50 } = {}) {
   const withdrawalTx = withdrawals.map((w) => ({
     _id: w._id,
     type: "withdrawal",
-    description: w.status === "failed" ? `Withdrawal failed: ${w.failure_reason || "unknown error"}` : "Withdrawal to bank account",
+    description:
+      w.status === "failed"
+        ? `Withdrawal failed: ${w.failure_reason || "unknown error"}`
+        : "Withdrawal to bank account",
     amount: w.amount,
     createdAt: w.createdAt,
   }));
@@ -103,13 +176,19 @@ export async function listTransactions(userId, { limit = 50 } = {}) {
     .slice(0, Number(limit));
 }
 
-
 export async function requestWithdrawal(userId, amount) {
-  if (!(amount > 0)) throw new ValidationError("Withdrawal amount must be greater than zero");
+  if (!(amount > 0)) {
+    throw new ValidationError("Withdrawal amount must be greater than zero");
+  }
 
   const wallet = await Wallet.findOne({ user_id: userId });
-  if (!wallet || !wallet.stripe_account_id || !wallet.stripe_onboarding_complete) {
+  if (!wallet || !wallet.stripe_account_id) {
     throw new ValidationError("Complete payout account setup before requesting a withdrawal");
+  }
+
+  const status = await syncStripeAccountStatus(wallet);
+  if (!status.payouts_enabled) {
+    throw new ValidationError("Complete Stripe payout verification before requesting a withdrawal");
   }
 
   const withdrawal = await Withdrawal.create({
@@ -121,9 +200,13 @@ export async function requestWithdrawal(userId, amount) {
 
   try {
     const payout = await stripe.payouts.create(
-      { amount: Math.round(amount * 100), currency: paymentConfig.currency },
+      {
+        amount: Math.round(amount * 100),
+        currency: paymentConfig.currency,
+      },
       { stripeAccount: wallet.stripe_account_id }
     );
+
     withdrawal.status = "paid";
     withdrawal.stripe_payout_id = payout.id;
     await withdrawal.save();
