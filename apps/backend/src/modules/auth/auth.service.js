@@ -43,6 +43,11 @@ export async function registerUser({
   termsAccepted,
   recaptchaToken,
   organizationName,
+  organizationType,
+  university_id,
+  student_id_number,
+  program,
+  enrollment_status,
 }) {
   await verifyRecaptcha(recaptchaToken);
 
@@ -65,7 +70,10 @@ export async function registerUser({
   }
 
   let university = null;
-  if (role === "university_staff") {
+  if (role === "student") {
+    university = await University.findById(university_id);
+    if (!university) throw new ValidationError("Selected university was not found");
+  } else if (role === "university_staff") {
     const domain = email.toLowerCase().split("@")[1];
     university = await University.findOne({ domain });
     if (!university) {
@@ -88,11 +96,19 @@ export async function registerUser({
 
   if (role === "student") {
     await Wallet.create({ user_id: user._id });
-    await StudentProfile.create({ user_id: user._id });
+    await StudentProfile.create({
+      user_id: user._id,
+      university_id,
+      student_id_number: student_id_number.trim(),
+      program: program.trim(),
+      enrollment_status,
+      verification_status: "pending",
+    });
   } else if (role === "client") {
     await Wallet.create({ user_id: user._id });
     await ClientProfile.create({
       user_id: user._id,
+      organization_type: organizationType || "individual",
       ...(organizationName ? { organization_name: organizationName } : {}),
     });
   } else if (role === "university_staff") {
@@ -146,7 +162,19 @@ export async function loginUser({ email, password }) {
   return { token: signToken(user), user };
 }
 
-export async function loginOrRegisterWithGoogle(idToken, { role, termsAccepted, organizationName } = {}) {
+export async function loginOrRegisterWithGoogle(
+  idToken,
+  {
+    role,
+    termsAccepted,
+    organizationName,
+    organizationType,
+    university_id,
+    student_id_number,
+    program,
+    enrollment_status,
+  } = {}
+) {
   const { googleId, email, emailVerified, name } = await verifyGoogleIdToken(idToken);
 
   let user = await User.findOne({ google_id: googleId });
@@ -202,12 +230,22 @@ export async function loginOrRegisterWithGoogle(idToken, { role, termsAccepted, 
     await Wallet.create({ user_id: user._id });
     await ClientProfile.create({
       user_id: user._id,
+      organization_type: organizationType || "individual",
       ...(organizationName ? { organization_name: organizationName } : {}),
     });
   } else {
     await Wallet.create({ user_id: user._id });
     if (role === "student") {
-      await StudentProfile.create({ user_id: user._id });
+      const studentUniversity = await University.findById(university_id);
+      if (!studentUniversity) throw new ValidationError("Selected university was not found");
+      await StudentProfile.create({
+        user_id: user._id,
+        university_id,
+        student_id_number: student_id_number.trim(),
+        program: program.trim(),
+        enrollment_status,
+        verification_status: "pending",
+      });
     }
   }
 

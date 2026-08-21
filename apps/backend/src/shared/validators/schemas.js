@@ -21,26 +21,75 @@ export const nonNegativeNumber = z.coerce.number().min(0, "Must be zero or great
 export const url = z.string().trim().url("Invalid URL").optional().nullable();
 
 // --- Auth ---
-export const registerSchema = z.object({
-  email,
-  password,
-  name,
-  role,
-  termsAccepted: z.boolean().refine((v) => v === true, "Terms must be accepted"),
-  recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
-});
+export const registerSchema = z
+  .object({
+    email,
+    password,
+    name,
+    role,
+    termsAccepted: z.boolean().refine((v) => v === true, "Terms must be accepted"),
+    recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
+    university_id: optionalObjectId,
+    student_id_number: z.string().trim().max(50).optional(),
+    program: z.string().trim().max(150).optional(),
+    enrollment_status: z.enum(["enrolled", "graduated", "on_leave", "unknown"]).optional(),
+    organizationName: z.string().trim().max(200).optional(),
+    organizationType: z
+      .enum(["individual", "company", "university_department", "ngo", "government"])
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.role === "student") {
+      if (!value.university_id) {
+        ctx.addIssue({ code: "custom", path: ["university_id"], message: "University is required" });
+      }
+      if (!value.student_id_number) {
+        ctx.addIssue({ code: "custom", path: ["student_id_number"], message: "Student ID number is required" });
+      }
+      if (!value.program) {
+        ctx.addIssue({ code: "custom", path: ["program"], message: "Program / field of study is required" });
+      }
+      if (!value.enrollment_status) {
+        ctx.addIssue({ code: "custom", path: ["enrollment_status"], message: "Enrollment status is required" });
+      }
+    }
+
+    if (value.role === "client" && value.organizationType && value.organizationType !== "individual" && !value.organizationName) {
+      ctx.addIssue({ code: "custom", path: ["organizationName"], message: "Organization name is required for organizational clients" });
+    }
+  });
 
 export const loginSchema = z.object({
   email,
   password: z.string().min(1, "Password is required"),
 });
 
-export const googleAuthSchema = z.object({
-  credential: z.string().min(1, "Google credential is required"),
-  role: z.string().optional(),
-  termsAccepted: z.boolean().optional(),
-  organizationName: z.string().optional(),
-});
+export const googleAuthSchema = z
+  .object({
+    credential: z.string().min(1, "Google credential is required"),
+    role: z.string().optional(),
+    termsAccepted: z.boolean().optional(),
+    organizationName: z.string().trim().max(200).optional(),
+    organizationType: z
+      .enum(["individual", "company", "university_department", "ngo", "government"])
+      .optional(),
+    university_id: optionalObjectId,
+    student_id_number: z.string().trim().max(50).optional(),
+    program: z.string().trim().max(150).optional(),
+    enrollment_status: z.enum(["enrolled", "graduated", "on_leave", "unknown"]).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.role === "student") {
+      if (!value.university_id) ctx.addIssue({ code: "custom", path: ["university_id"], message: "University is required" });
+      if (!value.student_id_number) ctx.addIssue({ code: "custom", path: ["student_id_number"], message: "Student ID number is required" });
+      if (!value.program) ctx.addIssue({ code: "custom", path: ["program"], message: "Program / field of study is required" });
+      if (!value.enrollment_status) ctx.addIssue({ code: "custom", path: ["enrollment_status"], message: "Enrollment status is required" });
+    }
+
+    if (value.role === "client" && value.organizationType && value.organizationType !== "individual" && !value.organizationName) {
+      ctx.addIssue({ code: "custom", path: ["organizationName"], message: "Organization name is required for organizational clients" });
+    }
+  });
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),

@@ -72,6 +72,11 @@ export const googleAuth = asyncHandler(async (req, res) => {
       role: req.body.role,
       termsAccepted: req.body.termsAccepted,
       organizationName: req.body.organizationName,
+      organizationType: req.body.organizationType,
+      university_id: req.body.university_id,
+      student_id_number: req.body.student_id_number,
+      program: req.body.program,
+      enrollment_status: req.body.enrollment_status,
     });
     res.status(isNewUser ? 201 : 200).json({ success: true, data: { token, user: toPublicUser(user), isNewUser } });
   } catch (err) {
