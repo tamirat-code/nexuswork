@@ -10,9 +10,21 @@ const milestoneSchema = new mongoose.Schema(
     sequence: { type: Number, required: true, min: 1 },
     status: {
       type: String,
-      enum: ["not_funded", "funded", "delivered", "approved", "disputed", "released"],
+      enum: [
+        "not_funded",
+        "funded",
+        "in_progress",
+        "submitted",
+        "delivered",
+        "revision_requested",
+        "approved",
+        "disputed",
+        "released",
+      ],
       default: "not_funded",
     },
+    max_revisions: { type: Number, min: 0, max: 20, default: 3 },
+    revision_count: { type: Number, min: 0, default: 0 },
     payout_status: {
       type: String,
       enum: ["not_applicable", "pending", "paid", "failed"],

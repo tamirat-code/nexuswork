@@ -10,7 +10,7 @@ describe("Submissions module", () => {
 
   it("requires auth to request a revision", async () => {
     const res = await request(app)
-      .post("/v1/milestones/000000000000000000000001/request-revision")
+      .post("/v1/submissions/000000000000000000000001/request-revision")
       .send({ reason: "Please correct the missing methodology section." });
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);

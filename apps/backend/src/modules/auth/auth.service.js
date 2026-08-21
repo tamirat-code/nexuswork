@@ -14,6 +14,15 @@ import { verifyGoogleIdToken } from "./google.client.js";
 import { verifyRecaptcha } from "../../shared/recaptcha/recaptcha.service.js";
 import { requireStrongPassword } from "../../shared/validators/password.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
+import {
+  buildOtpAuthUri,
+  decryptMfaSecret,
+  encryptMfaSecret,
+  generateRecoveryCodes,
+  generateTotpSecret,
+  hashRecoveryCode,
+  verifyTotpCode,
+} from "./mfa.utils.js";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
@@ -21,9 +30,9 @@ const RESET_TOKEN_TTL_MINUTES = 60;
 const VERIFY_TOKEN_TTL_HOURS = 24;
 const SELF_REGISTERABLE_ROLES = ["student", "client", "university_staff"];
 
-function signToken(user) {
+function signToken(user, amr = ["pwd"]) {
   const jti = crypto.randomUUID();
-  return jwt.sign({ sub: user._id, role: user.role, jti }, authConfig.jwtSecret, {
+  return jwt.sign({ sub: user._id, role: user.role, jti, amr }, authConfig.jwtSecret, {
     expiresIn: authConfig.jwtExpiresIn,
   });
 }
@@ -42,6 +51,7 @@ export async function registerUser({
   role,
   termsAccepted,
   recaptchaToken,
+  phone,
   organizationName,
   organizationType,
   university_id,
@@ -88,6 +98,7 @@ export async function registerUser({
     email,
     password_hash,
     name,
+    phone: phone.trim(),
     role,
     auth_provider: "local",
     terms_accepted_at: new Date(),
@@ -122,7 +133,9 @@ export async function registerUser({
 }
 
 export async function loginUser({ email, password }) {
-  const user = await User.findOne({ email: email.toLowerCase() }).select("+password_hash");
+  const user = await User.findOne({ email: email.toLowerCase() }).select(
+    "+password_hash +mfa_secret_encrypted +mfa_pending_secret_encrypted +mfa_recovery_code_hashes"
+  );
   if (!user) {
     const err = new Error("Invalid credentials");
     err.status = 401;
@@ -159,14 +172,86 @@ export async function loginUser({ email, password }) {
     await user.save();
   }
 
-  return { token: signToken(user), user };
+  return beginMfaForUser(user);
 }
+
+function beginMfaForUser(user) {
+  if (user.mfa_enabled && user.mfa_secret_encrypted) {
+    const challengeToken = jwt.sign(
+      { sub: user._id, purpose: "mfa_challenge" },
+      authConfig.jwtSecret,
+      { expiresIn: "5m" }
+    );
+    return { mfaRequired: true, challengeToken };
+  }
+
+  const secret = generateTotpSecret();
+  user.mfa_pending_secret_encrypted = encryptMfaSecret(secret);
+  user.mfa_enabled = false;
+  return user.save().then(() => ({
+    mfaSetupRequired: true,
+    setupToken: jwt.sign(
+      { sub: user._id, purpose: "mfa_setup" },
+      authConfig.jwtSecret,
+      { expiresIn: "15m" }
+    ),
+    secret,
+    otpauthUri: buildOtpAuthUri(secret, user.email),
+  }));
+}
+
+export async function setupMfa(setupToken, code) {
+  const payload = jwt.verify(setupToken, authConfig.jwtSecret);
+  if (payload.purpose !== "mfa_setup") throw new ValidationError("Invalid MFA setup session");
+
+  const user = await User.findById(payload.sub).select("+mfa_pending_secret_encrypted +mfa_recovery_code_hashes");
+  if (!user || !user.mfa_pending_secret_encrypted) throw new ValidationError("MFA setup has expired. Please log in again.");
+
+  const secret = decryptMfaSecret(user.mfa_pending_secret_encrypted);
+  if (!verifyTotpCode(secret, code)) throw new ValidationError("Invalid authenticator code");
+
+  const recoveryCodes = generateRecoveryCodes();
+  user.mfa_secret_encrypted = user.mfa_pending_secret_encrypted;
+  user.mfa_pending_secret_encrypted = null;
+  user.mfa_recovery_code_hashes = recoveryCodes.map(hashRecoveryCode);
+  user.mfa_enabled = true;
+  await user.save();
+
+  return { token: signToken(user, ["pwd", "mfa"]), user, recoveryCodes };
+}
+
+export async function verifyMfa(challengeToken, code) {
+  const payload = jwt.verify(challengeToken, authConfig.jwtSecret);
+  if (payload.purpose !== "mfa_challenge") throw new ValidationError("Invalid MFA challenge");
+
+  const user = await User.findById(payload.sub).select("+mfa_secret_encrypted +mfa_recovery_code_hashes");
+  if (!user || !user.mfa_enabled || !user.mfa_secret_encrypted) throw new ValidationError("MFA is not configured for this account");
+
+  const normalized = String(code || "").trim();
+  const secret = decryptMfaSecret(user.mfa_secret_encrypted);
+  let valid = verifyTotpCode(secret, normalized);
+
+  if (!valid) {
+    const hash = hashRecoveryCode(normalized);
+    const index = user.mfa_recovery_code_hashes.findIndex((value) => value === hash);
+    if (index !== -1) {
+      user.mfa_recovery_code_hashes.splice(index, 1);
+      await user.save();
+      valid = true;
+    }
+  }
+
+  if (!valid) throw new ValidationError("Invalid MFA code");
+  return { token: signToken(user, ["pwd", "mfa"]), user };
+}
+
 
 export async function loginOrRegisterWithGoogle(
   idToken,
   {
     role,
     termsAccepted,
+    phone,
     organizationName,
     organizationType,
     university_id,
@@ -177,17 +262,20 @@ export async function loginOrRegisterWithGoogle(
 ) {
   const { googleId, email, emailVerified, name } = await verifyGoogleIdToken(idToken);
 
-  let user = await User.findOne({ google_id: googleId });
+  let user = await User.findOne({ google_id: googleId }).select("+mfa_secret_encrypted +mfa_pending_secret_encrypted +mfa_recovery_code_hashes");
   if (user) {
-    return { token: signToken(user), user, isNewUser: false };
+    if (user.mfa_enabled) {
+      return { ...(await beginMfaForUser(user)), user, isNewUser: false };
+    }
+    return { ...(await beginMfaForUser(user)), user, isNewUser: false };
   }
 
-  user = await User.findOne({ email: email.toLowerCase() });
+  user = await User.findOne({ email: email.toLowerCase() }).select("+mfa_secret_encrypted +mfa_pending_secret_encrypted +mfa_recovery_code_hashes");
   if (user) {
     user.google_id = googleId;
     if (emailVerified) user.email_verified = true;
     await user.save();
-    return { token: signToken(user), user, isNewUser: false };
+    return { ...(await beginMfaForUser(user)), user, isNewUser: false };
   }
 
   if (!role || !SELF_REGISTERABLE_ROLES.includes(role)) {
@@ -215,6 +303,7 @@ export async function loginOrRegisterWithGoogle(
   user = await User.create({
     email: email.toLowerCase(),
     name,
+    ...(phone ? { phone: phone.trim() } : {}),
     role,
     auth_provider: "google",
     google_id: googleId,
@@ -249,7 +338,7 @@ export async function loginOrRegisterWithGoogle(
     }
   }
 
-  return { token: signToken(user), user, isNewUser: true };
+  return { ...(await beginMfaForUser(user)), user, isNewUser: true };
 }
 
 export async function logoutUser(decodedToken) {

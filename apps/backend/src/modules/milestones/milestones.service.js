@@ -2,6 +2,7 @@ import Milestone from "./milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import Payment from "../payments/payments.model.js";
+import Submission from "../submissions/submissions.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { addSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
@@ -28,6 +29,7 @@ async function completeRelease(milestone, contract, requestingUserId) {
       milestoneId: milestone._id,
       amount: payout,
       stripeAccountId: studentWallet?.stripe_account_id,
+      transferToStripe: false,
     });
 
     try {
@@ -140,6 +142,7 @@ export async function createMilestone(contractId, requestingUserId, data) {
     sequence: count + 1,
     status: "not_funded",
     payout_status: "not_applicable",
+    max_revisions: data.max_revisions ?? 3,
   });
 }
 
@@ -196,6 +199,26 @@ export async function confirmFunding(paymentIntentId) {
   return milestone;
 }
 
+export async function startWork(milestoneId, requestingUserId) {
+  const milestone = await Milestone.findById(milestoneId).populate("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+
+  const contract = milestone.contract_id;
+
+  if (String(contract.student_id) !== String(requestingUserId)) {
+    throw new ForbiddenError("Only the assigned student can start work");
+  }
+
+  if (milestone.status !== "funded") {
+    throw new ValidationError("Milestone must be funded before work can start");
+  }
+
+  milestone.status = "in_progress";
+  await milestone.save();
+
+  return milestone;
+}
+
 export async function submitWork(milestoneId, requestingUserId, { file_url, note } = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
@@ -206,13 +229,13 @@ export async function submitWork(milestoneId, requestingUserId, { file_url, note
     throw new ForbiddenError("Only the assigned student can submit work");
   }
 
-  if (milestone.status !== "funded") {
-    throw new ValidationError("Milestone must be funded before work is submitted");
+  if (!["funded", "in_progress", "revision_requested"].includes(milestone.status)) {
+    throw new ValidationError("Milestone must be funded or awaiting revision before work is submitted");
   }
 
-  const submission = await addSubmission(milestone._id, { file_url, note });
+  const submission = await addSubmission(milestone._id, requestingUserId, { file_url, note });
 
-  milestone.status = "delivered";
+  milestone.status = "submitted";
   milestone.delivered_at = new Date();
   await milestone.save();
 
@@ -231,8 +254,17 @@ export async function approveMilestone(milestoneId, requestingUserId) {
   const contract = milestone.contract_id;
   await assertClient(contract, requestingUserId);
 
-  if (milestone.status !== "delivered") {
-    throw new ValidationError("Milestone must be delivered before approval");
+  if (!["submitted", "delivered"].includes(milestone.status)) {
+    throw new ValidationError("Milestone must have submitted work before approval");
+  }
+
+  // Mark the latest submission as approved so the review flow stays consistent.
+  const latest = await Submission.findOne({ milestone_id: milestone._id }).sort({ version: -1 });
+  if (latest && latest.review_status === "pending_review") {
+    latest.review_status = "approved";
+    latest.reviewer_id = requestingUserId;
+    latest.reviewed_at = new Date();
+    await latest.save();
   }
 
   milestone.status = "approved";

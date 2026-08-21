@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./guards.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 
@@ -8,6 +8,8 @@ import RegisterPage from "../../features/auth/RegisterPage.jsx";
 import ForgotPasswordPage from "../../features/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../../features/auth/ResetPasswordPage.jsx";
 import VerifyEmailPage from "../../features/auth/VerifyEmailPage.jsx";
+import MfaSetupPage from "../../features/auth/MfaSetupPage.jsx";
+import MfaVerifyPage from "../../features/auth/MfaVerifyPage.jsx";
 import ProjectListPage from "../../features/projects/ProjectListPage.jsx";
 import ProjectDetailPage from "../../features/projects/ProjectDetailPage.jsx";
 import PostProjectPage from "../../features/projects/PostProjectPage.jsx";
@@ -51,6 +53,8 @@ export default function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/mfa/setup" element={<MfaSetupPage />} />
+      <Route path="/mfa/verify" element={<MfaVerifyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/projects" element={<ProjectListPage />} />
@@ -70,6 +74,9 @@ export default function AppRouter() {
       <Route path="/contracts/:id" element={protect(<ContractDetailPage />)} />
       <Route path="/disputes" element={protect(<DisputesPage />)} />
       <Route path="/wallet" element={protect(<WalletsPage />)} />
+      {/* Backwards-compatible redirects for legacy Stripe Connect callback URLs */}
+      <Route path="/wallet/connect/done" element={<Navigate to="/wallet?connect=done" replace />} />
+      <Route path="/wallet/connect/refresh" element={<Navigate to="/wallet?connect=refresh" replace />} />
       <Route path="/payments" element={protect(<PaymentsPage />)} />
       <Route path="/invoices" element={protect(<InvoicesPage />)} />
       <Route path="/portfolios" element={protect(<PortfoliosPage />)} />

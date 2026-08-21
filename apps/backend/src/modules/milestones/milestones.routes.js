@@ -5,6 +5,7 @@ import {
   getOne,
   fund,
   confirmFunding,
+  start,
   submit,
   approve,
   retryRelease,
@@ -36,6 +37,8 @@ router.post("/fund/confirm", requireAuth, confirmFunding);
 router.get("/:id", requireAuth, getOne);
 
 router.post("/:id/fund", requireAuth, fund);
+
+router.post("/:id/start", requireAuth, start);
 
 router.post(
   "/:id/submit",

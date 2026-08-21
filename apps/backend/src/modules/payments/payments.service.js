@@ -89,7 +89,7 @@ export async function markDepositFailed(paymentIntentId) {
   return payment;
 }
 
-export async function releaseToStudent({ milestoneId, amount, stripeAccountId }) {
+export async function releaseToStudent({ milestoneId, amount, stripeAccountId, transferToStripe = false }) {
   if (!stripeAccountId) {
     throw new ValidationError(
       "The student's payout account has not been connected yet."
@@ -103,6 +103,34 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId })
   });
 
   if (existing) return existing;
+
+  // By default milestone approval only creates the student's NexusWork
+  // wallet credit. The Stripe transfer is performed when the student
+  // explicitly withdraws the wallet balance. Keeping transferToStripe as an
+  // explicit opt-in preserves the existing Stripe release capability for any
+  // future caller that still needs it.
+  if (!transferToStripe) {
+    const payment = await Payment.create({
+      milestone_id: milestoneId,
+      amount,
+      currency: paymentConfig.currency,
+      direction: "release",
+      status: "succeeded",
+    });
+
+    await logAction({
+      action_type: "payment_released",
+      entity_type: "milestone",
+      entity_id: milestoneId,
+      details: {
+        amount,
+        currency: paymentConfig.currency,
+        wallet_credit: true,
+      },
+    });
+
+    return payment;
+  }
 
   let account;
   try {

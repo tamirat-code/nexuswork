@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     name: { type: String, required: true, trim: true },
+    phone: { type: String, default: "", trim: true },
     // Profile fields used by the frontend
     headline: { type: String, default: "", trim: true },
     bio: { type: String, default: "" },
@@ -33,6 +34,10 @@ const userSchema = new mongoose.Schema(
       default: "active",
     },
     email_verified: { type: Boolean, default: false },
+    mfa_enabled: { type: Boolean, default: false },
+    mfa_secret_encrypted: { type: String, default: null, select: false },
+    mfa_pending_secret_encrypted: { type: String, default: null, select: false },
+    mfa_recovery_code_hashes: { type: [String], default: [], select: false },
     failed_login_attempts: { type: Number, default: 0 },
     locked_until: { type: Date, default: null },
     terms_accepted_at: { type: Date },

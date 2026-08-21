@@ -23,7 +23,33 @@ export const register = asyncHandler(async (req, res) => {
 
 export const login = asyncHandler(async (req, res) => {
   requireFields(req.body, ["email", "password"]);
-  const { token, user } = await authService.loginUser(req.body);
+  const result = await authService.loginUser(req.body);
+  if (result.mfaRequired) {
+    return res.json({ success: true, data: { mfaRequired: true, challengeToken: result.challengeToken } });
+  }
+  if (result.mfaSetupRequired) {
+    return res.json({
+      success: true,
+      data: {
+        mfaSetupRequired: true,
+        setupToken: result.setupToken,
+        secret: result.secret,
+        otpauthUri: result.otpauthUri,
+      },
+    });
+  }
+  res.json({ success: true, data: { token: result.token, user: toPublicUser(result.user) } });
+});
+
+export const setupMfa = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["token", "code"]);
+  const { token, user, recoveryCodes } = await authService.setupMfa(req.body.token, req.body.code);
+  res.json({ success: true, data: { token, user: toPublicUser(user), recoveryCodes } });
+});
+
+export const verifyMfa = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["token", "code"]);
+  const { token, user } = await authService.verifyMfa(req.body.token, req.body.code);
   res.json({ success: true, data: { token, user: toPublicUser(user) } });
 });
 
@@ -68,8 +94,9 @@ export const resendVerification = asyncHandler(async (req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
   requireFields(req.body, ["credential"]);
   try {
-    const { token, user, isNewUser } = await authService.loginOrRegisterWithGoogle(req.body.credential, {
+    const result = await authService.loginOrRegisterWithGoogle(req.body.credential, {
       role: req.body.role,
+      phone: req.body.phone,
       termsAccepted: req.body.termsAccepted,
       organizationName: req.body.organizationName,
       organizationType: req.body.organizationType,
@@ -78,7 +105,15 @@ export const googleAuth = asyncHandler(async (req, res) => {
       program: req.body.program,
       enrollment_status: req.body.enrollment_status,
     });
-    res.status(isNewUser ? 201 : 200).json({ success: true, data: { token, user: toPublicUser(user), isNewUser } });
+    const data = {
+      isNewUser: result.isNewUser,
+      ...(result.mfaRequired ? { mfaRequired: true, challengeToken: result.challengeToken } : {}),
+      ...(result.mfaSetupRequired
+        ? { mfaSetupRequired: true, setupToken: result.setupToken, secret: result.secret, otpauthUri: result.otpauthUri }
+        : {}),
+      ...(result.token ? { token: result.token, user: toPublicUser(result.user) } : {}),
+    };
+    res.status(result.isNewUser ? 201 : 200).json({ success: true, data });
   } catch (err) {
     if (err.needsRole) {
       return res.status(422).json({ success: false, message: err.message, needsRole: true });

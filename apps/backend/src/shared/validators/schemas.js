@@ -29,6 +29,7 @@ export const registerSchema = z
     role,
     termsAccepted: z.boolean().refine((v) => v === true, "Terms must be accepted"),
     recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
+    phone: z.string().trim().min(7, "Phone number is required").max(30).regex(/^[+0-9()\-\s]+$/, "Invalid phone number"),
     university_id: optionalObjectId,
     student_id_number: z.string().trim().max(50).optional(),
     program: z.string().trim().max(150).optional(),
@@ -63,10 +64,20 @@ export const loginSchema = z.object({
   email,
   password: z.string().min(1, "Password is required"),
 });
-
+export const mfaCodeSchema = z.object({
+  token: z.string().min(1, "MFA token is required"),
+  code: z
+    .string()
+    .trim()
+    .regex(
+      /^(?:\d{6}|[A-Fa-f0-9]{5}-[A-Fa-f0-9]{5})$/,
+      "Enter a 6-digit code or recovery code"
+    ),
+});
 export const googleAuthSchema = z
   .object({
     credential: z.string().min(1, "Google credential is required"),
+    phone: z.string().trim().min(7).max(30).regex(/^[+0-9()\-\s]+$/, "Invalid phone number").optional(),
     role: z.string().optional(),
     termsAccepted: z.boolean().optional(),
     organizationName: z.string().trim().max(200).optional(),

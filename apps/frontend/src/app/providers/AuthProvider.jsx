@@ -28,7 +28,8 @@ export function AuthProvider({ children }) {
   const login = useCallback(
     async (email, password) => {
       const { data } = await authApi.login(email, password);
-      persist(data.token, data.user);
+      if (data.token) persist(data.token, data.user);
+      return data;
     },
     [persist]
   );
@@ -45,8 +46,8 @@ export function AuthProvider({ children }) {
     async (credential, options) => {
       try {
         const { data } = await authApi.googleAuth(credential, options);
-        persist(data.token, data.user);
-        return { isNewUser: data.isNewUser };
+        if (data.token) persist(data.token, data.user);
+        return data;
       } catch (err) {
         if (err.needsRole) return { needsRole: true };
         throw err;
@@ -97,8 +98,13 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("focus", maybeRefresh);
   }, [token, refreshMe]);
 
+  const completeMfaLogin = useCallback(
+    (nextToken, nextUser) => persist(nextToken, nextUser),
+    [persist]
+  );
+
   return (
-    <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, logout, refreshMe, setLocalUser }}>
+    <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, completeMfaLogin, logout, refreshMe, setLocalUser }}>
       {children}
     </AuthContext.Provider>
   );

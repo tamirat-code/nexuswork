@@ -16,7 +16,7 @@ function CardForm({ contractId, milestone, token, onDone }) {
   const [stripeError, setStripeError] = useState(null);
 
   const confirmOnServer = useMutation({
-    mutationFn: (paymentIntentId) => confirmMilestoneFunding(milestone._id, paymentIntentId, token),
+    mutationFn: (paymentIntentId) => confirmMilestoneFunding(paymentIntentId, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["milestones", contractId] });
       toast.success("Milestone funded — funds are held in escrow.");

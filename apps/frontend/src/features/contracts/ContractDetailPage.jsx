@@ -266,7 +266,7 @@ function RequestRevisionDialog({ milestone, submission, token, onRequested }) {
   const remaining = Math.max(Number(milestone.max_revisions ?? 3) - Number(milestone.revision_count ?? 0), 0);
 
   const mutation = useMutation({
-    mutationFn: () => requestMilestoneRevision(milestone._id, reason.trim(), token),
+    mutationFn: () => requestMilestoneRevision(submission?._id, { reason: reason.trim() }, token),
     onSuccess: () => {
       setOpen(false);
       setReason("");

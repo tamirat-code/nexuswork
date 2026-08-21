@@ -53,6 +53,19 @@ export default function WalletsPage() {
         toast.error("Stripe did not return an onboarding link.");
         return;
       }
+      if (res.data.already_complete) {
+        // This is a Stripe Login Link, not an onboarding form — it has no return_url at
+        // all, so there's no way for Stripe to send the user back to this app from there.
+        // Open it in a new tab instead of navigating away, so the app stays put, and
+        // refresh the wallet now since we already know from `already_complete` that it's
+        // current (no need to wait on the account.updated webhook, which local dev can't
+        // even receive without the Stripe CLI running).
+        qc.invalidateQueries({ queryKey: ["wallet"] });
+        qc.invalidateQueries({ queryKey: ["wallet-tx"] });
+        toast.success("Your payout account is already set up — opening your Stripe dashboard in a new tab.");
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
       window.location.assign(url);
     },
     onError: (e) => toast.error(e.message || "Could not start Stripe payout setup"),

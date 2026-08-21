@@ -34,18 +34,22 @@ export const confirmMilestoneFunding = (paymentIntentId, token) =>
   });
 
 
-export const startMilestoneWork = (milestoneId, payload = {}, token) =>
+export const startMilestoneWork = (milestoneId, token) =>
+  apiRequest(`/milestones/${milestoneId}/start`, {
+    method: "POST",
+    token,
+  });
+
+export const submitMilestoneWork = (milestoneId, payload = {}, token) =>
   apiRequest(`/milestones/${milestoneId}/submit`, {
     method: "POST",
     body: payload,
     token,
   });
 
-export const submitMilestoneWork = startMilestoneWork;
 
-
-export const requestMilestoneRevision = (milestoneId, payload = {}, token) =>
-  apiRequest(`/milestones/${milestoneId}/revision`, {
+export const requestMilestoneRevision = (submissionId, payload = {}, token) =>
+  apiRequest(`/submissions/${submissionId}/request-revision`, {
     method: "POST",
     body: payload,
     token,

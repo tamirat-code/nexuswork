@@ -57,6 +57,15 @@ export const confirmFunding = asyncHandler(async (req, res) => {
   res.json({ success: true, data: milestone });
 });
 
+export const start = asyncHandler(async (req, res) => {
+  const result = await milestonesService.startWork(
+    req.params.id,
+    req.user._id
+  );
+
+  res.json({ success: true, data: result });
+});
+
 export const submit = asyncHandler(async (req, res) => {
   const result = await milestonesService.submitWork(
     req.params.id,

@@ -10,6 +10,8 @@ import {
   verifyEmail,
   resendVerification,
   googleAuth,
+  setupMfa,
+  verifyMfa,
 } from "./auth.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { loginRateLimiter } from "../../middleware/rateLimiter.middleware.js";
@@ -22,6 +24,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyEmailSchema,
+  mfaCodeSchema,
 } from "../../shared/validators/schemas.js";
 
 const router = Router();
@@ -29,6 +32,8 @@ const router = Router();
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", loginRateLimiter, validateBody(loginSchema), login);
 router.post("/google", loginRateLimiter, validateBody(googleAuthSchema), googleAuth);
+router.post("/mfa/setup", loginRateLimiter, validateBody(mfaCodeSchema), setupMfa);
+router.post("/mfa/verify", loginRateLimiter, validateBody(mfaCodeSchema), verifyMfa);
 router.get("/me", requireAuth, me);
 router.post("/logout", requireAuth, logout);
 router.patch("/password", requireAuth, validateBody(changePasswordSchema), changePassword);

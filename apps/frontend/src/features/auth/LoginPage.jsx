@@ -30,7 +30,21 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await login(email, password);
+      const result = await login(email, password);
+      if (result.mfaRequired) {
+        navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
+        return;
+      }
+      if (result.mfaSetupRequired) {
+        navigate("/mfa/setup", {
+          state: {
+            setupToken: result.setupToken,
+            secret: result.secret,
+            otpauthUri: result.otpauthUri,
+          },
+        });
+        return;
+      }
       navigate("/dashboard");
     } catch (err) {
       setError(err.message);
@@ -46,6 +60,20 @@ export default function LoginPage() {
       const result = await loginWithGoogle(credential);
       if (result.needsRole) {
         setPendingGoogleCredential(credential);
+        return;
+      }
+      if (result.mfaRequired) {
+        navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
+        return;
+      }
+      if (result.mfaSetupRequired) {
+        navigate("/mfa/setup", {
+          state: {
+            setupToken: result.setupToken,
+            secret: result.secret,
+            otpauthUri: result.otpauthUri,
+          },
+        });
         return;
       }
       show(result.isNewUser ? "Account created with Google." : "Welcome back.");
@@ -68,6 +96,20 @@ try {
   if (result.needsRole) {
     
     show("Something went wrong creating your account. Please try again.", { variant: "error" });
+    return;
+  }
+  if (result.mfaRequired) {
+    navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
+    return;
+  }
+  if (result.mfaSetupRequired) {
+    navigate("/mfa/setup", {
+      state: {
+        setupToken: result.setupToken,
+        secret: result.secret,
+        otpauthUri: result.otpauthUri,
+      },
+    });
     return;
   }
   show("Account created with Google.");

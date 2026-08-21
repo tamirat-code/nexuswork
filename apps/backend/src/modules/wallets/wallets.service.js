@@ -48,27 +48,55 @@ export async function getBalance(userId) {
 
   const payoutStatus = await syncStripeAccountStatus(wallet);
 
-  if (!wallet.stripe_account_id || !payoutStatus.payouts_enabled) {
-    return {
-      available: 0,
-      pending: 0,
-      currency: paymentConfig.currency,
-      ...payoutStatus,
-    };
-  }
+  // NexusWork wallet balance is the internal earnings ledger. Stripe Connect
+  // is only the payout rail; its balance must not be used as the wallet
+  // balance because Stripe may automatically pay it out to the bank.
+  const contractIds = await Contract.find({ student_id: userId }).distinct("_id");
+  const milestoneIds = contractIds.length
+    ? await Milestone.find({ contract_id: { $in: contractIds } }).distinct("_id")
+    : [];
 
-  const balance = await stripe.balance.retrieve({
-    stripeAccount: wallet.stripe_account_id,
-  });
+  const [releaseTotals, withdrawalTotals] = await Promise.all([
+    milestoneIds.length
+      ? Payment.aggregate([
+          {
+            $match: {
+              milestone_id: { $in: milestoneIds },
+              direction: "release",
+              status: "succeeded",
+              currency: paymentConfig.currency,
+              $or: [
+                { stripe_transfer_id: { $exists: false } },
+                { stripe_transfer_id: null },
+              ],
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ])
+      : [],
+    Withdrawal.aggregate([
+      {
+        $match: {
+          user_id: userId,
+          status: { $in: ["pending", "paid"] },
+          currency: paymentConfig.currency,
+        },
+      },
+      { $group: { _id: "$status", total: { $sum: "$amount" } } },
+    ]),
+  ]);
 
-  const available =
-    balance.available.find((b) => b.currency === paymentConfig.currency)?.amount || 0;
-  const pending =
-    balance.pending.find((b) => b.currency === paymentConfig.currency)?.amount || 0;
+  const released = Number(releaseTotals[0]?.total || 0);
+  const paidWithdrawals = Number(
+    withdrawalTotals.find((item) => item._id === "paid")?.total || 0
+  );
+  const pendingWithdrawals = Number(
+    withdrawalTotals.find((item) => item._id === "pending")?.total || 0
+  );
 
   return {
-    available: available / 100,
-    pending: pending / 100,
+    available: Math.max(0, released - paidWithdrawals - pendingWithdrawals),
+    pending: pendingWithdrawals,
     currency: paymentConfig.currency,
     ...payoutStatus,
   };
@@ -191,6 +219,13 @@ export async function requestWithdrawal(userId, amount) {
     throw new ValidationError("Complete Stripe payout verification before requesting a withdrawal");
   }
 
+  const balance = await getBalance(userId);
+  if (amount > balance.available) {
+    throw new ValidationError(
+      `Insufficient wallet balance. Available balance: ${balance.available.toFixed(2)} ${paymentConfig.currency.toUpperCase()}`
+    );
+  }
+
   const withdrawal = await Withdrawal.create({
     user_id: userId,
     amount,
@@ -199,16 +234,21 @@ export async function requestWithdrawal(userId, amount) {
   });
 
   try {
-    const payout = await stripe.payouts.create(
-      {
-        amount: Math.round(amount * 100),
-        currency: paymentConfig.currency,
+    // Move the withdrawn amount from the NexusWork Stripe platform balance
+    // to the student's connected account. Stripe then pays it out according
+    // to that connected account's payout schedule.
+    const transfer = await stripe.transfers.create({
+      amount: Math.round(amount * 100),
+      currency: paymentConfig.currency,
+      destination: wallet.stripe_account_id,
+      metadata: {
+        withdrawal_id: String(withdrawal._id),
+        user_id: String(userId),
       },
-      { stripeAccount: wallet.stripe_account_id }
-    );
+    });
 
     withdrawal.status = "paid";
-    withdrawal.stripe_payout_id = payout.id;
+    withdrawal.stripe_payout_id = transfer.id;
     await withdrawal.save();
   } catch (err) {
     withdrawal.status = "failed";
