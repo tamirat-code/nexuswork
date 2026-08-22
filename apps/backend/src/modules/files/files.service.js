@@ -62,6 +62,10 @@ export async function getById(id, requestingUser) {
     await assertCanViewVerificationDocument(file, requestingUser);
   }
 
+  if (file.related_type === "staff_verification_document") {
+    await assertCanViewStaffVerificationDocument(file, requestingUser);
+  }
+
   if (file.related_type === "contract") {
     await assertContractParty(file.related_id, requestingUser?._id);
   }
@@ -92,6 +96,18 @@ async function assertCanViewVerificationDocument(file, requestingUser) {
       if (isContactStaff) return;
     }
   }
+
+  throw new ForbiddenError("You don't have access to this document");
+}
+
+// Staff verification requests (proof that a university_staff registrant really
+// works at the university) are only ever reviewed by a platform admin, never
+// by other university_staff — so there is deliberately no contact_staff
+// carve-out here.
+async function assertCanViewStaffVerificationDocument(file, requestingUser) {
+  if (!requestingUser) throw new ForbiddenError("You don't have access to this document");
+  if (String(file.owner_id) === String(requestingUser._id)) return;
+  if (requestingUser.role === "admin") return;
 
   throw new ForbiddenError("You don't have access to this document");
 }

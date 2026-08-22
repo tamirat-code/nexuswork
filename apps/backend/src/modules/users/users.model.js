@@ -28,6 +28,9 @@ const userSchema = new mongoose.Schema(
     website: { type: String, default: "", trim: true },
     avatarUrl: { type: String, default: null },
     universityVerified: { type: Boolean, default: false },
+    // True only once a platform admin has approved this user's StaffVerification
+    // request — matching an email domain at registration is never sufficient.
+    staffVerified: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["active", "suspended", "deactivated"],

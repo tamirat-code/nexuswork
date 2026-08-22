@@ -203,6 +203,27 @@ export const reviewVerificationSchema = z.object({
   rejection_reason: z.string().trim().max(500).optional(),
 });
 
+// --- Staff verifications ---
+// university_id is intentionally NOT accepted from the client — it's derived
+// server-side from the authenticated user's own account email domain, so a
+// staff registrant can't file a request against a university their email
+// has no relationship to. See staff-verifications.service.js.
+export const submitStaffVerificationSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, "Full legal name (as it appears on your ID) is required")
+    .max(150),
+  job_title: z.string().trim().min(1, "Job title is required").max(150),
+  department: z.string().trim().min(1, "Department is required").max(150),
+  document_file_id: objectId, // required: staff ID / HR letter must be uploaded first via /files/upload
+});
+
+export const reviewStaffVerificationSchema = z.object({
+  decision: z.enum(["approved", "rejected"]),
+  rejection_reason: z.string().trim().max(500).optional(),
+});
+
 // --- Skills ---
 export const createSkillSchema = z.object({
   name: z.string().trim().min(1, "Skill name is required").max(100),

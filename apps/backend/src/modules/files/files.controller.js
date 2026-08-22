@@ -9,6 +9,7 @@ const VALID_RELATED_TYPES = new Set([
   "message_attachment",
   "contract",
   "verification_document",
+  "staff_verification_document",
   "other",
 ]);
 

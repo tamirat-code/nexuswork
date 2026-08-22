@@ -91,6 +91,7 @@ export async function registerUser({
         "Your email domain isn't registered to a university on NexusWork yet. Ask a platform admin to add your university first."
       );
     }
+   
   }
 
   const password_hash = await bcrypt.hash(password, authConfig.bcryptSaltRounds);
@@ -122,11 +123,8 @@ export async function registerUser({
       organization_type: organizationType || "individual",
       ...(organizationName ? { organization_name: organizationName } : {}),
     });
-  } else if (role === "university_staff") {
-    university.contact_staff.push(user._id);
-    await university.save();
   }
-
+  
   await issueVerificationEmail(user);
 
   return { token: signToken(user), user };
@@ -298,6 +296,7 @@ export async function loginOrRegisterWithGoogle(
         "Your email domain isn't registered to a university on NexusWork yet. Ask a platform admin to add your university first."
       );
     }
+    
   }
 
   user = await User.create({

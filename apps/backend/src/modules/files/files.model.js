@@ -17,6 +17,7 @@ const fileSchema = new mongoose.Schema(
         "message_attachment",
         "contract",
         "verification_document",
+        "staff_verification_document",
         "other",
       ],
       default: "other",
