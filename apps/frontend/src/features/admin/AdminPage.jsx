@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck } from "lucide-react";
@@ -174,9 +175,9 @@ function ResolveDisputeDialog({ dispute, token }) {
 // its email domain only made it eligible to apply. This is the only place in
 // the app that turns a pending request into actual contact_staff membership
 // (see staff-verifications.service.js reviewStaffVerification).
-function ReviewStaffVerificationDialog({ verification, token }) {
+function ReviewStaffVerificationDialog({ verification, token, defaultOpen = false }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [rejectionReason, setRejectionReason] = useState("");
   const [decision, setDecision] = useState(null); // "approved" | "rejected"
 
@@ -291,6 +292,8 @@ function ReviewStaffVerificationDialog({ verification, token }) {
 
 export default function AdminPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const highlightStaffVerificationId = searchParams.get("staffVerificationId");
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
   const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => listAdminUsers("?limit=10", token), enabled: !!token });
   const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes("?limit=10", token), enabled: !!token });
@@ -482,7 +485,10 @@ export default function AdminPage() {
                   </TableRow>
                 )}
                 {staffVerifications.map((v) => (
-                  <TableRow key={v._id}>
+                  <TableRow
+                    key={v._id}
+                    className={v._id === highlightStaffVerificationId ? "bg-brass/5" : undefined}
+                  >
                     <TableCell className="font-semibold text-slate">
                       {v.full_name}
                       <div className="text-xs font-normal text-slate-300">{v.user_id?.email}</div>
@@ -502,7 +508,11 @@ export default function AdminPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <ReviewStaffVerificationDialog verification={v} token={token} />
+                      <ReviewStaffVerificationDialog
+                        verification={v}
+                        token={token}
+                        defaultOpen={v._id === highlightStaffVerificationId}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

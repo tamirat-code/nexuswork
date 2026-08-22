@@ -232,6 +232,47 @@ export default function NotificationsPage() {
 
 
       /*
+       * Staff verification notifications.
+       */
+      const staffVerificationId =
+        notification.data?.staff_verification_id ||
+        notification.data?.staffVerificationId;
+
+
+      if (
+        notification.data?.action ===
+          "review_staff_verification" &&
+        staffVerificationId
+      ) {
+
+        navigate(
+          `/admin?staffVerificationId=${encodeURIComponent(
+            staffVerificationId
+          )}`
+        );
+
+        return;
+      }
+
+
+      if (
+        notificationType ===
+          "staff_verification_approved" ||
+        notificationType ===
+          "staff_verification_rejected" ||
+        notification.data?.action ===
+          "view_staff_verification"
+      ) {
+
+        navigate(
+          "/profile"
+        );
+
+        return;
+      }
+
+
+      /*
        * Contract notification.
        */
       const contractId =
@@ -404,6 +445,19 @@ export default function NotificationsPage() {
                 "review_proposal";
 
 
+            const isStaffVerificationAdminAction =
+              notification.data?.action ===
+                "review_staff_verification";
+
+            const isStaffVerificationStatusUpdate =
+              notification.type ===
+                "staff_verification_approved" ||
+              notification.type ===
+                "staff_verification_rejected" ||
+              notification.data?.action ===
+                "view_staff_verification";
+
+
             return (
 
               <button
@@ -490,6 +544,32 @@ export default function NotificationsPage() {
                         <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
 
                           Review proposal
+
+                          <ChevronRight className="h-3.5 w-3.5" />
+
+                        </span>
+
+                      )}
+
+
+                      {isStaffVerificationAdminAction && (
+
+                        <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
+
+                          Review request
+
+                          <ChevronRight className="h-3.5 w-3.5" />
+
+                        </span>
+
+                      )}
+
+
+                      {isStaffVerificationStatusUpdate && (
+
+                        <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
+
+                          View status
 
                           <ChevronRight className="h-3.5 w-3.5" />
 
