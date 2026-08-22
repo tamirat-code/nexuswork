@@ -24,20 +24,48 @@ export async function getPlatformMetrics({ days = 30 } = {}) {
   const since = new Date();
   since.setDate(since.getDate() - Number(days));
 
-  const [totalUsers, totalStudents, totalClients, totalProjects, openProjects, activeContracts, totalPayments, totalRevenue] =
-    await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ role: "student" }),
-      User.countDocuments({ role: "client" }),
-      Project.countDocuments(),
-      Project.countDocuments({ status: "open" }),
-      Contract.countDocuments({ status: "active" }),
-      Payment.countDocuments({ status: "succeeded" }),
-      Payment.aggregate([
-        { $match: { status: "succeeded", direction: "release" } },
-        { $group: { _id: null, total: { $sum: "$amount" } } },
-      ]).then((rows) => rows[0]?.total || 0),
-    ]);
+  const [
+    totalUsers,
+    totalStudents,
+    totalClients,
+    totalProjects,
+    openProjects,
+    activeContracts,
+    totalPayments,
+    totalRevenue,
+    commissionAgg,
+    popularSkillsAgg,
+    demandByCategoryAgg,
+  ] = await Promise.all([
+    User.countDocuments(),
+    User.countDocuments({ role: "student" }),
+    User.countDocuments({ role: "client" }),
+    Project.countDocuments(),
+    Project.countDocuments({ status: "open" }),
+    Contract.countDocuments({ status: "active" }),
+    Payment.countDocuments({ status: "succeeded" }),
+    Payment.aggregate([
+      { $match: { status: "succeeded", direction: "release" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]).then((rows) => rows[0]?.total || 0),
+    Payment.aggregate([
+      { $match: { status: "succeeded", direction: "commission" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]).then((rows) => rows[0]?.total || 0),
+    Project.aggregate([
+      { $unwind: "$required_skills" },
+      { $match: { required_skills: { $nin: [null, ""] } } },
+      { $group: { _id: "$required_skills", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 },
+    ]),
+    Project.aggregate([
+      { $match: { category: { $nin: [null, ""] } } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 },
+    ]),
+  ]);
 
   const recentEvents = await AnalyticsEvent.aggregate([
     { $match: { createdAt: { $gte: since } } },
@@ -57,6 +85,13 @@ export async function getPlatformMetrics({ days = 30 } = {}) {
     total_revenue: totalRevenue,
     top_events: recentEvents,
     period_days: Number(days),
+
+    
+    active_projects: activeContracts,
+    students: totalStudents,
+    income: commissionAgg,
+    popular_skills: popularSkillsAgg.map((row) => ({ name: row._id, count: row.count })),
+    demand_by_category: demandByCategoryAgg.map((row) => ({ category: row._id, projects: row.count })),
   };
 }
 
@@ -154,6 +189,26 @@ export async function getUniversityMetrics(universityId, requestingUser) {
   const totalEarnings = earningsAgg[0]?.total || 0;
   const releasedMilestoneCount = earningsAgg[0]?.count || 0;
 
+  const activeProjects = verifiedUserIds.length
+    ? await Contract.countDocuments({ student_id: { $in: verifiedUserIds }, status: "active" })
+    : 0;
+
+  const deliveredMilestones = contractIds.length
+    ? await Milestone.find({
+        contract_id: { $in: contractIds },
+        delivered_at: { $ne: null },
+        status: { $in: ["delivered", "revision_requested", "approved", "released"] },
+      })
+        .select("delivered_at due_date")
+        .lean()
+    : [];
+  const onTimeCount = deliveredMilestones.filter(
+    (m) => m.delivered_at && m.due_date && new Date(m.delivered_at) <= new Date(m.due_date)
+  ).length;
+  const onTimeRate = deliveredMilestones.length
+    ? Math.round((onTimeCount / deliveredMilestones.length) * 1000) / 10
+    : null;
+
   return {
     university: { id: university._id, name: university.name },
     total_students: students.length,
@@ -165,5 +220,9 @@ export async function getUniversityMetrics(universityId, requestingUser) {
     released_milestone_count: releasedMilestoneCount,
     average_earnings_per_employed_student:
       studentsWithContracts.length ? Math.round((totalEarnings / studentsWithContracts.length) * 100) / 100 : null,
+
+    // Fields consumed by the university analytics dashboard.
+    active_projects: activeProjects,
+    on_time_rate: onTimeRate,
   };
 }

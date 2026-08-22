@@ -6,8 +6,18 @@ export default function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    if (hash) return;
+    if (hash) {
+      const id = hash.slice(1);
+      // The target section may not be mounted yet in the same tick as the
+      // route change (e.g. navigating from another page to "/#faq"), so wait
+      // for the next paint before trying to scroll to it.
+      const raf = requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    return undefined;
   }, [pathname, hash]);
 
   return null;

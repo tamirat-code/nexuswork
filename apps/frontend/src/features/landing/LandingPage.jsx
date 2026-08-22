@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -103,6 +104,33 @@ const TRUST_SIGNALS = [
   { title: "No hidden fees", body: "One clear commission, shown up front" },
 ];
 
+const STATS = [
+  { value: "1,200+", label: "Verified students" },
+  { value: "$180K+", label: "Held in escrow" },
+  { value: "40+", label: "Universities" },
+];
+
+const TESTIMONIALS = [
+  {
+    quote:
+      "We had a landing page redesigned and shipped in under two weeks. Funds sat in escrow the whole time, so there was never a moment I wondered if the student would deliver.",
+    name: "Maya Reinholt",
+    role: "Founder, Loomstate Coffee",
+  },
+  {
+    quote:
+      "Milestones being funded up front changed everything for me. I could plan my week around real, committed work instead of chasing invoices between classes.",
+    name: "Daniel Osei",
+    role: "Computer Science, Georgia Tech",
+  },
+  {
+    quote:
+      "Every proposal we got was from a verified student, so screening took minutes instead of days. We've hired the same designer for three projects now.",
+    name: "Priya Chandrasekar",
+    role: "Marketing Lead, Fernbank Analytics",
+  },
+];
+
 const btnPrimary =
   "inline-flex items-center justify-center h-11 px-6 rounded-control bg-brass text-ink text-sm font-semibold tracking-tight hover:bg-brass-300 active:scale-[0.99] transition-all w-full sm:w-auto";
 
@@ -136,7 +164,7 @@ function OpenRightNow() {
   const projects = (data?.data ?? []).slice(0, 4);
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-20" aria-label="Open projects">
+    <section className="w-full px-6 py-20 sm:px-10 lg:px-24" aria-label="Open projects">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <SectionHeading title="Open right now" subtitle="Fresh briefs from clients hiring this week." />
         <Link
@@ -184,10 +212,105 @@ function OpenRightNow() {
   );
 }
 
+/**
+ * Auto-rotating testimonial strip for the hero. Pauses on hover/focus and
+ * when the tab isn't visible, respects prefers-reduced-motion, and exposes
+ * accessible manual controls so it never traps a keyboard or screen-reader
+ * user in a moving carousel.
+ */
+function HeroTestimonial() {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion || paused || TESTIMONIALS.length <= 1) return undefined;
+
+    timerRef.current = setInterval(() => {
+      setIndex((i) => (i + 1) % TESTIMONIALS.length);
+    }, 6000);
+
+    return () => clearInterval(timerRef.current);
+  }, [paused]);
+
+  useEffect(() => {
+    const handleVisibility = () => setPaused(document.hidden);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  const { quote, name, role } = TESTIMONIALS[index];
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .join("");
+
+  return (
+    <div
+      className="relative mx-auto w-full max-w-md overflow-hidden rounded-card border border-ink-300/60 bg-gradient-to-b from-ink-50/90 to-ink-100/80 p-6 text-left shadow-elevated backdrop-blur-sm sm:p-8"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
+      {/* accent glow + top border */}
+      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-brass to-transparent" aria-hidden="true" />
+      <div
+        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-brass/10 blur-3xl"
+        aria-hidden="true"
+      />
+
+      <span aria-hidden="true" className="font-display text-5xl leading-none text-brass/30">
+        “
+      </span>
+
+      <p
+        aria-live="polite"
+        className="relative -mt-2 min-h-[7em] text-base italic leading-relaxed text-slate-200 sm:text-lg"
+      >
+        {quote}
+      </p>
+
+      <div className="mt-6 flex items-center justify-between gap-4 border-t border-ink-300/60 pt-5">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brass/15 text-sm font-semibold text-brass ring-1 ring-brass/30"
+          >
+            {initials}
+          </span>
+          <span>
+            <p className="text-sm font-semibold tracking-tight text-slate">{name}</p>
+            <p className="text-xs text-slate-400">{role}</p>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5" role="tablist" aria-label="Choose testimonial">
+          {TESTIMONIALS.map((t, i) => (
+            <button
+              key={t.name}
+              type="button"
+              role="tab"
+              aria-selected={i === index}
+              aria-label={`Show testimonial from ${t.name}`}
+              onClick={() => setIndex(i)}
+              className={`h-1.5 w-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink-50 ${
+                i === index ? "bg-brass" : "bg-ink-300 hover:bg-ink-300/70"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="bg-ink">
-      <section className="relative overflow-hidden bg-ink" aria-label="Hero">
+      <section className="relative flex min-h-screen items-center overflow-hidden bg-ink" aria-label="Hero">
         <div className="absolute inset-0 z-0" aria-hidden="true">
           <Strands
             colors={["#00c8b4", "#0e7fa3", "#7C3AED"]}
@@ -205,50 +328,68 @@ export default function LandingPage() {
         />
 
         <motion.div
-          className="relative z-10 mx-auto max-w-3xl px-6 pb-20 pt-20 text-center sm:pb-24 sm:pt-24"
+          className="relative z-10 flex w-full flex-col items-center gap-12 px-6 py-20 sm:px-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:py-24 lg:px-12 xl:px-20"
           initial="hidden"
           animate="show"
           variants={STAGGER_CONTAINER}
         >
-          <motion.div variants={FADE_UP}>
-            <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brass">
-              <SealMark className="h-3.5 w-3.5" />
-              University-verified students only
-            </span>
-          </motion.div>
+          <div className="text-center lg:max-w-xl lg:flex-shrink-0 lg:text-left">
+            <motion.div variants={FADE_UP} className="flex justify-center lg:justify-start">
+              <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brass">
+                <SealMark className="h-3.5 w-3.5" />
+                University-verified students only
+              </span>
+            </motion.div>
 
-          <motion.h1
-            variants={FADE_UP}
-            className="font-display text-[2.5rem] leading-[1.05] tracking-tight text-slate sm:text-[3.5rem]"
-          >
-            Where student talent meets{" "}
-            <em className="not-italic text-brass">real,&nbsp;paid&nbsp;work</em>.
-          </motion.h1>
+            <motion.h1
+              variants={FADE_UP}
+              className="font-display text-[2.5rem] leading-[1.05] tracking-tight text-slate sm:text-[3.5rem]"
+            >
+              Where student talent meets{" "}
+              <em className="not-italic text-brass">real,&nbsp;paid&nbsp;work</em>.
+            </motion.h1>
 
-          <motion.p
-            variants={FADE_UP}
-            className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg"
-          >
-            NexusWork connects verified university students with clients who need projects done — with
-            every milestone held in escrow until the work is approved.
-          </motion.p>
+            <motion.p
+              variants={FADE_UP}
+              className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg lg:mx-0"
+            >
+              NexusWork connects verified university students with clients who need projects done — with
+              every milestone held in escrow until the work is approved.
+            </motion.p>
 
-          <motion.div
-            variants={FADE_UP}
-            className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
-          >
-            <Link to="/projects" className={btnPrimary}>
-              Browse open projects
-            </Link>
-            <Link to="/register" className={btnSecondary}>
-              Post a project
-            </Link>
+            <motion.div
+              variants={FADE_UP}
+              className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
+            >
+              <Link to="/projects" className={btnPrimary}>
+                Browse open projects
+              </Link>
+              <Link to="/register" className={btnSecondary}>
+                Post a project
+              </Link>
+            </motion.div>
+
+            <motion.div
+              variants={FADE_UP}
+              className="mx-auto mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-ink-300/60 pt-8 lg:mx-0"
+            >
+              {STATS.map(({ value, label }) => (
+                <div key={label}>
+                  <p className="font-display text-2xl tracking-tight text-brass sm:text-3xl">{value}</p>
+                  <p className="mt-1 text-xs text-slate-300">{label}</p>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          <motion.div variants={FADE_UP} className="flex w-full justify-center lg:w-auto lg:flex-shrink-0 lg:justify-end">
+            <HeroTestimonial />
           </motion.div>
         </motion.div>
       </section>
 
       <section className="border-y border-ink-300 bg-ink-50" aria-label="Trust signals">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-6 py-6 text-center sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-ink-300">
+        <div className="grid w-full grid-cols-1 gap-6 px-6 py-6 text-center sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-ink-300 sm:px-10 lg:px-24">
           {TRUST_SIGNALS.map(({ title, body }) => (
             <div key={title} className="px-4">
               <p className="text-sm font-semibold tracking-tight text-slate">{title}</p>
@@ -258,10 +399,11 @@ export default function LandingPage() {
         </div>
       </section>
 
+
       <OpenRightNow />
 
       <section className="border-t border-ink-300 bg-ink-50" aria-label="Categories">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="w-full px-6 py-20 sm:px-10 lg:px-24">
           <SectionHeading
             eyebrow="Browse by discipline"
             title="Categories students work in"
@@ -292,7 +434,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-20" aria-label="How it works">
+      <section id="how-it-works" className="w-full scroll-mt-24 px-6 py-20 sm:px-10 lg:px-24" aria-label="How it works">
         <SectionHeading
           align="center"
           eyebrow="How it works"
@@ -357,7 +499,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="border-t border-ink-300 bg-ink-50" aria-label="Frequently asked questions">
+      <section id="faq" className="scroll-mt-24 border-t border-ink-300 bg-ink-50" aria-label="Frequently asked questions">
         <div className="mx-auto max-w-3xl px-6 py-20">
           <SectionHeading eyebrow="FAQ" title="Questions" />
 

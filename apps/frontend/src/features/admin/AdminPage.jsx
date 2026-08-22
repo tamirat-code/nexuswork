@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck } from "lucide-react";
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
+import { formatCurrency } from "../../utils/currency.utils.js";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/shadcn/card.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
@@ -14,6 +15,7 @@ import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
+import BarChart from "../../components/charts/BarChart.jsx";
 import {
   Dialog,
   DialogContent,
@@ -175,6 +177,9 @@ export default function AdminPage() {
   const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
 
   const stats = statsData?.data ?? {};
+  const revenue = stats.revenue ?? {};
+  const currency = revenue.currency?.toUpperCase() || "USD";
+
   const users = Array.isArray(usersData?.data)
     ? usersData.data
     : usersData?.data?.users ?? [];
@@ -188,8 +193,27 @@ export default function AdminPage() {
   const statCards = [
     { label: "Active projects", value: stats.active_projects ?? 0, icon: Briefcase },
     { label: "Students", value: stats.students ?? 0, icon: Users },
-    { label: "Open disputes", value: stats.open_disputes ?? 0, icon: Flag },
-    { label: "Platform income", value: stats.income ? `$${stats.income.toLocaleString()}` : "$0", icon: ShieldCheck },
+    { label: "Active users (30d)", value: stats.users?.active_30d ?? 0, icon: UserCheck },
+    { label: "Open disputes", value: stats.disputes?.open ?? 0, icon: Flag },
+  ];
+
+  const revenueCards = [
+    {
+      label: "Platform commission (all-time)",
+      value: formatCurrency(revenue.commission_total ?? 0, currency),
+      icon: ShieldCheck,
+      highlight: true,
+    },
+    {
+      label: "Commission (last 30 days)",
+      value: formatCurrency(revenue.commission_30d ?? 0, currency),
+      icon: TrendingUp,
+    },
+    {
+      label: "Total paid out to students",
+      value: formatCurrency(revenue.total_withdrawn ?? 0, currency),
+      icon: Wallet,
+    },
   ];
 
   return (
@@ -211,6 +235,39 @@ export default function AdminPage() {
           </Card>
         ))}
       </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {revenueCards.map((s) => (
+          <Card key={s.label} className={s.highlight ? "border-brass/40" : undefined}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <s.icon className={s.highlight ? "h-5 w-5 text-brass" : "h-5 w-5 text-slate-300"} />
+              </div>
+              <p className={`mt-3 font-mono text-2xl font-semibold ${s.highlight ? "text-brass" : "text-slate"}`}>
+                {statsLoading ? "…" : s.value}
+              </p>
+              <p className="text-xs text-slate-300">{s.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Commission revenue by month</CardTitle>
+          <CardDescription>Platform's cut of released milestones, last 12 months.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {statsLoading ? (
+            <Skeleton className="h-[220px] w-full" />
+          ) : (
+            <BarChart
+              data={revenue.monthly ?? []}
+              valueFormatter={(v) => formatCurrency(v, currency)}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>

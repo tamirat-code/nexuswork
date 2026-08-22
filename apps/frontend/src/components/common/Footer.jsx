@@ -30,7 +30,7 @@ const columns = [
 export default function Footer() {
   return (
     <footer className="mt-20 border-t border-ink-300 bg-ink">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid w-full gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 sm:px-10 lg:px-16">
         <div>
           <Link to="/" className="flex items-center gap-2">
             <SealMark className="h-6 w-6 text-brass" />
@@ -58,7 +58,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-ink-300">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-xs text-slate-300 sm:flex-row">
+        <div className="flex w-full flex-col items-center justify-between gap-2 px-6 py-6 text-xs text-slate-300 sm:flex-row sm:px-10 lg:px-16">
           <span>© {new Date().getFullYear()} NexusWork — Student Freelance Marketplace</span>
           <span>Built for university talent · Escrow-backed payments</span>
         </div>

@@ -1,9 +1,13 @@
 import { ROLES } from "../constants/roles.constants.js";
 
 export const marketingNav = [
-  { to: "/projects", label: "Browse projects" },
-  { to: "/students", label: "Find talent" },
-  { to: "/universities", label: "For universities" },
+  { to: "/", label: "Home", icon: "home" },
+  { to: "/projects", label: "Browse projects", icon: "briefcase" },
+  { to: "/students", label: "Find talent", icon: "users" },
+  { to: "/universities", label: "For universities", icon: "building" },
+  { to: "/#how-it-works", label: "How it works", icon: "spark" },
+  { to: "/#faq", label: "FAQ", icon: "help" },
+  { to: "/search", label: "Search", icon: "search" },
 ];
 
 const ALL = [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN];

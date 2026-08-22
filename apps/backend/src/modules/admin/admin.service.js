@@ -1,15 +1,17 @@
 import User from "../users/users.model.js";
 import Dispute from "../disputes/disputes.model.js";
 import Milestone from "../milestones/milestones.model.js";
+import Contract from "../contracts/contracts.model.js";
+import Payment from "../payments/payments.model.js";
+import Withdrawal from "../wallets/withdrawal.model.js";
 import AdminAction from "./admin.model.js";
 import AuditLog from "../audit-logs/audit-logs.model.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { ROLES } from "../../shared/enums/roles.enum.js";
+import { paymentConfig } from "../../config/payment.config.js";
 
-/**
- * Suspend a user account (prevent login and activity).
- */
+
 export async function suspendUser(admin_id, admin_role, user_id, reason) {
   const user = await User.findById(user_id);
   if (!user) throw new NotFoundError("User not found");
@@ -37,9 +39,7 @@ export async function suspendUser(admin_id, admin_role, user_id, reason) {
   return user;
 }
 
-/**
- * Restore a suspended user.
- */
+
 export async function restoreUser(admin_id, admin_role, user_id, reason) {
   const user = await User.findById(user_id);
   if (!user) throw new NotFoundError("User not found");
@@ -62,9 +62,7 @@ export async function restoreUser(admin_id, admin_role, user_id, reason) {
   return user;
 }
 
-/**
- * Permanently delete a user and their data (with financial audit trail preserved).
- */
+
 export async function deleteUser(admin_id, admin_role, user_id, reason) {
   const user = await User.findById(user_id);
   if (!user) throw new NotFoundError("User not found");
@@ -73,7 +71,7 @@ export async function deleteUser(admin_id, admin_role, user_id, reason) {
     throw new ValidationError("Cannot delete yourself");
   }
 
-  // Store deletion record before removing
+  
   const deletedUser = {
     _id: user._id,
     email: user.email,
@@ -97,9 +95,7 @@ export async function deleteUser(admin_id, admin_role, user_id, reason) {
   return { success: true, deleted_user: deletedUser };
 }
 
-/**
- * List all users with optional filtering.
- */
+
 export async function listUsers({ role, status, search, limit = 50, skip = 0 }) {
   const query = {};
   if (role) query.role = role;
@@ -130,9 +126,7 @@ export async function listUsers({ role, status, search, limit = 50, skip = 0 }) 
   };
 }
 
-/**
- * Get detailed user profile with activity history.
- */
+
 export async function getUserProfile(user_id) {
   const user = await User.findById(user_id).select("-password_hash").lean();
   if (!user) throw new NotFoundError("User not found");
@@ -154,9 +148,7 @@ export async function getUserProfile(user_id) {
   };
 }
 
-/**
- * Update user role (admin privilege).
- */
+
 export async function updateUserRole(admin_id, admin_role, user_id, new_role, reason) {
   if (admin_role !== ROLES.ADMIN) {
     throw new ForbiddenError("Only admins can change user roles");
@@ -182,9 +174,7 @@ export async function updateUserRole(admin_id, admin_role, user_id, new_role, re
   return user;
 }
 
-/**
- * Get all open disputes for admin review.
- */
+
 export async function listDisputes({ status, limit = 50, skip = 0 }) {
   const query = status ? { status } : {};
 
@@ -239,28 +229,87 @@ export async function resolveDispute(admin_id, admin_role, dispute_id, resolutio
 }
 
 /**
- * Get platform admin dashboard statistics.
+ * Get platform admin dashboard statistics, including real commission
+ * revenue pulled from the Payment ledger (direction: "commission").
  */
 export async function getDashboardStats() {
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-  const [users_total, users_active, disputes_open, disputes_resolved] = await Promise.all([
+  const [
+    users_total,
+    users_active,
+    students_total,
+    clients_total,
+    projects_active,
+    disputes_open,
+    disputes_resolved,
+    commissionTotalAgg,
+    commission30dAgg,
+    withdrawnTotalAgg,
+    monthlyCommissionAgg,
+  ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ status: "active", last_login: { $gte: thirtyDaysAgo } }),
+    User.countDocuments({ role: ROLES.STUDENT }),
+    User.countDocuments({ role: ROLES.CLIENT }),
+    Contract.countDocuments({ status: "active" }),
     Dispute.countDocuments({ status: "open" }),
     Dispute.countDocuments({ status: "resolved", resolved_at: { $gte: thirtyDaysAgo } }),
+    Payment.aggregate([
+      { $match: { direction: "commission", status: "succeeded" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Payment.aggregate([
+      {
+        $match: {
+          direction: "commission",
+          status: "succeeded",
+          createdAt: { $gte: thirtyDaysAgo },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Withdrawal.aggregate([
+      { $match: { status: "paid" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Payment.aggregate([
+      {
+        $match: {
+          direction: "commission",
+          status: "succeeded",
+          createdAt: { $gte: twelveMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: { y: { $year: "$createdAt" }, m: { $month: "$createdAt" } },
+          total: { $sum: "$amount" },
+        },
+      },
+      { $sort: { "_id.y": 1, "_id.m": 1 } },
+    ]),
   ]);
 
   const user_breakdown = await User.aggregate([
-    {
-      $group: {
-        _id: "$role",
-        count: { $sum: 1 },
-      },
-    },
+    { $group: { _id: "$role", count: { $sum: 1 } } },
     { $sort: { _id: 1 } },
   ]);
+
+  const commission_total = Number(commissionTotalAgg[0]?.total || 0);
+  const commission_30d = Number(commission30dAgg[0]?.total || 0);
+  const total_withdrawn = Number(withdrawnTotalAgg[0]?.total || 0);
+
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const monthly_commission = monthlyCommissionAgg.map((row) => ({
+    label: `${monthNames[row._id.m - 1]} ${String(row._id.y).slice(2)}`,
+    total: Number(row.total || 0),
+  }));
 
   return {
     users: {
@@ -268,9 +317,19 @@ export async function getDashboardStats() {
       active_30d: users_active,
       by_role: user_breakdown,
     },
+    students: students_total,
+    clients: clients_total,
+    active_projects: projects_active,
     disputes: {
       open: disputes_open,
       resolved_30d: disputes_resolved,
+    },
+    revenue: {
+      commission_total,
+      commission_30d,
+      total_withdrawn,
+      currency: paymentConfig.currency,
+      monthly: monthly_commission,
     },
   };
 }
