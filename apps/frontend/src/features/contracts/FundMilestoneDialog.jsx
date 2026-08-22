@@ -72,7 +72,7 @@ function CardForm({ contractId, milestone, token, onDone }) {
       )}
       <DialogFooter>
         <Button type="submit" disabled={!stripe || busy} className="w-full sm:w-auto">
-          {busy ? "Processing…" : `Pay ${formatCurrency(milestone.amount)} into escrow`}
+          {busy ? "Processing…" : `Pay ${formatCurrency(milestone?.amount ?? 0)} into escrow`}
         </Button>
       </DialogFooter>
     </form>

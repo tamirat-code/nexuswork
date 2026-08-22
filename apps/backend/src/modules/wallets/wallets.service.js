@@ -8,6 +8,14 @@ import Payment from "../payments/payments.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
+async function getPlatformAvailableBalance() {
+  const balance = await stripe.balance.retrieve();
+  const available = balance.available.find(
+    (b) => b.currency === paymentConfig.currency
+  );
+  return Number(available?.amount || 0) / 100;
+}
+
 async function syncStripeAccountStatus(wallet) {
   if (!wallet?.stripe_account_id) {
     return {
@@ -234,9 +242,15 @@ export async function requestWithdrawal(userId, amount) {
   });
 
   try {
-    // Move the withdrawn amount from the NexusWork Stripe platform balance
-    // to the student's connected account. Stripe then pays it out according
-    // to that connected account's payout schedule.
+    const platformAvailable = await getPlatformAvailableBalance();
+    if (platformAvailable < amount) {
+      throw new Error(
+        `The platform's Stripe account does not have enough available funds to complete this withdrawal. ` +
+        `Available platform balance: ${platformAvailable.toFixed(2)} ${paymentConfig.currency.toUpperCase()}. ` +
+        `Card payments typically take 2 business days to become available. Please try again later.`
+      );
+    }
+
     const transfer = await stripe.transfers.create({
       amount: Math.round(amount * 100),
       currency: paymentConfig.currency,

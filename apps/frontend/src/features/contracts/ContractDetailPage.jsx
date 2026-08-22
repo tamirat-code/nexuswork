@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   Clock,
@@ -23,6 +24,7 @@ import {
   createMilestone,
   fundMilestone,
   requestMilestoneRevision,
+  retryMilestoneRelease,
   startMilestoneWork,
   submitMilestoneWork,
 } from "../../services/api/milestones.api.js";
@@ -325,10 +327,17 @@ function SubmissionReviewDialog({ milestone, submissions, token, onChanged }) {
 
   const approveMutation = useMutation({
     mutationFn: () => approveMilestone(milestone._id, token),
-    onSuccess: () => {
+    onSuccess: (res) => {
       setOpen(false);
       onChanged();
-      toast.success("Milestone approved — escrow funds are being released.");
+      if (res?.data?.payout_pending) {
+        toast.error(
+          res?.data?.payout_message ||
+            "Milestone approved, but the payout to the student failed. You can retry it from the milestone."
+        );
+      } else {
+        toast.success("Milestone approved — escrow funds have been released.");
+      }
     },
     onError: (error) => toast.error(error.message || "Could not approve milestone"),
   });
@@ -432,9 +441,19 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
   const isStartingFunding = fundingMilestoneId === milestone._id;
   const isWorking = milestone.status === MILESTONE_STATUS.IN_PROGRESS;
 
+  // The client approved this milestone and escrow release was attempted, but the
+  // transfer to the student's Stripe account failed (bad/unverified payout account,
+  // Stripe error, etc). The milestone stays in "approved" — not "released" — with
+  // payout_status "pending" and a reason. Without this check the UI just shows a
+  // plain "Approved" badge and the student's wallet silently stays at $0.
+  const hasPayoutFailure =
+    milestone.status === MILESTONE_STATUS.APPROVED && milestone.payout_status === "pending";
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["milestones"] });
     queryClient.invalidateQueries({ queryKey: ["submissions", milestone._id] });
+    queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    queryClient.invalidateQueries({ queryKey: ["wallet-tx"] });
     onChanged?.();
   };
 
@@ -442,6 +461,19 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
     mutationFn: () => startMilestoneWork(milestone._id, token),
     onSuccess: refresh,
     onError: (error) => toast.error(error.message || "Could not start work"),
+  });
+
+  const retryReleaseMutation = useMutation({
+    mutationFn: () => retryMilestoneRelease(milestone._id, token),
+    onSuccess: (res) => {
+      refresh();
+      if (res?.data?.payout_pending) {
+        toast.error(res?.data?.payout_message || "Payout still could not be released.");
+      } else {
+        toast.success("Payout released to the student.");
+      }
+    },
+    onError: (error) => toast.error(error.message || "Could not retry the payout"),
   });
 
   return (
@@ -466,6 +498,34 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
             <StatusBadge kind="milestone" status={milestone.status} showDot />
           </div>
         </div>
+
+        {hasPayoutFailure && (
+          <div className="mt-4 flex flex-wrap items-start justify-between gap-3 rounded-card border border-brick/30 bg-brick/5 p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-brick" />
+              <div>
+                <p className="text-sm font-semibold text-brick">Payout could not be released</p>
+                <p className="mt-1 text-sm text-slate-300">
+                  {milestone.payout_failure_reason ||
+                    "The escrow funds were approved but the transfer to the student's payout account failed."}
+                </p>
+                <p className="mt-1 text-xs text-slate-300">
+                  The client's approval was recorded, but the student has not been paid yet.
+                </p>
+              </div>
+            </div>
+            {role === ROLES.CLIENT && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => retryReleaseMutation.mutate()}
+                loading={retryReleaseMutation.isPending}
+              >
+                <RefreshCcw className="h-4 w-4" /> Retry payout
+              </Button>
+            )}
+          </div>
+        )}
 
         {latestSubmission && (
           <div className="mt-4 rounded-card border border-ink-300 bg-ink-50 p-4">
@@ -755,7 +815,7 @@ export default function ContractDetailPage() {
 
   function handleAction(action, milestone, payload = {}) {
     if (action === "fund") {
-      fundMutation.mutate({ milestoneId: milestone._id });
+      fundMutation.mutate({ milestoneId: milestone._id, milestone });
       return;
     }
     if (action === "approve") {
