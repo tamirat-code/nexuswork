@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BadgeCheck, GraduationCap, ShieldCheck, XCircle, FileText } from "lucide-react";
@@ -232,9 +233,18 @@ export default function UniversitiesPage() {
                     <span className="text-slate-300/70">({university.domain})</span>
                   </p>
                 ) : (
-                  <p className="text-sm text-slate-300">
-                    You aren't listed as contact staff for a university yet. Ask an admin to add you.
-                  </p>
+                  <div className="text-sm text-slate-300">
+                    <p>
+                      Matching your university's email domain only made your account eligible to apply — you
+                      still need a platform admin to confirm you actually work there.
+                    </p>
+                    <Link
+                      to="/profile"
+                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brass underline-offset-4 hover:underline"
+                    >
+                      Submit staff verification
+                    </Link>
+                  </div>
                 )
               ) : unis.length === 0 ? (
                 <p className="text-sm text-slate-300">No universities registered yet.</p>

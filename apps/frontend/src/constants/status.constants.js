@@ -110,6 +110,25 @@ export const VERIFICATION_STATUS_META = {
   },
 };
 
+
+export const STAFF_VERIFICATION_STATUS_META = {
+  pending: {
+    label: "Pending admin review",
+    tone: "warning",
+    hint: "A platform admin is reviewing your submitted proof",
+  },
+  approved: {
+    label: "Approved",
+    tone: "success",
+    hint: "Confirmed by a platform admin",
+  },
+  rejected: {
+    label: "Not approved",
+    tone: "danger",
+    hint: "A platform admin could not confirm your staff role",
+  },
+};
+
 export const PAYMENT_STATUS_META = {
   pending: { label: "Pending", tone: "warning", hint: "Waiting to clear" },
   held: { label: "In escrow", tone: "info", hint: "Held until the milestone is approved" },
@@ -133,6 +152,7 @@ export const STATUS_REGISTRY = {
   milestone: MILESTONE_STATUS_META,
   proposal: PROPOSAL_STATUS_META,
   verification: VERIFICATION_STATUS_META,
+  staff_verification: STAFF_VERIFICATION_STATUS_META,
   payment: PAYMENT_STATUS_META,
   dispute: DISPUTE_STATUS_META,
 };

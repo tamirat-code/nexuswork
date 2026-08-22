@@ -117,6 +117,25 @@ export default function DashboardPage() {
         )}
       </header>
 
+      {isUniversityStaff && !user?.staffVerified && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-card border border-brass/40 bg-brass/10 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold tracking-tight text-brass">Staff access pending admin approval</p>
+            <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-300">
+              Matching your university's email domain only confirmed eligibility to apply. Submit your staff
+              ID or HR letter from your profile, and a platform admin will confirm you before you can review
+              student verifications.
+            </p>
+          </div>
+          <Link
+            to="/profile"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-control bg-brass px-4 text-[13px] font-semibold text-ink transition-colors hover:bg-brass-300"
+          >
+            Submit verification
+          </Link>
+        </div>
+      )}
+
       <section aria-label="Overview" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card">

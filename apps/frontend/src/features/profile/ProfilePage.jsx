@@ -21,6 +21,7 @@ import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
 import { listUniversities } from "../../services/api/universities.api.js";
 import { getMyVerifications, requestVerification } from "../../services/api/verifications.api.js";
+import { getMyStaffVerifications, requestStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
 import { PROFILE_LIMITS, profileCompleteness, validateProfile } from "./profile.utils.js";
@@ -185,6 +186,7 @@ export default function ProfilePage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Badge>{ROLE_LABELS[user?.role] || "Member"}</Badge>
                   {user?.universityVerified && <Badge tone="success">University verified</Badge>}
+                  {user?.staffVerified && <Badge tone="success">Staff verified</Badge>}
                 </div>
               </div>
 
@@ -240,6 +242,7 @@ export default function ProfilePage() {
           </Card>
 
           {user?.role === "student" && <UniversityVerificationCard user={user} token={token} />}
+          {user?.role === "university_staff" && <StaffVerificationCard user={user} token={token} />}
 
           <Card as="section">
             <CardHeader title="About you" description="Context that helps clients judge fit quickly." />
@@ -579,6 +582,204 @@ function UniversityVerificationCard({ user, token }) {
 
           <div className="mt-5">
             <Button type="button" onClick={handleSubmit} loading={submit.isPending} disabled={busy || universities.length === 0}>
+              Submit for review
+            </Button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// Matching your university's email domain at registration only proves
+// eligibility to *apply* — it grants no real power. This card is how a
+// university_staff registrant submits secondary proof (staff ID, HR/offer
+// letter, department page) for a platform admin to actually approve before
+// they can review student verifications, certify skills, or see analytics.
+function StaffVerificationCard({ user, token }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const { refreshMe } = useAuth();
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [jobTitle, setJobTitle] = useState("");
+  const [department, setDepartment] = useState("");
+  const [uploadedDoc, setUploadedDoc] = useState(null); // { _id, original_name, size }
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const { data: verificationsRes, isLoading: verificationsLoading } = useQuery({
+    queryKey: ["my-staff-verifications"],
+    queryFn: () => getMyStaffVerifications(token),
+    enabled: !!token,
+  });
+
+  const verifications = verificationsRes?.data ?? [];
+  // Backend returns these newest-first.
+  const latest = verifications[0];
+  const isApproved = latest?.status === "approved" || Boolean(user?.staffVerified);
+
+  useEffect(() => {
+    if (latest?.status === "approved" && !user?.staffVerified) {
+      refreshMe().catch(() => {
+        /* best-effort resync — the card already reflects the correct state either way */
+      });
+    }
+  }, [latest?.status, user?.staffVerified, refreshMe]);
+
+  function resetForm() {
+    setJobTitle("");
+    setDepartment("");
+    setUploadedDoc(null);
+    setFieldErrors({});
+  }
+
+  const uploadDoc = useMutation({
+    mutationFn: (file) => uploadFile(file, { relatedType: "staff_verification_document", token }),
+    onSuccess: (res) => {
+      setUploadedDoc(res.data);
+      setFieldErrors((prev) => ({ ...prev, document: undefined }));
+    },
+    onError: (err) => {
+      toast.show(err?.message || "That file couldn't be uploaded. Please try again.", { variant: "error" });
+    },
+  });
+
+  const removeDoc = useMutation({
+    mutationFn: () => deleteFile(uploadedDoc._id, token),
+    onSuccess: () => setUploadedDoc(null),
+    onError: (err) => {
+      toast.show(err?.message || "Couldn't remove that file — try again.", { variant: "error" });
+    },
+  });
+
+  const submit = useMutation({
+    mutationFn: () =>
+      requestStaffVerification(
+        {
+          full_name: fullName.trim(),
+          job_title: jobTitle.trim(),
+          department: department.trim(),
+          document_file_id: uploadedDoc._id,
+        },
+        token
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-staff-verifications"] });
+      toast.show("Verification request submitted. A platform admin will review it shortly.");
+      resetForm();
+    },
+    onError: (err) => {
+      toast.show(err?.message || "We couldn't submit that request. Please try again.", { variant: "error" });
+    },
+  });
+
+  function validate() {
+    const errors = {};
+    if (!fullName.trim()) errors.fullName = "Enter your full legal name, as it appears on your ID.";
+    if (!jobTitle.trim()) errors.jobTitle = "Enter your job title.";
+    if (!department.trim()) errors.department = "Enter your department.";
+    if (!uploadedDoc) errors.document = "Upload a staff ID, HR/offer letter, or department directory page.";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function handleSubmit() {
+    if (!validate()) return;
+    submit.mutate();
+  }
+
+  const busy = uploadDoc.isPending || removeDoc.isPending || submit.isPending;
+  const universityName = latest?.university_id?.name;
+
+  return (
+    <Card as="section">
+      <CardHeader
+        title="Staff verification"
+        description="Your email domain only confirms you're eligible to apply. A platform admin has to approve real proof before you can review students, certify skills, or see analytics."
+      />
+      <CardDivider className="my-5" />
+
+      {verificationsLoading ? (
+        <p className="text-sm text-slate-300">Loading verification status…</p>
+      ) : isApproved ? (
+        <Alert variant="success" title="You're approved">
+          {universityName
+            ? `Confirmed by a platform admin for ${universityName}. You now have full staff access.`
+            : "A platform admin has confirmed your staff role. You now have full staff access."}
+        </Alert>
+      ) : latest?.status === "pending" ? (
+        <Alert variant="warning" title="Verification pending">
+          Your request was submitted on {new Date(latest.createdAt).toLocaleDateString()} and is awaiting admin
+          review. You'll be notified once it's decided — you can't review students or certify skills until it's
+          approved.
+        </Alert>
+      ) : (
+        <>
+          {latest?.status === "rejected" && (
+            <Alert variant="danger" title="Your last request was declined" className="mb-4">
+              {latest.rejection_reason || "No reason was given."} You can fix the details and submit again below.
+            </Alert>
+          )}
+
+          <p className="text-sm leading-relaxed text-slate-300">
+            This goes to a platform admin, not to other staff at your university. Give them enough to confirm
+            you actually work there: your name as it appears on your ID, your job title, your department, and a
+            staff ID, HR/offer letter, or a link to your department's directory page.
+          </p>
+
+          {/* Not a <form>: this card is nested inside the page's main profile
+              <form>, and HTML doesn't allow forms inside forms. */}
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Input
+              id="staff-verification-full-name"
+              label="Full legal name"
+              hint="As it appears on your staff ID."
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              error={fieldErrors.fullName}
+              maxLength={150}
+              wrapperClassName="sm:col-span-2"
+            />
+            <Input
+              id="staff-verification-job-title"
+              label="Job title"
+              placeholder="e.g. Career Services Coordinator"
+              value={jobTitle}
+              onChange={(event) => setJobTitle(event.target.value)}
+              error={fieldErrors.jobTitle}
+              maxLength={150}
+            />
+            <Input
+              id="staff-verification-department"
+              label="Department"
+              placeholder="e.g. Office of Career Development"
+              value={department}
+              onChange={(event) => setDepartment(event.target.value)}
+              error={fieldErrors.department}
+              maxLength={150}
+            />
+
+            <div className="sm:col-span-2">
+              <FileUpload
+                label="Proof of employment"
+                hint={`Staff ID, HR/offer letter, or department directory page · JPG, PNG or PDF · up to ${VERIFICATION_DOC_MAX_MB} MB`}
+                accept={VERIFICATION_DOC_ACCEPT}
+                maxSizeMb={VERIFICATION_DOC_MAX_MB}
+                disabled={busy}
+                files={uploadedDoc ? [{ id: uploadedDoc._id, name: uploadedDoc.original_name, size: uploadedDoc.size }] : []}
+                onFilesSelected={(files) => files[0] && uploadDoc.mutate(files[0])}
+                onRemove={() => removeDoc.mutate()}
+              />
+              {uploadDoc.isPending && <ProgressBar className="mt-2" value={60} label="Uploading document" showValue={false} />}
+              {fieldErrors.document && !uploadDoc.isPending && (
+                <p className="mt-2 text-xs text-brick" role="alert">
+                  {fieldErrors.document}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <Button type="button" onClick={handleSubmit} loading={submit.isPending} disabled={busy}>
               Submit for review
             </Button>
           </div>

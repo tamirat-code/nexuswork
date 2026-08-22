@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck } from "lucide-react";
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
+import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/shadcn/card.jsx";
@@ -169,12 +170,136 @@ function ResolveDisputeDialog({ dispute, token }) {
   );
 }
 
+// A university_staff account gets zero real power at registration — matching
+// its email domain only made it eligible to apply. This is the only place in
+// the app that turns a pending request into actual contact_staff membership
+// (see staff-verifications.service.js reviewStaffVerification).
+function ReviewStaffVerificationDialog({ verification, token }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [decision, setDecision] = useState(null); // "approved" | "rejected"
+
+  const review = useMutation({
+    mutationFn: (nextDecision) =>
+      reviewStaffVerification(
+        verification._id,
+        { decision: nextDecision, rejection_reason: nextDecision === "rejected" ? rejectionReason.trim() : undefined },
+        token
+      ),
+    onSuccess: (_, nextDecision) => {
+      qc.invalidateQueries({ queryKey: ["admin-staff-verifications"] });
+      toast.success(nextDecision === "approved" ? "Staff access approved" : "Request rejected");
+      setRejectionReason("");
+      setDecision(null);
+      setOpen(false);
+    },
+    onError: (err) => toast.error(err.message || "Could not review this request"),
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setDecision(null);
+          setRejectionReason("");
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" variant="secondary" className="h-8 gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5" /> Review
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{verification.full_name}</DialogTitle>
+          <DialogDescription>
+            {verification.job_title} · {verification.department} · {verification.university_id?.name || "Unknown university"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-lg border border-ink-300 bg-ink-100 p-3 text-xs text-slate-300">
+            <p>
+              Account email domain: <span className="font-mono text-slate">{verification.email_domain}</span>
+              {verification.email_domain_matched ? (
+                <span className="ml-2 text-escrow">matches university on file</span>
+              ) : (
+                <span className="ml-2 text-brick">does not match on file</span>
+              )}
+            </p>
+          </div>
+
+          {verification.document_file_id?.url ? (
+            <a
+              href={verification.document_file_id.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brass underline-offset-4 hover:underline"
+            >
+              <FileText className="h-4 w-4" />
+              View uploaded document ({verification.document_file_id.original_name || "file"})
+            </a>
+          ) : (
+            <p className="text-sm text-brick">No document on file — reject and ask them to resubmit with proof.</p>
+          )}
+
+          {decision === "rejected" && (
+            <div className="space-y-1.5">
+              <Label htmlFor={`staff-rejection-${verification._id}`}>Reason (shown to the requester)</Label>
+              <Textarea
+                id={`staff-rejection-${verification._id}`}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="e.g. The document doesn't show your name or job title clearly enough to confirm."
+                rows={3}
+              />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 sm:justify-between">
+          {decision !== "rejected" ? (
+            <Button variant="secondary" onClick={() => setDecision("rejected")} disabled={review.isPending}>
+              <XCircle className="h-4 w-4" /> Reject
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              loading={review.isPending}
+              disabled={!rejectionReason.trim()}
+              onClick={() => review.mutate("rejected")}
+            >
+              Confirm rejection
+            </Button>
+          )}
+          <Button
+            loading={review.isPending && decision !== "rejected"}
+            disabled={decision === "rejected" || !verification.document_file_id}
+            onClick={() => review.mutate("approved")}
+          >
+            <BadgeCheck className="h-4 w-4" /> Approve staff access
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminPage() {
   const { token } = useAuth();
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
   const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => listAdminUsers("?limit=10", token), enabled: !!token });
   const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes("?limit=10", token), enabled: !!token });
   const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
+  const { data: staffVerificationsData, isLoading: staffVerificationsLoading } = useQuery({
+    queryKey: ["admin-staff-verifications"],
+    queryFn: () => getStaffVerifications("?status=pending&limit=50", token),
+    enabled: !!token,
+  });
 
   const stats = statsData?.data ?? {};
   const revenue = stats.revenue ?? {};
@@ -189,12 +314,14 @@ export default function AdminPage() {
     : disputesData?.data?.disputes ?? [];
 
   const universities = universitiesData?.data ?? [];
+  const staffVerifications = staffVerificationsData?.data ?? [];
 
   const statCards = [
     { label: "Active projects", value: stats.active_projects ?? 0, icon: Briefcase },
     { label: "Students", value: stats.students ?? 0, icon: Users },
     { label: "Active users (30d)", value: stats.users?.active_30d ?? 0, icon: UserCheck },
     { label: "Open disputes", value: stats.disputes?.open ?? 0, icon: Flag },
+    { label: "Pending staff requests", value: staffVerifications.length, icon: ShieldCheck },
   ];
 
   const revenueCards = [
@@ -224,7 +351,7 @@ export default function AdminPage() {
         <p className="mt-2 text-sm text-slate-300">Manage users, resolve disputes, and monitor platform health.</p>
       </header>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((s) => (
           <Card key={s.label}>
             <CardContent className="p-5">
@@ -316,6 +443,66 @@ export default function AdminPage() {
                       ) : (
                         <Badge variant="success">Resolved</Badge>
                       )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg">Staff verification requests</CardTitle>
+            <CardDescription>
+              A matching email domain only made these accounts eligible to apply — they get no real access
+              (reviewing students, certifying skills, analytics) until approved here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Requester</TableHead>
+                  <TableHead>University</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Domain</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {staffVerificationsLoading && (
+                  <TableRow><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                )}
+                {!staffVerificationsLoading && staffVerifications.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-slate-300">
+                      No pending staff verification requests.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {staffVerifications.map((v) => (
+                  <TableRow key={v._id}>
+                    <TableCell className="font-semibold text-slate">
+                      {v.full_name}
+                      <div className="text-xs font-normal text-slate-300">{v.user_id?.email}</div>
+                    </TableCell>
+                    <TableCell className="flex items-center gap-2 text-sm text-slate">
+                      <GraduationCap className="h-4 w-4 text-brass" /> {v.university_id?.name || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-300">
+                      {v.job_title}
+                      <div className="text-xs text-slate-400">{v.department}</div>
+                    </TableCell>
+                    <TableCell>
+                      {v.email_domain_matched ? (
+                        <Badge variant="success">Domain matches</Badge>
+                      ) : (
+                        <Badge variant="danger">Domain mismatch</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ReviewStaffVerificationDialog verification={v} token={token} />
                     </TableCell>
                   </TableRow>
                 ))}
