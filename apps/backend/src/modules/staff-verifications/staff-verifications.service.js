@@ -74,7 +74,11 @@ export async function submitStaffVerification({
           type: "system",
           title: "New staff verification request",
           body: `${fullName} requested staff access at ${university.name}.`,
-          data: { staff_verification_id: verification._id, university_id: university._id },
+          data: {
+            staff_verification_id: verification._id,
+            university_id: university._id,
+            action: "review_staff_verification",
+          },
         })
       )
     );
@@ -150,7 +154,7 @@ export async function reviewStaffVerification({ verificationId, reviewerId, revi
         decision === "approved"
           ? "A platform admin confirmed your staff role — you can now review student verifications for your university."
           : `Your staff verification was not approved: ${verification.rejection_reason || "Please try again."}`,
-      data: { staff_verification_id: verification._id },
+      data: { staff_verification_id: verification._id, action: "view_staff_verification" },
     });
   } catch (err) {
     console.error("[staff-verifications] failed to notify requester:", err.message);

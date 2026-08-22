@@ -28,6 +28,8 @@ const notificationSchema = new mongoose.Schema(
         "review_received",
         "verification_approved",
         "verification_rejected",
+        "staff_verification_approved",
+        "staff_verification_rejected",
         "dispute_update",
         "system",
       ],
