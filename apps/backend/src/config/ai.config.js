@@ -1,7 +1,13 @@
-// AI recommendation module config (Section 4.15). The recommendation module
-// runs inside this Node backend rather than a separate service.
+
+const DEFAULT_MODEL_BY_PROVIDER = {
+  anthropic: "claude-sonnet-4-6",
+  groq: "llama-3.3-70b-versatile",
+};
+
+const provider = process.env.AI_PROVIDER || "anthropic";
+
 export const aiConfig = {
-  provider: process.env.AI_PROVIDER || "anthropic", // "anthropic" | "openai" | "none"
+  provider,
   apiKey: process.env.AI_API_KEY,
-  model: process.env.AI_MODEL || "claude-sonnet-4-6",
+  model: process.env.AI_MODEL || DEFAULT_MODEL_BY_PROVIDER[provider] || "claude-sonnet-4-6",
 };

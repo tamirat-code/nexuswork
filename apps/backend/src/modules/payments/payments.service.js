@@ -66,10 +66,13 @@ export async function markDepositSucceeded(paymentIntentId) {
   return payment;
 }
 
-export async function markDepositFailed(paymentIntentId) {
+export async function markDepositFailed(paymentIntentId, lastPaymentError = null) {
+  const failure_code = lastPaymentError?.decline_code || lastPaymentError?.code || undefined;
+  const failure_message = lastPaymentError?.message || undefined;
+
   const payment = await Payment.findOneAndUpdate(
     { stripe_payment_intent_id: paymentIntentId, direction: "deposit" },
-    { status: "failed" },
+    { status: "failed", failure_code, failure_message },
     { new: true }
   );
 
@@ -82,6 +85,8 @@ export async function markDepositFailed(paymentIntentId) {
         amount: payment.amount,
         currency: payment.currency,
         payment_intent_id: paymentIntentId,
+        failure_code,
+        failure_message,
       },
     });
   }

@@ -35,7 +35,7 @@ export async function handleStripeWebhook(req, res) {
         break;
 
       case "payment_intent.payment_failed":
-        await markDepositFailed(event.data.object.id);
+        await markDepositFailed(event.data.object.id, event.data.object.last_payment_error);
         break;
 
       case "account.updated": {

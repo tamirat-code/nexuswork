@@ -2,6 +2,7 @@ import Project from "../projects/projects.model.js";
 import StudentProfile from "../students/students.model.js";
 import Proposal from "../proposals/proposals.model.js";
 import User from "../users/users.model.js";
+import LearningResource from "../learning/learning.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import RecommendationCache from "./recommendation.model.js";
 import { aiConfig } from "../../config/ai.config.js";
@@ -21,15 +22,31 @@ function scoreStudentBySkillOverlap(project, studentSkills) {
 }
 
 
-async function rankWithAI(studentProfile, shortlist) {
+async function callAIText(prompt, maxTokens) {
   if (aiConfig.provider === "none" || !aiConfig.apiKey) return null;
 
-  const prompt = `Student skills: ${JSON.stringify(studentProfile.skills)}.
-Candidate projects (id, title, required_skills, budget): ${JSON.stringify(
-    shortlist.map((p) => ({ id: p._id, title: p.title, required_skills: p.required_skills, budget: p.budget }))
-  )}.
-Return ONLY a JSON array of project ids, best match first.`;
+  if (aiConfig.provider === "groq") {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${aiConfig.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: aiConfig.model,
+        max_completion_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
 
+    if (!response.ok) {
+      throw new Error(`AI provider responded with status ${response.status}`);
+    }
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  // Default / "anthropic"
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -39,7 +56,7 @@ Return ONLY a JSON array of project ids, best match first.`;
     },
     body: JSON.stringify({
       model: aiConfig.model,
-      max_tokens: 512,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -48,8 +65,20 @@ Return ONLY a JSON array of project ids, best match first.`;
     throw new Error(`AI provider responded with status ${response.status}`);
   }
   const data = await response.json();
-  const text = data.content?.map((b) => b.text || "").join("") || "[]";
-  const cleaned = text.replace(/```json|```/g, "").trim();
+  return data.content?.map((b) => b.text || "").join("") || "";
+}
+
+async function rankWithAI(studentProfile, shortlist) {
+  const prompt = `Student skills: ${JSON.stringify(studentProfile.skills)}.
+Candidate projects (id, title, required_skills, budget): ${JSON.stringify(
+    shortlist.map((p) => ({ id: p._id, title: p.title, required_skills: p.required_skills, budget: p.budget }))
+  )}.
+Return ONLY a JSON array of project ids, best match first.`;
+
+  const text = await callAIText(prompt, 512);
+  if (text === null) return null;
+
+  const cleaned = (text || "[]").replace(/```json|```/g, "").trim();
   return JSON.parse(cleaned);
 }
 
@@ -145,5 +174,85 @@ export async function getPriceSuggestion({ requiredSkills = [], category } = {})
     suggested_price: Math.round(median * 100) / 100,
     sample_size: pool.length,
     basis: relevant.length ? "skill_and_category_match" : "platform_wide_fallback",
+  };
+}
+
+
+
+async function getSkillDemand(limit = 15) {
+  const rows = await Project.aggregate([
+    { $match: { status: { $in: ["open", "in_progress"] } } },
+    { $unwind: "$required_skills" },
+    { $match: { required_skills: { $nin: [null, ""] } } },
+    { $group: { _id: { $toLower: "$required_skills" }, count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: limit },
+  ]);
+  return rows.map((r) => ({ name: r._id, demand_count: r.count }));
+}
+
+async function findResourcesForSkill(skillName, limit = 3) {
+  return LearningResource.find({
+    is_published: true,
+    $or: [
+      { tags: { $regex: `^${skillName}$`, $options: "i" } },
+      { category: { $regex: `^${skillName}$`, $options: "i" } },
+      { title: { $regex: skillName, $options: "i" } },
+    ],
+  })
+    .select("title resource_type url difficulty category")
+    .limit(limit)
+    .lean();
+}
+
+async function summarizeCareerPathWithAI(currentSkillNames, gapSkills) {
+  if (!gapSkills.length) return null;
+
+  const prompt = `A student currently has these skills: ${JSON.stringify(currentSkillNames)}.
+The most in-demand skills on the platform that they do NOT yet have, ranked by demand, are:
+${JSON.stringify(gapSkills.map((g) => g.name))}.
+Write a short (2-3 sentence) encouraging career-path summary recommending which 1-2 of
+these gap skills to prioritize learning next and why, given their current skills.
+Return ONLY the plain text summary, no JSON, no markdown.`;
+
+  const text = await callAIText(prompt, 256);
+  return text ? text.trim() : null;
+}
+
+export async function getCareerRecommendation(studentUserId) {
+  const profile = await StudentProfile.findOne({ user_id: studentUserId }).lean();
+  if (!profile) throw new NotFoundError("Student profile not found");
+
+  const currentSkillNames = new Set((profile.skills || []).map((s) => s.name?.toLowerCase()).filter(Boolean));
+
+  const demand = await getSkillDemand(15);
+  const gapSkills = demand.filter((d) => !currentSkillNames.has(d.name));
+
+  const topGap = gapSkills.slice(0, 5);
+  const skillPath = await Promise.all(
+    topGap.map(async (skill) => ({
+      ...skill,
+      resources: await findResourcesForSkill(skill.name),
+    }))
+  );
+
+  let summary = null;
+  try {
+    summary = await summarizeCareerPathWithAI(
+      (profile.skills || []).map((s) => s.name),
+      topGap
+    );
+  } catch (err) {
+    logger.warn("[recommendation] AI career summary failed, omitting summary:", err.message);
+  }
+
+  if (!summary && topGap.length) {
+    summary = `${topGap[0].name} is currently the most in-demand skill you haven't listed yet — it appears in ${topGap[0].demand_count} open project${topGap[0].demand_count === 1 ? "" : "s"} right now.`;
+  }
+
+  return {
+    current_skills: (profile.skills || []).map((s) => s.name).filter(Boolean),
+    skill_path: skillPath,
+    summary,
   };
 }

@@ -14,6 +14,8 @@ const paymentSchema = new mongoose.Schema(
     stripe_payment_intent_id: { type: String },
     stripe_transfer_id: { type: String },
     stripe_refund_id: { type: String },
+    failure_code: { type: String },
+    failure_message: { type: String },
   },
   { timestamps: true }
 );

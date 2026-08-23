@@ -1,9 +1,14 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
-import { getRecommendationsForStudent, getRecommendationsForClient, getPriceSuggestion } from "./recommendation.service.js";
+import { getRecommendationsForStudent, getRecommendationsForClient, getPriceSuggestion, getCareerRecommendation } from "./recommendation.service.js";
 
 export const getMyRecommendations = asyncHandler(async (req, res) => {
   const projects = await getRecommendationsForStudent(req.user._id);
   res.json({ success: true, data: projects });
+});
+
+export const getMyCareerRecommendation = asyncHandler(async (req, res) => {
+  const careerPath = await getCareerRecommendation(req.user._id);
+  res.json({ success: true, data: careerPath });
 });
 
 export const getStudentMatchesForProject = asyncHandler(async (req, res) => {
