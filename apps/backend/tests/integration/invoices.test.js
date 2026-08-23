@@ -22,6 +22,12 @@ describe("Invoices module", () => {
     expect(res.body.success).toBe(false);
   });
 
+  it("requires auth to download an invoice", async () => {
+    const res = await request(app).get("/v1/invoices/000000000000000000000001/download");
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
   it("requires auth to update an invoice status", async () => {
     const res = await request(app)
       .patch("/v1/invoices/000000000000000000000001")

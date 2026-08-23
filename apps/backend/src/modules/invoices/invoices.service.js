@@ -53,6 +53,22 @@ export async function getInvoiceById(id, userId) {
   return invoice;
 }
 
+export async function getInvoiceForDownload(id, userId) {
+  const invoice = await Invoice.findById(id)
+    .populate("contract_id", "terms.title")
+    .populate("client_id", "name email")
+    .populate("student_id", "name email")
+    .lean();
+  if (!invoice) throw new NotFoundError("Invoice not found");
+
+  const isParty = [String(invoice.client_id?._id || invoice.client_id), String(invoice.student_id?._id || invoice.student_id)].includes(
+    String(userId)
+  );
+  if (!isParty) throw new ForbiddenError("Not a party to this invoice");
+
+  return invoice;
+}
+
 export async function updateInvoiceStatus(id, userId, { status }) {
   const invoice = await Invoice.findById(id);
   if (!invoice) throw new NotFoundError("Invoice not found");

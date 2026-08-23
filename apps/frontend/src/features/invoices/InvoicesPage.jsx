@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Download } from "lucide-react";
-import { listMyInvoices } from "../../services/api/invoices.api.js";
+import { FileText, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { listMyInvoices, downloadInvoice } from "../../services/api/invoices.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
@@ -14,6 +16,18 @@ export default function InvoicesPage() {
   const { token } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => listMyInvoices(token), enabled: !!token });
   const invoices = data?.data ?? [];
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  async function handleDownload(id) {
+    setDownloadingId(id);
+    try {
+      await downloadInvoice(id, token, "pdf");
+    } catch (err) {
+      toast.error(err.message || "Could not download invoice");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl animate-fade-up">
@@ -51,7 +65,15 @@ export default function InvoicesPage() {
                   <TableCell className="text-right font-mono text-brass">{formatCurrency(inv.net_amount ?? 0)}</TableCell>
                   <TableCell className="text-right font-mono text-xs text-slate-300">{formatDate(inv.createdAt)}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" aria-label="Download invoice"><Download className="h-4 w-4" /></Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Download invoice"
+                      disabled={downloadingId === inv._id}
+                      onClick={() => handleDownload(inv._id)}
+                    >
+                      {downloadingId === inv._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
