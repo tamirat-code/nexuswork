@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { MessageSquare, Paperclip, Send } from "lucide-react";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useSocket } from "../../hooks/useSocket.js";
 import { Card, CardContent } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
@@ -39,8 +40,63 @@ export default function ChatPage() {
   // GET /messaging/contract/:id responds with { messages, total, limit, skip }.
   const messages = data?.data?.messages ?? [];
 
+  const { contractSocket } = useSocket() || {};
+  const [isLive, setIsLive] = useState(false);
+
+  // Join this contract's realtime room and merge in messages the other party
+  // sends while we're here. The socket connection is shared/app-wide (see
+  // SocketProvider) and stays joined to every contract room visited this
+  // session, so updates always target the message's own contract_id — not
+  // just whichever thread happens to be open — keeping every cached thread
+  // fresh even if you're not currently looking at it.
+  useEffect(() => {
+    if (!contractSocket || !contractId) {
+      setIsLive(false);
+      return undefined;
+    }
+
+    const join = () => contractSocket.emit("join", contractId);
+    const handleConnect = () => {
+      setIsLive(true);
+      join();
+    };
+    const handleDisconnect = () => setIsLive(false);
+    const handleJoinError = (err) => toast.error(err?.message || "Couldn't open live chat for this conversation");
+
+    const handleNewMessage = (message) => {
+      const key = ["messages", String(message.contract_id)];
+      queryClient.setQueryData(key, (prev) => {
+        if (!prev) return prev;
+        const existing = prev.data?.messages ?? [];
+        if (existing.some((m) => String(m._id) === String(message._id))) return prev;
+        return { ...prev, data: { ...prev.data, messages: [...existing, message] } };
+      });
+    };
+
+    if (contractSocket.connected) {
+      setIsLive(true);
+      join();
+    }
+    contractSocket.on("connect", handleConnect);
+    contractSocket.on("disconnect", handleDisconnect);
+    contractSocket.on("message:new", handleNewMessage);
+    contractSocket.on("join:error", handleJoinError);
+
+    return () => {
+      contractSocket.off("connect", handleConnect);
+      contractSocket.off("disconnect", handleDisconnect);
+      contractSocket.off("message:new", handleNewMessage);
+      contractSocket.off("join:error", handleJoinError);
+    };
+  }, [contractSocket, contractId, queryClient]);
+
   const activeContract =
     contracts.find((c) => String(c._id) === String(contractId)) || null;
+
+  const messagesEndRef = useRef(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [contractId, messages.length]);
 
   const sendMutation = useMutation({
     mutationFn: () =>
@@ -129,6 +185,13 @@ export default function ChatPage() {
                   {activeContract?.project_id?.title || "Contract"}
                 </span>
                 <span className="ml-auto shrink-0 text-xs text-slate-300">with {partnerName}</span>
+                <span
+                  className={`ml-2 flex shrink-0 items-center gap-1.5 text-[11px] ${isLive ? "text-emerald-400" : "text-slate-500"}`}
+                  title={isLive ? "Live — new messages arrive instantly" : "Reconnecting…"}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-emerald-400" : "bg-slate-500"}`} />
+                  {isLive ? "Live" : "Reconnecting…"}
+                </span>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -146,7 +209,7 @@ export default function ChatPage() {
                 )}
                 {messages.map((m) => {
                   const mine =
-                    m.sender_id?._id && user && String(m.sender_id._id) === String(user._id);
+                    m.sender_id?._id && user && String(m.sender_id._id) === String(user.id);
                   return (
                     <div key={m._id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div
@@ -165,6 +228,7 @@ export default function ChatPage() {
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
 
               <form
