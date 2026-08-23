@@ -1,9 +1,45 @@
 
 import StudentProfile from "./students.model.js";
 import User from "../users/users.model.js";
+import { NotFoundError } from "../../shared/exceptions/AppError.js";
 
 export async function getProfileByUserId(userId) {
   return StudentProfile.findOne({ user_id: userId });
+}
+
+
+export async function getPublicStudentProfile(userId) {
+  const user = await User.findOne({ _id: userId, role: "student", status: "active" })
+    .select("name headline bio location university skills website avatarUrl universityVerified createdAt")
+    .lean();
+  if (!user) throw new NotFoundError("Student not found");
+
+  const profile = await StudentProfile.findOne({ user_id: userId }).lean();
+
+  const skills = profile?.skills?.length
+    ? profile.skills
+    : (user.skills || "")
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .map((name) => ({ name, verification_method: "self_declared" }));
+
+  return {
+    _id: user._id,
+    name: user.name,
+    headline: user.headline || "",
+    bio: profile?.bio || user.bio || "",
+    location: user.location || "",
+    university: user.university || "",
+    website: user.website || "",
+    avatar: user.avatarUrl,
+    universityVerified: !!user.universityVerified,
+    verification_status: profile?.verification_status || "pending",
+    enrollment_status: profile?.enrollment_status || "unknown",
+    program: profile?.program || "",
+    skills,
+    memberSince: user.createdAt,
+  };
 }
 
 

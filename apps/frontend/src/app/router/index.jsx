@@ -29,6 +29,7 @@ import PortfoliosPage from "../../features/portfolios/PortfoliosPage.jsx";
 import SkillsPage from "../../features/skills/SkillsPage.jsx";
 import LearningPage from "../../features/learning/LearningPage.jsx";
 import StudentsPage from "../../features/students/StudentsPage.jsx";
+import StudentProfilePage from "../../features/students/ProfilePage.jsx";
 import ClientsPage from "../../features/clients/ClientsPage.jsx";
 import UniversitiesPage from "../../features/universities/UniversitiesPage.jsx";
 import AnalyticsPage from "../../features/analytics/AnalyticsPage.jsx";
@@ -61,6 +62,7 @@ export default function AppRouter() {
       <Route path="/projects/new" element={protect(<PostProjectPage />, [ROLES.CLIENT])} />
       <Route path="/projects/:id" element={<ProjectDetailPage />} />
       <Route path="/students" element={<StudentsPage />} />
+      <Route path="/profile/:id" element={<StudentProfilePage />} />
       <Route path="/universities" element={<UniversitiesPage />} />
       <Route path="/search" element={<SearchPage />} />
 
