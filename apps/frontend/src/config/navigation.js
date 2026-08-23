@@ -48,6 +48,7 @@ export const workspaceNav = [
   {
     section: "Grow",
     items: [
+      { to: "/recommendations", label: "AI matches", icon: "sparkle", roles: [ROLES.STUDENT] },
       { to: "/portfolios", label: "Portfolio", icon: "sparkle", roles: [ROLES.STUDENT] },
       { to: "/skills", label: "Skills", icon: "spark", roles: [ROLES.STUDENT] },
       { to: "/learning", label: "Learning", icon: "book", roles: [ROLES.STUDENT] },

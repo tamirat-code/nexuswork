@@ -5,9 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, BadgeCheck, Users } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
 import { getProject } from "../../services/api/projects.api.js";
 import { submitProposal, listProjectProposals, acceptProposal } from "../../services/api/proposals.api.js";
+import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeAgo, formatTimeLeft } from "../../utils/date.utils.js";
@@ -175,6 +176,51 @@ function ClientProposalList({ projectId, token }) {
   );
 }
 
+function RecommendedStudents({ projectId, token }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["project-student-matches", projectId],
+    queryFn: () => getStudentMatchesForProject(projectId, token),
+    enabled: !!token,
+  });
+
+  const matches = data?.data ?? [];
+  if (!isLoading && matches.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-brass" />
+        <h2 className="font-display text-lg text-slate">Recommended students</h2>
+      </div>
+      <p className="text-sm text-slate-300">Verified students whose skills best match this brief — no proposal required yet.</p>
+
+      {isLoading && <><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></>}
+
+      {matches.map((m) => (
+        <Card key={m.user._id}>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar>
+                <AvatarImage src={m.user.avatar_url} alt="" />
+                <AvatarFallback>{(m.user.name || "S").slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-slate">{m.user.name || "Student"}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {(m.skills || []).slice(0, 4).map((s) => (
+                    <Badge key={s.name} variant="secondary" className="text-xs">{s.name}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Badge variant="outline" className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> {Math.round((m.match_score || 0) * 100)}% match</Badge>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const { user, token, refreshMe } = useAuth();
@@ -268,6 +314,7 @@ export default function ProjectDetailPage() {
           </Card>
 
           {isClientOwner && <ClientProposalList projectId={id} token={token} />}
+          {isClientOwner && <RecommendedStudents projectId={id} token={token} />}
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24">

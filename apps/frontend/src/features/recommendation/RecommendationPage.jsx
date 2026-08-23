@@ -12,16 +12,47 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 
 export default function RecommendationPage() {
   const { token, user } = useAuth();
-  const { data, isLoading } = useQuery({ queryKey: ["recommendations"], queryFn: () => getRecommendations(token), enabled: !!token });
+  const isStudent = user?.role === "student";
+
+  // The /recommendations/me and /recommendations/career endpoints are student-only on the
+  // backend (requireRole("student")) — they rank open projects against this student's own
+  // profile. Fetching them for any other role just 403s, so gate the queries on role, not
+  // just on having a token.
+  const { data, isLoading } = useQuery({
+    queryKey: ["recommendations"],
+    queryFn: () => getRecommendations(token),
+    enabled: !!token && isStudent,
+  });
   const recs = data?.data ?? [];
 
-  const isStudent = user?.role === "student";
   const { data: careerData, isLoading: careerLoading } = useQuery({
     queryKey: ["career-recommendation"],
     queryFn: () => getCareerRecommendation(token),
     enabled: !!token && isStudent,
   });
   const career = careerData?.data;
+
+  if (!isStudent) {
+    return (
+      <div className="mx-auto max-w-2xl animate-fade-up">
+        <Card className="p-10 text-center">
+          <Sparkles className="mx-auto h-10 w-10 text-brass" />
+          <h1 className="mt-4 font-display text-xl text-slate">AI matching is student-facing</h1>
+          <p className="mt-2 text-sm text-slate-300">
+            This page ranks open projects against a student's verified skills, so it's only available to student
+            accounts. As a {user?.role === "client" ? "client" : "team member"}, you'll find the AI tools built into
+            your workflow instead: a suggested budget while posting a project, and a "Recommended students" panel on
+            each project you own.
+          </p>
+          {user?.role === "client" && (
+            <Link to="/projects/new" className="mt-6 inline-block">
+              <Button variant="secondary">Post a project</Button>
+            </Link>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl animate-fade-up">

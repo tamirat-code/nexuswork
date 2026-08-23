@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { createProject } from "../../services/api/projects.api.js";
+import { getSuggestedPrice } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { formatCurrency } from "../../utils/currency.utils.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
@@ -59,6 +61,45 @@ function SkillPicker({ value, onChange }) {
             </Badge>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function PriceSuggestion({ skills, category, token, onApply }) {
+  const enabled = skills.length > 0 || Boolean(category);
+  const { data, isFetching } = useQuery({
+    queryKey: ["price-suggestion", skills, category],
+    queryFn: () => getSuggestedPrice({ skills, category }, token),
+    enabled,
+    staleTime: 30_000,
+  });
+
+  if (!enabled) return null;
+
+  const suggestion = data?.data;
+  if (!isFetching && suggestion?.suggested_price == null) {
+    return (
+      <p className="mt-2 text-xs text-slate-300">
+        Not enough historical proposals for these skills yet to suggest a price.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-2 text-xs">
+      <Sparkles className="h-3.5 w-3.5 shrink-0 text-brass" />
+      {isFetching ? (
+        <span className="text-slate-300">Checking similar accepted proposals…</span>
+      ) : (
+        <span className="text-slate-300">
+          Similar accepted proposals settled around{" "}
+          <span className="font-mono font-semibold text-brass">{formatCurrency(suggestion.suggested_price)}</span>
+          {" "}({suggestion.sample_size} sample{suggestion.sample_size === 1 ? "" : "s"}).{" "}
+          <button type="button" onClick={() => onApply(suggestion.suggested_price)} className="font-semibold text-brass hover:underline">
+            Use this
+          </button>
+        </span>
       )}
     </div>
   );
@@ -157,6 +198,12 @@ export default function PostProjectPage() {
                   <FormField control={form.control} name="budget" render={({ field }) => (
                     <FormItem><FormLabel>Budget (USD)</FormLabel>
                       <FormControl><Input type="number" min={10} placeholder="750" className="font-mono" {...field} /></FormControl>
+                      <PriceSuggestion
+                        skills={skills}
+                        category={form.watch("category")}
+                        token={token}
+                        onApply={(price) => form.setValue("budget", price, { shouldValidate: true })}
+                      />
                       <FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="deadline" render={({ field }) => (
