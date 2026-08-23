@@ -5,8 +5,11 @@ import { sendNotificationEmail } from "../../shared/mailer/mailer.service.js";
 import User from "../../modules/users/users.model.js";
 
 async function getEmail(userId) {
-  const user = await User.findById(userId).select("email").lean();
-  return user?.email;
+  const user = await User.findById(userId).select("email notification_prefs").lean();
+  if (!user?.email) return null;
+ 
+  if (user.notification_prefs?.email === false) return null;
+  return user.email;
 }
 
 eventBus.on("milestone.approved", async ({ milestoneId, studentId, payout }) => {

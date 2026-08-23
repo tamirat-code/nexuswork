@@ -13,12 +13,12 @@ import { Switch } from "../../components/ui/shadcn/switch.jsx";
 import { Separator } from "../../components/ui/shadcn/separator.jsx";
 
 export default function SettingsPage() {
-  const { token, user } = useAuth();
+  const { token, user, refreshMe } = useAuth();
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [emailNotifs, setEmailNotifs] = useState(true);
-  const [pushNotifs, setPushNotifs] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(user?.notification_prefs?.email ?? true);
+  const [pushNotifs, setPushNotifs] = useState(user?.notification_prefs?.push ?? true);
 
   const profileMutation = useMutation({
     mutationFn: () => updateMe({ name }, token),
@@ -30,6 +30,27 @@ export default function SettingsPage() {
     mutationFn: () => changePassword(currentPassword, newPassword, token),
     onSuccess: () => { setCurrentPassword(""); setNewPassword(""); toast.success("Password changed"); },
     onError: (err) => toast.error(err.message || "Could not change password"),
+  });
+
+  const notificationsMutation = useMutation({
+    mutationFn: (nextPrefs) => updateMe({ notification_prefs: nextPrefs }, token),
+    onMutate: (nextPrefs) => {
+      const previous = { email: emailNotifs, push: pushNotifs };
+      setEmailNotifs(nextPrefs.email);
+      setPushNotifs(nextPrefs.push);
+      return { previous };
+    },
+    onSuccess: () => {
+      refreshMe();
+      toast.success("Notification preferences saved");
+    },
+    onError: (err, _nextPrefs, context) => {
+      if (context?.previous) {
+        setEmailNotifs(context.previous.email);
+        setPushNotifs(context.previous.push);
+      }
+      toast.error(err.message || "Could not update notification preferences");
+    },
   });
 
   return (
@@ -84,7 +105,10 @@ export default function SettingsPage() {
                 <p className="font-semibold text-slate">Email notifications</p>
                 <p className="text-xs text-slate-300">Proposals received, milestone funded, payment released.</p>
               </div>
-              <Switch checked={emailNotifs} onCheckedChange={setEmailNotifs} />
+              <Switch
+                checked={emailNotifs}
+                onCheckedChange={(checked) => notificationsMutation.mutate({ email: checked, push: pushNotifs })}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between gap-4">
@@ -92,7 +116,10 @@ export default function SettingsPage() {
                 <p className="font-semibold text-slate">Push notifications</p>
                 <p className="text-xs text-slate-300">Real-time alerts while you're signed in.</p>
               </div>
-              <Switch checked={pushNotifs} onCheckedChange={setPushNotifs} />
+              <Switch
+                checked={pushNotifs}
+                onCheckedChange={(checked) => notificationsMutation.mutate({ email: emailNotifs, push: checked })}
+              />
             </div>
           </CardContent>
         </Card>

@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
     website: { type: String, default: "", trim: true },
     avatarUrl: { type: String, default: null },
     universityVerified: { type: Boolean, default: false },
+    notification_prefs: {
+      email: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+    },
     // True only once a platform admin has approved this user's StaffVerification
     // request — matching an email domain at registration is never sufficient.
     staffVerified: { type: Boolean, default: false },

@@ -1,4 +1,5 @@
 import Notification from "./notifications.model.js";
+import User from "../users/users.model.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { emitToUser } from "../../websocket/socket.registry.js";
 
@@ -21,19 +22,21 @@ export async function createNotification({
     data: data || {},
   });
 
-  // Push the notification to the user's connected browser immediately.
-  emitToUser(userId, "notification:new", {
-    _id: notification._id,
-    user_id: notification.user_id,
-    type: notification.type,
-    title: notification.title,
-    body: notification.body,
-    message: notification.body,
-    data: notification.data,
-    read: false,
-    createdAt: notification.createdAt,
-    updatedAt: notification.updatedAt,
-  });
+  const recipient = await User.findById(userId).select("notification_prefs").lean();
+  if (recipient?.notification_prefs?.push !== false) {
+    emitToUser(userId, "notification:new", {
+      _id: notification._id,
+      user_id: notification.user_id,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      message: notification.body,
+      data: notification.data,
+      read: false,
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
+    });
+  }
 
   return notification;
 }

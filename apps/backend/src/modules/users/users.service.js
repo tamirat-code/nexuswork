@@ -31,6 +31,7 @@ export async function getPrivateProfile(userId) {
     website,
     avatarUrl,
     universityVerified,
+    notification_prefs,
   } = user;
   return {
     id: _id,
@@ -46,11 +47,12 @@ export async function getPrivateProfile(userId) {
     website,
     avatarUrl,
     universityVerified,
+    notification_prefs,
   };
 }
 
 export async function updateMe(userId, payload) {
-  const allowed = ["name", "email", "headline", "bio", "location", "university", "skills", "website"];
+  const allowed = ["name", "email", "headline", "bio", "location", "university", "skills", "website", "notification_prefs"];
   const update = {};
   for (const k of allowed) {
     if (Object.prototype.hasOwnProperty.call(payload, k)) update[k] = payload[k];
@@ -81,7 +83,7 @@ export async function updateAvatar(userId, avatarData) {
     return { avatarUrl: url };
   }
 
-  // Fallback: store raw value on the user (e.g., data URL). Not ideal for production.
+
   const user = await User.findByIdAndUpdate(userId, { avatarUrl: avatarData }, { new: true });
   if (!user) return null;
   return { avatarUrl: user.avatarUrl };

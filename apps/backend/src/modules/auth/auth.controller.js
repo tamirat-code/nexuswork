@@ -12,6 +12,7 @@ function toPublicUser(user) {
     auth_provider: user.auth_provider,
     avatarUrl: user.avatarUrl,
     universityVerified: user.universityVerified,
+    notification_prefs: user.notification_prefs,
   };
 }
 
