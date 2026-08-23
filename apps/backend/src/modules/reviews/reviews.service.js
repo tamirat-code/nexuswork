@@ -2,6 +2,7 @@ import Review from "./reviews.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Submission from "../submissions/submissions.model.js";
+import { ValidationError } from "../../shared/exceptions/AppError.js";
 
 export async function submitReview(contractId, reviewerId, { reviewee_id, rating, text }) {
   const contract = await Contract.findById(contractId);
@@ -16,7 +17,14 @@ export async function submitReview(contractId, reviewerId, { reviewee_id, rating
     err.status = 403;
     throw err;
   }
-  return Review.create({ contract_id: contractId, reviewer_id: reviewerId, reviewee_id, rating, text });
+  try {
+    return await Review.create({ contract_id: contractId, reviewer_id: reviewerId, reviewee_id, rating, text });
+  } catch (err) {
+    if (err.code === 11000) {
+      throw new ValidationError("You've already reviewed this contract.");
+    }
+    throw err;
+  }
 }
 
 export async function listForUser(userId, { limit = 50, skip = 0 } = {}) {

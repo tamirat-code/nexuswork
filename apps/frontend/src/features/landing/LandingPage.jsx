@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { Plus, Minus } from "lucide-react";
 import { SealMark } from "../auth/components/AuthShell.jsx";
 import Strands from "../../components/Strands.jsx";
 import ProjectCard from "../../components/cards/ProjectCard.jsx";
@@ -500,25 +502,40 @@ export default function LandingPage() {
       </section>
 
       <section id="faq" className="scroll-mt-24 border-t border-ink-300 bg-ink-50" aria-label="Frequently asked questions">
-        <div className="mx-auto max-w-3xl px-6 py-20">
-          <SectionHeading eyebrow="FAQ" title="Questions" />
+        <div className="mx-auto max-w-6xl px-6 py-20 sm:px-10 lg:px-16">
+          <div className="grid gap-10 lg:grid-cols-[280px_1fr] lg:gap-16">
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <SectionHeading eyebrow="FAQ" title="Questions" />
+            </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={VIEWPORT}
-            variants={STAGGER_CONTAINER}
-            className="mt-8 divide-y divide-ink-300 border-y border-ink-300"
-          >
-            {FAQS.map(({ q, a }) => (
-              <motion.div key={q} variants={FADE_UP} className="py-5">
-                <h3 className="font-display text-base tracking-tight text-slate">{q}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{a}</p>
-              </motion.div>
-            ))}
-          </motion.div>
+            <AccordionPrimitive.Root
+              type="single"
+              collapsible
+              defaultValue="faq-0"
+              className="border-t border-ink-300"
+            >
+              {FAQS.map(({ q, a }, i) => (
+                <AccordionPrimitive.Item key={q} value={`faq-${i}`} className="group border-b border-ink-300">
+                  <AccordionPrimitive.Header>
+                    <AccordionPrimitive.Trigger className="flex w-full items-center justify-between gap-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink-50">
+                      <span className="font-display text-base tracking-tight text-slate transition-colors group-hover:text-brass sm:text-lg">
+                        {q}
+                      </span>
+                      <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full border border-ink-300 text-slate transition-colors group-hover:border-brass/40 group-data-[state=open]:border-brass group-data-[state=open]:bg-brass/10 group-data-[state=open]:text-brass">
+                        <Plus className="h-4 w-4 transition-opacity group-data-[state=open]:opacity-0" />
+                        <Minus className="absolute h-4 w-4 opacity-0 transition-opacity group-data-[state=open]:opacity-100" />
+                      </span>
+                    </AccordionPrimitive.Trigger>
+                  </AccordionPrimitive.Header>
+                  <AccordionPrimitive.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                    <p className="pb-5 pr-14 text-sm leading-relaxed text-slate-300">{a}</p>
+                  </AccordionPrimitive.Content>
+                </AccordionPrimitive.Item>
+              ))}
+            </AccordionPrimitive.Root>
+          </div>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-14 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link to="/register" className={btnPrimary}>
               Post a project
             </Link>

@@ -60,6 +60,21 @@ async function completeRelease(milestone, contract, requestingUserId) {
     milestone.released_at = new Date();
     await milestone.save();
 
+    // A contract is "finished" once every one of its milestones has been
+    // released — nothing else ever moves it out of "active", so without
+    // this the "completed" status is unreachable and features gated on it
+    // (e.g. leaving a review) never activate.
+    if (contract.status === "active") {
+      const outstanding = await Milestone.countDocuments({
+        contract_id: contract._id,
+        status: { $ne: "released" },
+      });
+      if (outstanding === 0) {
+        contract.status = "completed";
+        await contract.save();
+      }
+    }
+
     eventBus.emit("milestone.approved", {
       milestoneId: milestone._id,
       studentId: contract.student_id,

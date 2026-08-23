@@ -33,6 +33,7 @@ import FundMilestoneDialog from "./FundMilestoneDialog.jsx";
 import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
 import { deleteFile, uploadFile } from "../../services/api/files.api.js";
+import ReviewsSection from "../reviews/ReviewsSection.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
@@ -846,6 +847,7 @@ export default function ContractDetailPage() {
   }
 
   const partnerName = isClient ? contract?.student_id?.name : contract?.client_id?.name;
+  const partnerId = isClient ? studentId : clientId;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -888,6 +890,18 @@ export default function ContractDetailPage() {
               </div>
             </div>
             <Button onClick={() => signMutation.mutate()} loading={signMutation.isPending}>Sign contract</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {contract?.status === "completed" && (
+        <Card className="mt-6 border-escrow/30 bg-escrow-100/40">
+          <CardContent className="flex flex-wrap items-center gap-3 p-5">
+            <CheckCircle2 className="h-5 w-5 text-escrow" />
+            <div>
+              <p className="font-semibold text-slate">Contract completed</p>
+              <p className="text-sm text-slate-300">All milestones have been delivered and paid out. Consider leaving {partnerName || "your collaborator"} a review below.</p>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -968,6 +982,10 @@ export default function ContractDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {contract?.status === "completed" && partnerId && (
+            <ReviewsSection userId={partnerId} contractId={id} showForm />
+          )}
 
           <Card>
             <CardHeader><CardTitle className="text-lg">File exchange</CardTitle></CardHeader>

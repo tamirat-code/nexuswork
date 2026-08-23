@@ -6,7 +6,6 @@ import { submitReview, getUserReviews } from "../../services/api/reviews.api.js"
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatDate } from "../../utils/date.utils.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
-import { Badge } from "../../components/ui/shadcn/badge.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
@@ -32,16 +31,16 @@ function StarRating({ value, onChange, readOnly = false }) {
   );
 }
 
-function ReviewForm({ contractId, onDone }) {
+function ReviewForm({ contractId, revieweeId, onDone }) {
   const { token } = useAuth();
   const qc = useQueryClient();
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
+  const [text, setText] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () => submitReview(contractId, { rating, comment }, token),
+    mutationFn: () => submitReview(contractId, { reviewee_id: revieweeId, rating, text }, token),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["reviews"] });
+      qc.invalidateQueries({ queryKey: ["reviews", revieweeId] });
       toast.success("Review submitted — thanks for the feedback");
       onDone?.();
     },
@@ -56,7 +55,7 @@ function ReviewForm({ contractId, onDone }) {
       </div>
       <div className="space-y-1.5">
         <label htmlFor="review-comment" className="text-sm font-semibold text-slate">Written review</label>
-        <Textarea id="review-comment" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="How was the collaboration? Timeliness, quality, communication…" />
+        <Textarea id="review-comment" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="How was the collaboration? Timeliness, quality, communication…" />
       </div>
       <Button className="w-full" disabled={rating === 0} loading={mutation.isPending} onClick={() => mutation.mutate()}>
         Submit review
@@ -65,29 +64,41 @@ function ReviewForm({ contractId, onDone }) {
   );
 }
 
+
 export default function ReviewsSection({ userId, contractId, showForm = false }) {
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? user?._id;
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["reviews", userId],
     queryFn: () => getUserReviews(userId),
     enabled: !!userId,
   });
-  const reviews = data?.data ?? [];
+  // GET /reviews/user/:userId responds with { success, data: { reviews, total, limit, skip } }.
+  const reviews = data?.data?.reviews ?? [];
+
+  const alreadyReviewed = reviews.some((r) => String(r.reviewer_id) === String(currentUserId));
+  const canLeaveReview = showForm && contractId && userId && !alreadyReviewed;
 
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg">Reviews</CardTitle>
-        {showForm && contractId && (
-          <Dialog>
+        {canLeaveReview && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild><Button size="sm">Leave a review</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Review this collaboration</DialogTitle>
                 <DialogDescription>Your rating and feedback help the community trust verified work.</DialogDescription>
               </DialogHeader>
-              <ReviewForm contractId={contractId} />
+              <ReviewForm contractId={contractId} revieweeId={userId} onDone={() => setDialogOpen(false)} />
             </DialogContent>
           </Dialog>
+        )}
+        {showForm && contractId && alreadyReviewed && (
+          <span className="text-xs text-slate-300">You've already reviewed this collaboration</span>
         )}
       </CardHeader>
       <CardContent>
@@ -105,11 +116,7 @@ export default function ReviewsSection({ userId, contractId, showForm = false })
                 </div>
                 <span className="text-xs text-slate-300">{formatDate(r.createdAt)}</span>
               </div>
-              {r.comment && <p className="mt-2 text-sm leading-relaxed text-slate-300">{r.comment}</p>}
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Badge variant="secondary" className="text-xs">On-time</Badge>
-                <Badge variant="secondary" className="text-xs">Quality work</Badge>
-              </div>
+              {r.text && <p className="mt-2 text-sm leading-relaxed text-slate-300">{r.text}</p>}
             </div>
           ))}
         </div>
