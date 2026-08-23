@@ -43,7 +43,14 @@ export async function getPublicStudentProfile(userId) {
 }
 
 
-export async function listStudentDirectory({ search = "", limit = 24, skip = 0 } = {}) {
+const DEPARTMENT_KEYWORDS = {
+  cs: ["computer science"],
+  software: ["software engineering", "software"],
+  it: ["information technology"],
+  is: ["information systems"],
+};
+
+export async function listStudentDirectory({ search = "", department = "", limit = 24, skip = 0 } = {}) {
   const userQuery = { role: "student", status: "active" };
   if (search) {
     userQuery.$or = [
@@ -51,6 +58,16 @@ export async function listStudentDirectory({ search = "", limit = 24, skip = 0 }
       { university: { $regex: search, $options: "i" } },
       { skills: { $regex: search, $options: "i" } },
     ];
+  }
+
+  if (department && department !== "all") {
+    const keywords = DEPARTMENT_KEYWORDS[department] || [department];
+    const pattern = keywords.map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const matchingProfiles = await StudentProfile.find({ program: { $regex: pattern, $options: "i" } })
+      .select("user_id")
+      .lean();
+    const matchingUserIds = matchingProfiles.map((p) => p.user_id);
+    userQuery._id = { $in: matchingUserIds };
   }
 
   const users = await User.find(userQuery)
@@ -61,7 +78,7 @@ export async function listStudentDirectory({ search = "", limit = 24, skip = 0 }
     .lean();
 
   const profiles = await StudentProfile.find({ user_id: { $in: users.map((u) => u._id) } })
-    .select("user_id verification_status skills")
+    .select("user_id verification_status skills program")
     .lean();
   const profileByUserId = new Map(profiles.map((p) => [String(p.user_id), p]));
 
@@ -81,6 +98,7 @@ export async function listStudentDirectory({ search = "", limit = 24, skip = 0 }
       university: u.university,
       location: u.location,
       avatar: u.avatarUrl,
+      department: profile?.program || "",
       verification_status: profile?.verification_status || "pending",
       skills,
     };
