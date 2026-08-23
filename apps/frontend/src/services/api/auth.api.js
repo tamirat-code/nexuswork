@@ -14,6 +14,7 @@ export const resetPassword = (resetToken, newPassword) =>
 export const verifyEmail = (verifyToken) =>
   apiRequest("/auth/verify-email", { method: "POST", body: { token: verifyToken } });
 export const resendVerification = (token) => apiRequest("/auth/resend-verification", { method: "POST", token });
+export const initiateMfaSetup = (token) => apiRequest("/auth/mfa/setup/initiate", { method: "POST", token });
 export const setupMfa = (token, code) =>
   apiRequest("/auth/mfa/setup", { method: "POST", body: { token, code } });
 export const verifyMfa = (token, code) =>

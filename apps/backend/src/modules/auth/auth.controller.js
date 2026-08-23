@@ -13,6 +13,7 @@ function toPublicUser(user) {
     avatarUrl: user.avatarUrl,
     universityVerified: user.universityVerified,
     notification_prefs: user.notification_prefs,
+    mfa_enabled: user.mfa_enabled,
   };
 }
 
@@ -40,6 +41,11 @@ export const login = asyncHandler(async (req, res) => {
     });
   }
   res.json({ success: true, data: { token: result.token, user: toPublicUser(result.user) } });
+});
+
+export const initiateMfaSetup = asyncHandler(async (req, res) => {
+  const result = await authService.initiateMfaSetup(req.user._id);
+  res.json({ success: true, data: result });
 });
 
 export const setupMfa = asyncHandler(async (req, res) => {

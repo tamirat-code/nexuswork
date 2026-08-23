@@ -13,7 +13,7 @@ const STORAGE_KEY = "nw_mfa_setup";
 export default function MfaSetupPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { completeMfaLogin } = useAuth();
+  const { user, completeMfaLogin } = useAuth();
   const { show } = useToast();
   const [setup, setSetup] = useState(() => {
     if (location.state?.setupToken) return location.state;
@@ -23,6 +23,9 @@ export default function MfaSetupPage() {
       return null;
     }
   });
+  // Reached from Settings (already-authenticated opt-in) vs. from the login flow.
+  const returnTo = setup?.returnTo || "/dashboard";
+  const isProactive = Boolean(user);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -74,7 +77,11 @@ export default function MfaSetupPage() {
       <AuthShell
         eyebrow="Security"
         title="MFA setup expired"
-        subtitle="For your security, this setup session is no longer valid. Return to login and start again."
+        subtitle={
+          isProactive
+            ? "For your security, this setup session is no longer valid. Head back to Settings and start again."
+            : "For your security, this setup session is no longer valid. Return to login and start again."
+        }
       >
         <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-5">
           <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brass/30 bg-brass/10 text-brass">
@@ -83,8 +90,8 @@ export default function MfaSetupPage() {
           <p className="mt-4 text-sm leading-relaxed text-slate-300">
             Your authenticator setup was not completed. No changes were made to your account.
           </p>
-          <Button className="mt-5 w-full" size="lg" onClick={() => navigate("/login")}>
-            Return to login
+          <Button className="mt-5 w-full" size="lg" onClick={() => navigate(isProactive ? "/settings" : "/login")}>
+            {isProactive ? "Return to settings" : "Return to login"}
           </Button>
         </div>
       </AuthShell>
@@ -124,8 +131,8 @@ export default function MfaSetupPage() {
               {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
               {copied ? "Copied" : "Copy codes"}
             </Button>
-            <Button className="w-full" size="lg" onClick={() => navigate("/dashboard")}>
-              Continue to NexusWork
+            <Button className="w-full" size="lg" onClick={() => navigate(returnTo)}>
+              {isProactive ? "Back to settings" : "Continue to NexusWork"}
             </Button>
           </div>
         </div>

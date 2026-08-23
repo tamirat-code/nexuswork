@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { KeyRound, ShieldCheck, User } from "lucide-react";
-import { changePassword } from "../../services/api/auth.api.js";
+import { changePassword, initiateMfaSetup } from "../../services/api/auth.api.js";
 import { updateMe } from "../../services/api/users.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
@@ -14,6 +15,7 @@ import { Separator } from "../../components/ui/shadcn/separator.jsx";
 
 export default function SettingsPage() {
   const { token, user, refreshMe } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -30,6 +32,21 @@ export default function SettingsPage() {
     mutationFn: () => changePassword(currentPassword, newPassword, token),
     onSuccess: () => { setCurrentPassword(""); setNewPassword(""); toast.success("Password changed"); },
     onError: (err) => toast.error(err.message || "Could not change password"),
+  });
+
+  const mfaMutation = useMutation({
+    mutationFn: () => initiateMfaSetup(token),
+    onSuccess: ({ data }) => {
+      navigate("/mfa/setup", {
+        state: {
+          setupToken: data.setupToken,
+          secret: data.secret,
+          otpauthUri: data.otpauthUri,
+          returnTo: "/settings",
+        },
+      });
+    },
+    onError: (err) => toast.error(err.message || "Could not start MFA setup"),
   });
 
   const notificationsMutation = useMutation({
@@ -91,6 +108,28 @@ export default function SettingsPage() {
               <Input id="settings-new" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
             <Button size="sm" variant="secondary" loading={passwordMutation.isPending} onClick={() => passwordMutation.mutate()}>Change password</Button>
+
+            <Separator />
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-slate">Two-factor authentication</p>
+                <p className="text-xs text-slate-300">
+                  {user?.mfa_enabled
+                    ? "An authenticator app is required each time you sign in."
+                    : "Add an authenticator app as a second sign-in step."}
+                </p>
+              </div>
+              {user?.mfa_enabled ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-brass/30 bg-brass/10 px-3 py-1 text-xs font-semibold text-brass">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Enabled
+                </span>
+              ) : (
+                <Button size="sm" variant="secondary" loading={mfaMutation.isPending} onClick={() => mfaMutation.mutate()}>
+                  Enable MFA
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 

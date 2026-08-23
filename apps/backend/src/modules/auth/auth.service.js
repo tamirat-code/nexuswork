@@ -173,19 +173,9 @@ export async function loginUser({ email, password }) {
   return beginMfaForUser(user);
 }
 
-function beginMfaForUser(user) {
-  if (user.mfa_enabled && user.mfa_secret_encrypted) {
-    const challengeToken = jwt.sign(
-      { sub: user._id, purpose: "mfa_challenge" },
-      authConfig.jwtSecret,
-      { expiresIn: "5m" }
-    );
-    return { mfaRequired: true, challengeToken };
-  }
-
+function createMfaSetupChallenge(user) {
   const secret = generateTotpSecret();
   user.mfa_pending_secret_encrypted = encryptMfaSecret(secret);
-  user.mfa_enabled = false;
   return user.save().then(() => ({
     mfaSetupRequired: true,
     setupToken: jwt.sign(
@@ -196,6 +186,31 @@ function beginMfaForUser(user) {
     secret,
     otpauthUri: buildOtpAuthUri(secret, user.email),
   }));
+}
+
+function beginMfaForUser(user) {
+  if (user.mfa_enabled && user.mfa_secret_encrypted) {
+    const challengeToken = jwt.sign(
+      { sub: user._id, purpose: "mfa_challenge" },
+      authConfig.jwtSecret,
+      { expiresIn: "5m" }
+    );
+    return { mfaRequired: true, challengeToken };
+  }
+
+  user.mfa_enabled = false;
+  return createMfaSetupChallenge(user);
+}
+
+// Lets an already-authenticated user opt into MFA proactively from Settings,
+// rather than only being offered setup during login.
+export async function initiateMfaSetup(userId) {
+  const user = await User.findById(userId).select("+mfa_secret_encrypted +mfa_pending_secret_encrypted");
+  if (!user) throw new ValidationError("User not found");
+  if (user.mfa_enabled && user.mfa_secret_encrypted) {
+    throw new ValidationError("Two-factor authentication is already enabled on this account.");
+  }
+  return createMfaSetupChallenge(user);
 }
 
 export async function setupMfa(setupToken, code) {

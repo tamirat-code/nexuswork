@@ -10,6 +10,7 @@ import {
   verifyEmail,
   resendVerification,
   googleAuth,
+  initiateMfaSetup,
   setupMfa,
   verifyMfa,
 } from "./auth.controller.js";
@@ -32,6 +33,7 @@ const router = Router();
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", loginRateLimiter, validateBody(loginSchema), login);
 router.post("/google", loginRateLimiter, validateBody(googleAuthSchema), googleAuth);
+router.post("/mfa/setup/initiate", requireAuth, initiateMfaSetup);
 router.post("/mfa/setup", loginRateLimiter, validateBody(mfaCodeSchema), setupMfa);
 router.post("/mfa/verify", loginRateLimiter, validateBody(mfaCodeSchema), verifyMfa);
 router.get("/me", requireAuth, me);
