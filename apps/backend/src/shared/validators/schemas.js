@@ -239,6 +239,9 @@ export const createCategorySchema = z.object({
   name: z.string().trim().min(1, "Category name is required").max(100),
   slug: z.string().trim().min(1, "Slug is required").max(100),
   description: z.string().trim().max(1000).optional().default(""),
+  icon: z.string().trim().max(100).optional().default(""),
+  sort_order: z.coerce.number().int().optional().default(0),
+  is_active: z.coerce.boolean().optional().default(true),
 });
 
 export const updateCategorySchema = createCategorySchema.partial();

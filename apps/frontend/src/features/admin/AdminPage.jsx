@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText } from "lucide-react";
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
@@ -18,6 +18,9 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
 import BarChart from "../../components/charts/BarChart.jsx";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/shadcn/tabs.jsx";
+import CategoriesManager from "./CategoriesManager.jsx";
+import AuditLogViewer from "./AuditLogViewer.jsx";
 import {
   Dialog,
   DialogContent,
@@ -354,7 +357,23 @@ export default function AdminPage() {
         <p className="mt-2 text-sm text-slate-300">Manage users, resolve disputes, and monitor platform health.</p>
       </header>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <Tabs defaultValue="overview" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="overview"><LayoutDashboard className="h-4 w-4" /> Overview</TabsTrigger>
+          <TabsTrigger value="categories"><Tag className="h-4 w-4" /> Categories</TabsTrigger>
+          <TabsTrigger value="audit-log"><ScrollText className="h-4 w-4" /> Audit log</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="categories">
+          <CategoriesManager />
+        </TabsContent>
+
+        <TabsContent value="audit-log">
+          <AuditLogViewer />
+        </TabsContent>
+
+        <TabsContent value="overview">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((s) => (
           <Card key={s.label}>
             <CardContent className="p-5">
@@ -545,6 +564,8 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
