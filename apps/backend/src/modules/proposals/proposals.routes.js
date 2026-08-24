@@ -9,6 +9,8 @@ import {
 } from "./proposals.controller.js";
 
 import { requireAuth } from "../../middleware/auth.middleware.js";
+import { requireRole } from "../../middleware/role.middleware.js";
+import { requireEmailVerified } from "../../middleware/verification.middleware.js";
 import { validateBody } from "../../shared/validators/ZodValidator.js";
 import { submitProposalSchema } from "../../shared/validators/schemas.js";
 
@@ -17,6 +19,8 @@ const router = Router();
 router.post(
   "/",
   requireAuth,
+  requireEmailVerified,
+  requireRole("student"),
   validateBody(submitProposalSchema),
   createProposal
 );
@@ -25,6 +29,7 @@ router.post(
 router.get(
   "/incoming",
   requireAuth,
+  requireRole("client", "admin"),
   getIncomingProposals
 );
 
@@ -32,6 +37,7 @@ router.get(
 router.get(
   "/project/:projectId",
   requireAuth,
+  requireRole("client", "admin"),
   getProjectProposals
 );
 
@@ -39,6 +45,7 @@ router.get(
 router.post(
   "/:id/accept",
   requireAuth,
+  requireRole("client", "admin"),
   accept
 );
 
@@ -46,6 +53,7 @@ router.post(
 router.post(
   "/:id/reject",
   requireAuth,
+  requireRole("client", "admin"),
   reject
 );
 
