@@ -22,6 +22,7 @@ export const CONTRACT_STATUS = Object.freeze({
 
 export const MILESTONE_STATUS = Object.freeze({
   NOT_FUNDED: "not_funded",
+  FUNDING_PENDING: "funding_pending",
   FUNDED: "funded",
   IN_PROGRESS: "in_progress",
   SUBMITTED: "submitted",
@@ -29,5 +30,14 @@ export const MILESTONE_STATUS = Object.freeze({
   REVISION_REQUESTED: "revision_requested",
   APPROVED: "approved",
   DISPUTED: "disputed",
+  RELEASE_PENDING: "release_pending",
+  RELEASE_FAILED: "release_failed",
   RELEASED: "released",
+});
+
+export const PAYMENT_STATUS = Object.freeze({
+  CREATED: "created",
+  PENDING: "pending",
+  SUCCEEDED: "succeeded",
+  FAILED: "failed",
 });

@@ -29,30 +29,22 @@ async function completeRelease(milestone, contract, requestingUserId) {
       milestoneId: milestone._id,
       amount: payout,
       stripeAccountId: studentWallet?.stripe_account_id,
-      transferToStripe: false,
+      transferToStripe: true,
     });
 
-    try {
-      await Payment.create({
-        milestone_id: milestone._id,
-        amount: commissionAmount,
-        currency: paymentConfig.currency,
-        direction: "commission",
-        status: "succeeded",
-      });
-
-      await logAction({
-        action_type: "payment_commission_recorded",
-        entity_type: "milestone",
-        entity_id: milestone._id,
-        details: { commissionAmount, currency: paymentConfig.currency },
-      });
-    } catch (err) {
-      logger.warn(
-        `[milestones] failed to record commission for milestone ${milestone._id}:`,
-        err.message
-      );
-    }
+    await Payment.findOneAndUpdate(
+      { milestone_id: milestone._id, direction: "commission" },
+      {
+        $setOnInsert: {
+          milestone_id: milestone._id,
+          amount: commissionAmount,
+          currency: paymentConfig.currency,
+          direction: "commission",
+          status: "succeeded",
+        },
+      },
+      { upsert: true, new: true }
+    );
 
     milestone.status = "released";
     milestone.payout_status = "paid";
@@ -75,7 +67,7 @@ async function completeRelease(milestone, contract, requestingUserId) {
       }
     }
 
-    eventBus.emit("milestone.approved", {
+    eventBus.emit("milestone.released", {
       milestoneId: milestone._id,
       studentId: contract.student_id,
       payout,
@@ -108,8 +100,8 @@ async function completeRelease(milestone, contract, requestingUserId) {
 
     return { milestone, payout, releasePayment, payout_pending: false };
   } catch (err) {
-    milestone.status = "approved";
-    milestone.payout_status = "pending";
+    milestone.status = "release_failed";
+    milestone.payout_status = "failed";
     milestone.payout_failure_reason = err.message;
     await milestone.save();
 
@@ -204,11 +196,16 @@ export async function initiateFunding(milestoneId, requestingUserId) {
     throw new ValidationError("Both parties must sign the contract before a milestone can be funded");
   }
 
-  if (milestone.status !== "not_funded") {
+  if (!["not_funded", "funding_pending"].includes(milestone.status)) {
     throw new ValidationError(`Cannot fund a milestone in status ${milestone.status}`);
   }
 
-  return createDepositIntent(milestone);
+  const result = await createDepositIntent(milestone);
+  if (milestone.status === "not_funded") {
+    milestone.status = "funding_pending";
+    await milestone.save();
+  }
+  return result;
 }
 
 export async function confirmFunding(paymentIntentId, requestingUserId = null) {
@@ -224,11 +221,11 @@ export async function confirmFunding(paymentIntentId, requestingUserId = null) {
     await assertClient(milestone.contract_id, requestingUserId);
   }
 
-  if (!["not_funded", "funded"].includes(milestone.status)) {
+  if (!["not_funded", "funding_pending", "funded"].includes(milestone.status)) {
     throw new ValidationError(`Cannot confirm funding for milestone in status ${milestone.status}`);
   }
 
-  if (milestone.status === "not_funded") {
+  if (["not_funded", "funding_pending"].includes(milestone.status)) {
     milestone.status = "funded";
     milestone.funded_at = new Date();
     await milestone.save();
@@ -310,7 +307,7 @@ export async function approveMilestone(milestoneId, requestingUserId) {
   milestone.payout_status = "pending";
   await milestone.save();
 
-  return completeRelease(milestone, contract, requestingUserId);
+  return { milestone, payout_pending: true, release_required: true };
 }
 
 export async function releaseApprovedMilestone(milestoneId, requestingUserId) {
@@ -320,12 +317,22 @@ export async function releaseApprovedMilestone(milestoneId, requestingUserId) {
   const contract = milestone.contract_id;
   await assertClient(contract, requestingUserId);
 
-  if (milestone.status !== "approved") {
-    throw new ValidationError("Only an approved milestone can have its payout retried");
+  if (milestone.status === "disputed") {
+    throw new ValidationError("A disputed milestone cannot be released");
+  }
+
+  if (!["approved", "release_failed", "release_pending"].includes(milestone.status)) {
+    throw new ValidationError("Only an approved milestone can be released");
   }
 
   if (milestone.payout_status === "paid") {
     return { milestone, payout_pending: false };
+  }
+
+  if (milestone.status !== "release_pending") {
+    milestone.status = "release_pending";
+    milestone.payout_status = "pending";
+    await milestone.save();
   }
 
   return completeRelease(milestone, contract, requestingUserId);

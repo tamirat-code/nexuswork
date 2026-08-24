@@ -8,7 +8,7 @@ const paymentSchema = new mongoose.Schema(
     direction: { type: String, enum: ["deposit", "release", "refund", "commission"], required: true },
     status: {
       type: String,
-      enum: ["pending", "succeeded", "failed"],
+      enum: ["created", "pending", "succeeded", "failed"],
       default: "pending",
     },
     stripe_payment_intent_id: { type: String },
@@ -23,19 +23,16 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ stripe_payment_intent_id: 1 });
 paymentSchema.index(
   { milestone_id: 1, direction: 1 },
-  { unique: true, partialFilterExpression: { direction: "deposit", status: { $in: ["pending", "succeeded"] } } }
-);
-paymentSchema.index(
-  { milestone_id: 1, direction: 1 },
-  { unique: true, partialFilterExpression: { direction: "deposit", status: { $in: ["pending", "succeeded"] } } }
-);
-paymentSchema.index(
-  { milestone_id: 1, direction: 1 },
-  { unique: true, partialFilterExpression: { direction: "release", status: "succeeded" } }
-);
-paymentSchema.index(
-  { milestone_id: 1, direction: 1 },
-  { unique: true, partialFilterExpression: { direction: "commission", status: "succeeded" } }
+  {
+    unique: true,
+    partialFilterExpression: {
+      $or: [
+        { direction: "deposit", status: { $in: ["pending", "succeeded"] } },
+        { direction: "release", status: "succeeded" },
+        { direction: "commission", status: "succeeded" },
+      ],
+    },
+  }
 );
 
 export default mongoose.model("Payment", paymentSchema);

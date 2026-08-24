@@ -22,8 +22,20 @@ export async function handleStripeWebhook(req, res) {
   }
 
   try {
-    const already = await WebhookEvent.findOne({ event_id: event.id }).lean();
-    if (already) return res.json({ received: true, duplicate: true });
+    try {
+      await WebhookEvent.create({ event_id: event.id, type: event.type, status: "processing" });
+    } catch (err) {
+      if (err.code === 11000) {
+        const retry = await WebhookEvent.findOneAndUpdate(
+          { event_id: event.id, status: "failed" },
+          { $set: { status: "processing" }, $unset: { error_message: 1 } },
+          { new: true }
+        );
+        if (!retry) return res.json({ received: true, duplicate: true });
+      } else {
+        throw err;
+      }
+    }
   } catch (err) {
     // A database read failure must not be treated as an already-processed event.
     logger.error("[webhook] failed to check stored event:", err.message);
@@ -53,19 +65,17 @@ export async function handleStripeWebhook(req, res) {
         break;
     }
 
-    try {
-      await WebhookEvent.create({
-        event_id: event.id,
-        type: event.type,
-      });
-    } catch (err) {
-      // Unique event_id makes concurrent Stripe deliveries safe. If another
-      // worker won the race, the business operation has already completed.
-      if (err.code !== 11000) throw err;
-    }
+    await WebhookEvent.updateOne(
+      { event_id: event.id },
+      { $set: { status: "succeeded", processed_at: new Date() } }
+    );
 
     return res.json({ received: true });
   } catch (err) {
+    await WebhookEvent.updateOne(
+      { event_id: event.id },
+      { $set: { status: "failed", error_message: err.message } }
+    ).catch(() => {});
     logger.error(`[webhook] error handling ${event.type}:`, err.message, err.stack);
     // A non-2xx response tells Stripe to retry instead of permanently dropping
     // a payment event that failed because of a transient/backend error.

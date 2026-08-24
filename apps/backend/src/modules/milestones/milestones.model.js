@@ -12,6 +12,7 @@ const milestoneSchema = new mongoose.Schema(
       type: String,
       enum: [
         "not_funded",
+        "funding_pending",
         "funded",
         "in_progress",
         "submitted",
@@ -19,6 +20,8 @@ const milestoneSchema = new mongoose.Schema(
         "revision_requested",
         "approved",
         "disputed",
+        "release_pending",
+        "release_failed",
         "released",
       ],
       default: "not_funded",
@@ -34,7 +37,7 @@ const milestoneSchema = new mongoose.Schema(
     funded_at: { type: Date },
     delivered_at: { type: Date },
     approved_at: { type: Date },
-    released_at: { type: Date },
+    released_at: { type: Date, default: null },
   },
   { timestamps: true }
 );

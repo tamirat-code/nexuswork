@@ -1,11 +1,19 @@
-import request from "supertest";
-import app from "../../src/app.js";
-import { connectTestDB, clearDB, disconnectTestDB } from "../helpers/db.js";
-import { createUser, createActiveContractWithMilestone, fundMilestone } from "../helpers/fixtures.js";
-import Milestone from "../../src/modules/milestones/milestones.model.js";
-import Payment from "../../src/modules/payments/payments.model.js";
-import Contract from "../../src/modules/contracts/contracts.model.js";
-import { paymentConfig } from "../../src/config/payment.config.js";
+import { jest } from "@jest/globals";
+import { createStripeMock } from "../helpers/stripeMock.js";
+
+const stripeMock = createStripeMock();
+jest.unstable_mockModule("../../src/modules/payments/stripe.client.js", () => ({
+  stripe: stripeMock,
+}));
+
+const { default: request } = await import("supertest");
+const { default: app } = await import("../../src/app.js");
+const { connectTestDB, clearDB, disconnectTestDB } = await import("../helpers/db.js");
+const { createUser, createActiveContractWithMilestone, fundMilestone, createWallet } = await import("../helpers/fixtures.js");
+const { default: Milestone } = await import("../../src/modules/milestones/milestones.model.js");
+const { default: Payment } = await import("../../src/modules/payments/payments.model.js");
+const { default: Contract } = await import("../../src/modules/contracts/contracts.model.js");
+const { paymentConfig } = await import("../../src/config/payment.config.js");
 
 beforeAll(async () => {
   await connectTestDB();
@@ -13,6 +21,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await clearDB();
+  jest.clearAllMocks();
 });
 
 afterAll(async () => {
@@ -32,10 +41,24 @@ describe("Milestones module", () => {
     expect(res.body.success).toBe(false);
   });
 
-  describe("Approval-triggered release and commission calculation", () => {
+  it("rejects a student attempting release", async () => {
+    const { user: client } = await createUser("client");
+    const { user: student, token: studentToken } = await createUser("student");
+    const { milestone } = await createActiveContractWithMilestone({ client, student });
+
+    const res = await request(app)
+      .post(`/v1/milestones/${milestone._id}/release`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send();
+
+    expect(res.status).toBe(403);
+  });
+
+  describe("Approval and explicit release lifecycle", () => {
     async function fundedAndSubmitted({ amount = 200 } = {}) {
       const { user: client, token: clientToken } = await createUser("client");
       const { user: student } = await createUser("student");
+      await createWallet(student, { stripe_account_id: "acct_test_1" });
       const { contract, milestone } = await createActiveContractWithMilestone({
         client,
         student,
@@ -48,7 +71,7 @@ describe("Milestones module", () => {
       return { client, clientToken, student, contract, milestone };
     }
 
-    it("releases the payout minus commission and records both as Payments", async () => {
+    it("approves without releasing, then releases explicitly", async () => {
       const { clientToken, milestone } = await fundedAndSubmitted({ amount: 200 });
 
       const res = await request(app)
@@ -59,13 +82,25 @@ describe("Milestones module", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
 
+      const updated = await Milestone.findById(milestone._id);
+      expect(updated.status).toBe("approved");
+      expect(updated.payout_status).toBe("pending");
+      expect(updated.released_at).toBeNull();
+      expect(await Payment.countDocuments({ milestone_id: milestone._id, direction: "release" })).toBe(0);
+
+      stripeMock.accounts.retrieve.mockResolvedValue({ payouts_enabled: true });
+      stripeMock.transfers.create.mockResolvedValue({ id: "tr_test_1" });
+      const release = await request(app)
+        .post(`/v1/milestones/${milestone._id}/release`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+
+      expect(release.status).toBe(200);
       const expectedPayout = 200 * (1 - paymentConfig.commissionRate);
       const expectedCommission = 200 - expectedPayout;
-
-      const updated = await Milestone.findById(milestone._id);
-      expect(updated.status).toBe("released");
-      expect(updated.payout_status).toBe("paid");
-      expect(updated.released_at).not.toBeNull();
+      const released = await Milestone.findById(milestone._id);
+      expect(released.status).toBe("released");
+      expect(released.payout_status).toBe("paid");
 
       const releasePayment = await Payment.findOne({ milestone_id: milestone._id, direction: "release" });
       expect(releasePayment.status).toBe("succeeded");
@@ -84,8 +119,38 @@ describe("Milestones module", () => {
         .set("Authorization", `Bearer ${clientToken}`)
         .send();
 
+      stripeMock.accounts.retrieve.mockResolvedValue({ payouts_enabled: true });
+      stripeMock.transfers.create.mockResolvedValue({ id: "tr_test_2" });
+      await request(app)
+        .post(`/v1/milestones/${milestone._id}/release`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+
       const updatedContract = await Contract.findById(contract._id);
       expect(updatedContract.status).toBe("completed");
+    });
+
+    it("marks a provider release failure as release_failed", async () => {
+      const { clientToken, milestone } = await fundedAndSubmitted({ amount: 100 });
+
+      await request(app)
+        .post(`/v1/milestones/${milestone._id}/approve`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+
+      stripeMock.accounts.retrieve.mockResolvedValue({ payouts_enabled: true });
+      stripeMock.transfers.create.mockRejectedValue(new Error("provider unavailable"));
+
+      const res = await request(app)
+        .post(`/v1/milestones/${milestone._id}/release`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+
+      expect(res.status).toBe(200);
+      const updated = await Milestone.findById(milestone._id);
+      expect(updated.status).toBe("release_failed");
+      expect(updated.payout_status).toBe("failed");
+      expect(await Payment.findOne({ milestone_id: milestone._id, direction: "release", status: "failed" })).not.toBeNull();
     });
 
     it("rejects approval by a user who is not the contract's client", async () => {
@@ -120,6 +185,26 @@ describe("Milestones module", () => {
 
       expect(res.status).toBe(400);
       expect(res.body.message).toMatch(/must have submitted work/);
+    });
+
+    it("rejects release before approval and while disputed", async () => {
+      const { user: client, token: clientToken } = await createUser("client");
+      const { user: student } = await createUser("student");
+      const { milestone } = await createActiveContractWithMilestone({ client, student });
+
+      const unapproved = await request(app)
+        .post(`/v1/milestones/${milestone._id}/release`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+      expect(unapproved.status).toBe(400);
+
+      milestone.status = "disputed";
+      await milestone.save();
+      const disputed = await request(app)
+        .post(`/v1/milestones/${milestone._id}/release`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+      expect(disputed.status).toBe(400);
     });
   });
 });

@@ -69,6 +69,9 @@ describe("Payments module", () => {
       expect(payment.direction).toBe("deposit");
       expect(payment.status).toBe("pending");
       expect(payment.amount).toBe(250);
+
+      const updatedMilestone = await Milestone.findById(milestone._id);
+      expect(updatedMilestone.status).toBe("funding_pending");
     });
 
     it("rejects funding by a user who is not the contract's client", async () => {
@@ -259,6 +262,15 @@ describe("Payments module", () => {
       const updatedMilestone = await Milestone.findById(milestone._id);
       expect(updatedMilestone.status).toBe("funded");
       expect(updatedMilestone.funded_at).not.toBeNull();
+
+      const duplicate = await request(app)
+        .post("/webhooks/stripe")
+        .set("stripe-signature", "test-sig")
+        .send({ irrelevant: "duplicate" });
+
+      expect(duplicate.status).toBe(200);
+      expect(duplicate.body.duplicate).toBe(true);
+      expect(stripeMock.paymentIntents.retrieve).toHaveBeenCalledTimes(1);
     });
 
     it("rejects a webhook whose signature fails verification", async () => {

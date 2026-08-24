@@ -39,16 +39,20 @@ export async function createDepositIntent(milestone) {
     metadata: { milestone_id: String(milestone._id) },
     capture_method: "automatic",
     automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-  });
+  }, { idempotencyKey: `milestone-funding-${milestone._id}` });
 
-  await Payment.create({
-    milestone_id: milestone._id,
-    amount: milestone.amount,
-    currency: paymentConfig.currency,
-    direction: "deposit",
-    status: "pending",
-    stripe_payment_intent_id: intent.id,
-  });
+  try {
+    await Payment.create({
+      milestone_id: milestone._id,
+      amount: milestone.amount,
+      currency: paymentConfig.currency,
+      direction: "deposit",
+      status: "pending",
+      stripe_payment_intent_id: intent.id,
+    });
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+  }
 
   await logAction({
     action_type: "payment_deposit_initiated",
@@ -128,6 +132,13 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
   );
 
   if (payment) {
+    // A failed provider payment can only clear a funding attempt that has not
+    // already succeeded. Never regress an already-funded milestone.
+    await Milestone.updateOne(
+      { _id: payment.milestone_id, status: "funding_pending" },
+      { $set: { status: "not_funded" } }
+    );
+
     await logAction({
       action_type: "payment_deposit_failed",
       entity_type: "milestone",
@@ -145,7 +156,7 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
   return payment;
 }
 
-export async function releaseToStudent({ milestoneId, amount, stripeAccountId, transferToStripe = false }) {
+export async function releaseToStudent({ milestoneId, amount, stripeAccountId, transferToStripe = true }) {
   const existing = await Payment.findOne({
     milestone_id: milestoneId,
     direction: "release",
@@ -220,12 +231,15 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
 
   let transfer;
   try {
-    transfer = await stripe.transfers.create({
-      amount: toStripeAmount(amount),
-      currency: paymentConfig.currency,
-      destination: stripeAccountId,
-      metadata: { milestone_id: String(milestoneId) },
-    });
+    transfer = await stripe.transfers.create(
+      {
+        amount: toStripeAmount(amount),
+        currency: paymentConfig.currency,
+        destination: stripeAccountId,
+        metadata: { milestone_id: String(milestoneId) },
+      },
+      { idempotencyKey: `milestone-release-${milestoneId}` }
+    );
   } catch (err) {
     await Payment.create({
       milestone_id: milestoneId,
