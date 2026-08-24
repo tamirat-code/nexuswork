@@ -50,7 +50,7 @@ export default function AppRouter() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={guestOnly(<LandingPage />)} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={guestOnly(<LoginPage />)} />
       <Route path="/register" element={guestOnly(<RegisterPage />)} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
