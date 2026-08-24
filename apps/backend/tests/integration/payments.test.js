@@ -234,6 +234,15 @@ describe("Payments module", () => {
         stripe_payment_intent_id: "pi_success_1",
       });
 
+      stripeMock.paymentIntents.retrieve.mockResolvedValue({
+        id: "pi_success_1",
+        status: "succeeded",
+        amount: 10000,
+        amount_received: 10000,
+        currency: "usd",
+        metadata: { milestone_id: String(milestone._id) },
+      });
+
       stripeMock.webhooks.constructEvent.mockReturnValue({
         id: "evt_success_1",
         type: "payment_intent.succeeded",

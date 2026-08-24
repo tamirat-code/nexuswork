@@ -5,6 +5,7 @@ export function createStripeMock() {
   return {
     paymentIntents: {
       create: jest.fn(),
+      retrieve: jest.fn(),
     },
     transfers: {
       create: jest.fn(),
