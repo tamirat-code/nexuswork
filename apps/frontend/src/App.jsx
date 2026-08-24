@@ -3,7 +3,7 @@ import AppRouter from "./app/router/index.jsx";
 import MarketingLayout from "./components/layouts/MarketingLayout.jsx";
 import AppLayout from "./components/layouts/AppLayout.jsx";
 import ScrollToTop, { SkipLink } from "./components/common/ScrollToTop.jsx";
-import { STANDALONE_PATHS, WORKSPACE_PATHS } from "./config/navigation.js";
+import { STANDALONE_PATHS, WORKSPACE_PATHS, WORKSPACE_EXACT_PATHS } from "./config/navigation.js";
 import { useAuth } from "./hooks/useAuth.js";
 
 const matches = (paths, pathname) =>
@@ -14,18 +14,26 @@ export default function App() {
   const { token } = useAuth();
 
   const standalone = matches(STANDALONE_PATHS, pathname);
-  const workspace = !standalone && token && matches(WORKSPACE_PATHS, pathname);
+  
+  const isPublicSiblingOfExactPath = WORKSPACE_EXACT_PATHS.some(
+    (p) => pathname !== p && pathname.startsWith(`${p}/`)
+  );
+  const workspace = !standalone && token && matches(WORKSPACE_PATHS, pathname) && !isPublicSiblingOfExactPath;
 
   const Layout = standalone ? null : workspace ? AppLayout : MarketingLayout;
+  
+  const shellKey = standalone ? "standalone" : workspace ? "app" : "marketing";
 
   return (
     <>
       <ScrollToTop />
       {!standalone && <SkipLink />}
       {Layout ? (
-        <Layout>
-          <AppRouter />
-        </Layout>
+        <div key={shellKey} className="animate-fade-up">
+          <Layout>
+            <AppRouter />
+          </Layout>
+        </div>
       ) : (
         <AppRouter />
       )}

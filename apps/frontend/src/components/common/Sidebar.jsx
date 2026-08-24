@@ -31,11 +31,11 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 rounded-control px-2.5 py-2 text-sm transition-colors",
+                      "flex items-center gap-3 rounded-control border-l-2 px-2.5 py-2 text-sm transition-colors",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
                       isActive
-                        ? "bg-brass/12 font-semibold text-brass"
-                        : "text-slate-300 hover:bg-ink-50 hover:text-slate"
+                        ? "border-brass bg-brass/12 font-semibold text-brass"
+                        : "border-transparent text-slate-300 hover:bg-ink-50 hover:text-slate"
                     )
                   }
                 >

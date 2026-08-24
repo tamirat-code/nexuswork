@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { ProtectedRoute } from "./guards.jsx";
+import { ProtectedRoute, GuestOnlyRoute } from "./guards.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 
 import LandingPage from "../../features/landing/LandingPage.jsx";
@@ -44,13 +44,15 @@ const protect = (element, allowedRoles) => (
   <ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>
 );
 
+const guestOnly = (element) => <GuestOnlyRoute>{element}</GuestOnlyRoute>;
+
 export default function AppRouter() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/" element={guestOnly(<LandingPage />)} />
+      <Route path="/login" element={guestOnly(<LoginPage />)} />
+      <Route path="/register" element={guestOnly(<RegisterPage />)} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />

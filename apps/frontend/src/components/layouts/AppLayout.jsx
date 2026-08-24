@@ -8,12 +8,14 @@ import Button from "../ui/Button.jsx";
 import Drawer from "../ui/Drawer.jsx";
 import CommandPalette from "../common/CommandPalette.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
+import { getWorkspacePageMeta } from "../../config/navigation.js";
 
 
 export default function AppLayout({ children }) {
   const { user } = useAuth();
   const [navOpen, setNavOpen] = useState(false);
   const location = useLocation();
+  const pageMeta = getWorkspacePageMeta(location.pathname);
 
   useEffect(() => setNavOpen(false), [location.pathname]);
 
@@ -25,7 +27,7 @@ export default function AppLayout({ children }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-ink-300 bg-ink/90 px-4 backdrop-blur sm:px-6">
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-ink-300 bg-ink/90 px-4 backdrop-blur sm:px-6 lg:px-8">
             <Button
               variant="ghost"
               size="sm"
@@ -38,7 +40,21 @@ export default function AppLayout({ children }) {
               <NavIcon name="menu" className="h-5 w-5" />
             </Button>
 
-            <span className="font-display text-base text-slate lg:hidden">NexusWork</span>
+            {pageMeta ? (
+              <div className="min-w-0 lg:hidden">
+                <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-slate-300/70">{pageMeta.section}</p>
+                <h1 className="truncate font-display text-sm leading-tight text-slate">{pageMeta.label}</h1>
+              </div>
+            ) : (
+              <span className="font-display text-base text-slate lg:hidden">NexusWork</span>
+            )}
+
+            {pageMeta && (
+              <div className="hidden min-w-0 lg:block">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-300/70">{pageMeta.section}</p>
+                <h1 className="truncate font-display text-base leading-tight text-slate">{pageMeta.label}</h1>
+              </div>
+            )}
 
             <div className="ml-auto flex items-center gap-1.5">
               <NotificationBell />

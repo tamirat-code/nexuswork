@@ -85,6 +85,7 @@ export const WORKSPACE_PATHS = [
   "/portfolios",
   "/skills",
   "/learning",
+  "/students",
   "/clients",
   "/universities",
   "/analytics",
@@ -94,6 +95,13 @@ export const WORKSPACE_PATHS = [
   "/recommendations",
 ];
 
+// Paths above that must match exactly, never as a prefix — because a sibling dynamic
+// route under the same segment is public (e.g. "/profile/:id" is a student's public
+// profile page, not a subpage of "/profile"). Prefix-matching these would pull the
+// signed-in workspace chrome (sidebar) around a page that is meant to render the same
+// for everyone, logged in or not.
+export const WORKSPACE_EXACT_PATHS = ["/profile"];
+
 
 export const STANDALONE_PATHS = [
   "/login",
@@ -102,3 +110,17 @@ export const STANDALONE_PATHS = [
   "/reset-password",
   "/verify-email",
 ];
+
+
+export function getWorkspacePageMeta(pathname) {
+  let best = null;
+  for (const group of workspaceNav) {
+    for (const item of group.items) {
+      const isMatch = pathname === item.to || pathname.startsWith(`${item.to}/`);
+      if (isMatch && (!best || item.to.length > best.to.length)) {
+        best = { ...item, section: group.section };
+      }
+    }
+  }
+  return best;
+}
