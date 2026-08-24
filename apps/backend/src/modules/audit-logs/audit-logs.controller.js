@@ -57,7 +57,11 @@ export const flag = asyncHandler(async (req, res) => {
 
   const { id } = req.params;
   const { reason } = req.body;
-  const flagged = await flagForReview(id, reason);
+  const flagged = await flagForReview(id, {
+    reviewer: req.user,
+    reason,
+    correlationId: req.correlationId,
+  });
   res.json({ success: true, data: flagged });
 });
 

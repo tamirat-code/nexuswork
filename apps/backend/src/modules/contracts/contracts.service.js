@@ -6,6 +6,7 @@ import {
   ValidationError,
 } from "../../shared/exceptions/AppError.js";
 import { createNotification } from "../notifications/notifications.service.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
 function buildFingerprint(terms, version = 1) {
   return crypto
@@ -134,7 +135,8 @@ export async function listForUser(userId) {
 
 export async function reviewContract(
   id,
-  requestingUserId
+  requestingUserId,
+  auditContext = {}
 ) {
   const contract =
     await Contract.findById(id);
@@ -206,7 +208,20 @@ export async function reviewContract(
       "pending_signature";
   }
 
+  const previousState = contract.status;
   await contract.save();
+
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "CONTRACT_REVIEWED",
+    action: "contract.reviewed",
+    entityType: "contract",
+    entityId: contract._id,
+    previousState: previousState === contract.status ? null : previousState,
+    newState: previousState === contract.status ? null : contract.status,
+    correlationId: auditContext.correlationId,
+    metadata: { reviewedBy: party.client ? "client" : "student" },
+  });
 
   const otherUserId = party.client
     ? contract.student_id
@@ -314,6 +329,7 @@ export async function signContract(
     );
   }
 
+  const previousState = contract.status;
   const now = new Date();
 
   const signature = {
@@ -370,6 +386,32 @@ export async function signContract(
   }
 
   await contract.save();
+
+  await recordEvent({
+    actor: requestMeta.actor,
+    eventType: "CONTRACT_SIGNED",
+    action: "contract.signed",
+    entityType: "contract",
+    entityId: contract._id,
+    previousState: previousState === contract.status ? null : previousState,
+    newState: previousState === contract.status ? null : contract.status,
+    correlationId: requestMeta.correlationId,
+    metadata: { signedBy: party.client ? "client" : "student" },
+  });
+
+  if (previousState !== contract.status && contract.status === "active") {
+    await recordEvent({
+      actor: requestMeta.actor,
+      eventType: "CONTRACT_ACTIVATED",
+      action: "contract.activated",
+      entityType: "contract",
+      entityId: contract._id,
+      previousState,
+      newState: contract.status,
+      correlationId: requestMeta.correlationId,
+      metadata: { activatedBy: requestingUserId },
+    });
+  }
 
   const otherUserId = party.client
     ? contract.student_id

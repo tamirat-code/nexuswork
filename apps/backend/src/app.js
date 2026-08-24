@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { appConfig } from "./config/app.config.js";
 import { corsConfig } from "./config/cors.config.js";
 import { requestLogger } from "./middleware/logging.middleware.js";
+import { requestContext } from "./middleware/request-context.middleware.js";
 import { rateLimiter } from "./middleware/rateLimiter.middleware.js";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 import { v1Router } from "./api/v1/index.js";
@@ -13,6 +14,7 @@ import { WebhooksRoutes } from "./modules/webhooks/index.js";
 
 const app = express();
 
+app.use(requestContext);
 
 app.use(helmet({ crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" } }));
 app.use(cors(corsConfig));

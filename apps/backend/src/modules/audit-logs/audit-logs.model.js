@@ -1,54 +1,58 @@
 import mongoose from "mongoose";
 
+const AUDIT_ACTION_TYPES = [
+  "user_suspended", "user_restored", "user_deleted", "dispute_resolved",
+  "payment_reversed", "payment_adjusted", "contract_terminated",
+  "verification_approved", "verification_rejected", "user_role_changed",
+  "commission_adjusted", "content_removed", "fraud_reported", "login_via_admin",
+  "settings_changed", "payment_deposit_initiated", "payment_deposit_succeeded",
+  "payment_deposit_failed", "payment_released", "payment_release_failed",
+  "payment_refunded", "payment_commission_recorded", "milestone_work_submitted",
+  "milestone_revision_requested", "CONTRACT_CREATED", "CONTRACT_SIGNED",
+  "CONTRACT_ACTIVATED", "MILESTONE_CREATED", "MILESTONE_FUNDED",
+  "CONTRACT_REVIEWED", "MILESTONE_FUNDING_REQUESTED", "MILESTONE_WORK_STARTED",
+  "MILESTONE_SUBMITTED", "MILESTONE_REVISION_REQUESTED", "MILESTONE_APPROVED",
+  "MILESTONE_DISPUTED", "MILESTONE_RELEASE_REQUESTED", "MILESTONE_RELEASED",
+  "PAYMENT_CREATED", "PAYMENT_SUCCEEDED", "PAYMENT_FAILED", "REFUND_REQUESTED",
+  "REFUND_SUCCEEDED", "REFUND_FAILED", "DISPUTE_OPENED", "DISPUTE_RESOLVED",
+];
+
 
 const auditLogsSchema = new mongoose.Schema(
   {
-    
-    actor_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    actor_role: { type: String, enum: ["admin", "moderator", "university_staff", "system"], default: "system" },
+    eventId: { type: String, required: true, unique: true, immutable: true },
+    eventType: { type: String, required: true, immutable: true },
+    action: { type: String, required: true, immutable: true },
+    previousState: { type: mongoose.Schema.Types.Mixed, default: null, immutable: true },
+    newState: { type: mongoose.Schema.Types.Mixed, default: null, immutable: true },
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {}, immutable: true },
+    correlationId: { type: String, required: true, immutable: true },
+
+    actor_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", immutable: true },
+    actor_role: {
+      type: String,
+      enum: ["admin", "moderator", "client", "student", "university_staff", "system"],
+      default: "system",
+      immutable: true,
+    },
     action_type: {
       type: String,
-      enum: [
-        "user_suspended",
-        "user_restored",
-        "user_deleted",
-        "dispute_resolved",
-        "payment_reversed",
-        "payment_adjusted",
-        "contract_terminated",
-        "verification_approved",
-        "verification_rejected",
-        "user_role_changed",
-        "commission_adjusted",
-        "content_removed",
-        "fraud_reported",
-        "login_via_admin",
-        "settings_changed",
-        // Financial / escrow lifecycle events (system-triggered, no human actor)
-        "payment_deposit_initiated",
-        "payment_deposit_succeeded",
-        "payment_deposit_failed",
-        "payment_released",
-        "payment_release_failed",
-        "payment_refunded",
-        "payment_commission_recorded",
-        "milestone_work_submitted",
-        "milestone_revision_requested",
-      ],
+      enum: AUDIT_ACTION_TYPES,
       required: true,
+      immutable: true,
     },
     entity_type: {
       type: String,
       enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission"],
       required: true,
     },
-    entity_id: { type: mongoose.Schema.Types.ObjectId },
-    related_entity_type: { type: String },
-    related_entity_id: { type: mongoose.Schema.Types.ObjectId },
-    reason: { type: String }, // Why the action was taken
-    details: { type: mongoose.Schema.Types.Mixed }, // Additional structured data (e.g., before/after values)
-    ip_address: { type: String }, // For security tracking
-    user_agent: { type: String }, // For security tracking
+    entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },
+    related_entity_type: { type: String, immutable: true },
+    related_entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },
+    reason: { type: String, immutable: true },
+    details: { type: mongoose.Schema.Types.Mixed, immutable: true },
+    ip_address: { type: String, immutable: true },
+    user_agent: { type: String, immutable: true },
     status: {
       type: String,
       enum: ["logged", "flagged_for_review"],
@@ -59,6 +63,18 @@ const auditLogsSchema = new mongoose.Schema(
     timestamps: true,
     // Immutable flag ensures we prevent accidental updates
     collection: "audit_logs",
+  }
+);
+
+auditLogsSchema.pre("save", function preventAuditUpdates(next) {
+  if (!this.isNew) return next(new Error("Audit records are append-only"));
+  next();
+});
+
+auditLogsSchema.pre(
+  ["updateOne", "updateMany", "findOneAndUpdate", "findOneAndReplace", "deleteOne", "deleteMany", "findOneAndDelete"],
+  function preventAuditQueryMutation(next) {
+    next(new Error("Audit records are append-only"));
   }
 );
 

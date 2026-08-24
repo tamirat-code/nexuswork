@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import Milestone from "./milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Wallet from "../wallets/wallets.model.js";
@@ -6,12 +7,20 @@ import Submission from "../submissions/submissions.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { addSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
-import { logAction } from "../audit-logs/audit-logs.service.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";
 import { logger } from "../../shared/logger/logger.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
+
+async function auditMilestoneEvent({ actor, correlationId, ...event }) {
+  return recordEvent({
+    ...event,
+    actor,
+    correlationId: correlationId || crypto.randomUUID(),
+  });
+}
 
 async function assertClient(contract, requestingUserId) {
   if (String(contract.client_id) === String(requestingUserId)) return;
@@ -19,7 +28,7 @@ async function assertClient(contract, requestingUserId) {
   if (!allowed) throw new ForbiddenError("Only the client can manage milestones");
 }
 
-async function completeRelease(milestone, contract, requestingUserId) {
+async function completeRelease(milestone, contract, requestingUserId, auditContext = {}) {
   const payout = milestone.amount * (1 - paymentConfig.commissionRate);
   const commissionAmount = milestone.amount - payout;
   const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
@@ -51,6 +60,18 @@ async function completeRelease(milestone, contract, requestingUserId) {
     milestone.payout_failure_reason = "";
     milestone.released_at = new Date();
     await milestone.save();
+
+    await auditMilestoneEvent({
+      actor: auditContext.actor,
+      correlationId: auditContext.correlationId,
+      eventType: "MILESTONE_RELEASED",
+      action: "milestone.released",
+      entityType: "milestone",
+      entityId: milestone._id,
+      previousState: "release_pending",
+      newState: milestone.status,
+      metadata: { payout, commissionAmount },
+    });
 
     // A contract is "finished" once every one of its milestones has been
     // released — nothing else ever moves it out of "active", so without
@@ -115,7 +136,7 @@ async function completeRelease(milestone, contract, requestingUserId) {
   }
 }
 
-export async function createMilestone(contractId, requestingUserId, data) {
+export async function createMilestone(contractId, requestingUserId, data, auditContext = {}) {
   const contract = await Contract.findById(contractId);
   if (!contract) throw new NotFoundError("Contract not found");
   if (contract.status !== "active") {
@@ -140,7 +161,7 @@ export async function createMilestone(contractId, requestingUserId, data) {
 
   const count = await Milestone.countDocuments({ contract_id: contractId });
 
-  return Milestone.create({
+  const milestone = await Milestone.create({
     contract_id: contractId,
     title: data.title,
     description: data.description || "",
@@ -151,6 +172,19 @@ export async function createMilestone(contractId, requestingUserId, data) {
     payout_status: "not_applicable",
     max_revisions: data.max_revisions ?? 3,
   });
+
+  await auditMilestoneEvent({
+    actor: auditContext.actor,
+    correlationId: auditContext.correlationId,
+    eventType: "MILESTONE_CREATED",
+    action: "milestone.created",
+    entityType: "milestone",
+    entityId: milestone._id,
+    previousState: null,
+    newState: milestone.status,
+    metadata: { contractId },
+  });
+  return milestone;
 }
 
 export async function listForContract(contractId, requestingUserId, { limit = 100, skip = 0 } = {}) {
@@ -185,7 +219,7 @@ export async function getById(id, requestingUserId) {
   return milestone;
 }
 
-export async function initiateFunding(milestoneId, requestingUserId) {
+export async function initiateFunding(milestoneId, requestingUserId, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -204,11 +238,21 @@ export async function initiateFunding(milestoneId, requestingUserId) {
   if (milestone.status === "not_funded") {
     milestone.status = "funding_pending";
     await milestone.save();
+    await auditMilestoneEvent({
+      actor: auditContext.actor,
+      correlationId: auditContext.correlationId,
+      eventType: "MILESTONE_FUNDING_REQUESTED",
+      action: "milestone.funding_requested",
+      entityType: "milestone",
+      entityId: milestone._id,
+      previousState: "not_funded",
+      newState: milestone.status,
+    });
   }
   return result;
 }
 
-export async function confirmFunding(paymentIntentId, requestingUserId = null) {
+export async function confirmFunding(paymentIntentId, requestingUserId = null, auditContext = {}) {
   const payment = await markDepositSucceeded(paymentIntentId);
   if (!payment) return null;
 
@@ -226,15 +270,27 @@ export async function confirmFunding(paymentIntentId, requestingUserId = null) {
   }
 
   if (["not_funded", "funding_pending"].includes(milestone.status)) {
+    const previousState = milestone.status;
     milestone.status = "funded";
     milestone.funded_at = new Date();
     await milestone.save();
+    await auditMilestoneEvent({
+      actor: auditContext.actor,
+      correlationId: auditContext.correlationId,
+      eventType: "MILESTONE_FUNDED",
+      action: "milestone.funded",
+      entityType: "milestone",
+      entityId: milestone._id,
+      previousState,
+      newState: milestone.status,
+      metadata: { paymentIntentId },
+    });
   }
 
   return milestone;
 }
 
-export async function startWork(milestoneId, requestingUserId) {
+export async function startWork(milestoneId, requestingUserId, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -248,13 +304,25 @@ export async function startWork(milestoneId, requestingUserId) {
     throw new ValidationError("Milestone must be funded before work can start");
   }
 
+  const previousState = milestone.status;
   milestone.status = "in_progress";
   await milestone.save();
+
+  await auditMilestoneEvent({
+    actor: auditContext.actor,
+    correlationId: auditContext.correlationId,
+    eventType: "MILESTONE_WORK_STARTED",
+    action: "milestone.work_started",
+    entityType: "milestone",
+    entityId: milestone._id,
+    previousState,
+    newState: milestone.status,
+  });
 
   return milestone;
 }
 
-export async function submitWork(milestoneId, requestingUserId, { file_ids = [], file_url, note } = {}) {
+export async function submitWork(milestoneId, requestingUserId, { file_ids = [], file_url, note } = {}, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -270,9 +338,22 @@ export async function submitWork(milestoneId, requestingUserId, { file_ids = [],
 
   const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note });
 
+  const previousState = milestone.status;
   milestone.status = "submitted";
   milestone.delivered_at = new Date();
   await milestone.save();
+
+  await auditMilestoneEvent({
+    actor: auditContext.actor,
+    correlationId: auditContext.correlationId,
+    eventType: "MILESTONE_SUBMITTED",
+    action: "milestone.work_submitted",
+    entityType: "milestone",
+    entityId: milestone._id,
+    previousState,
+    newState: milestone.status,
+    metadata: { submissionId: submission._id },
+  });
 
   eventBus.emit("milestone.delivered", {
     milestoneId: milestone._id,
@@ -282,7 +363,7 @@ export async function submitWork(milestoneId, requestingUserId, { file_ids = [],
   return { milestone, submission };
 }
 
-export async function approveMilestone(milestoneId, requestingUserId) {
+export async function approveMilestone(milestoneId, requestingUserId, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -302,15 +383,27 @@ export async function approveMilestone(milestoneId, requestingUserId) {
     await latest.save();
   }
 
+  const previousState = milestone.status;
   milestone.status = "approved";
   milestone.approved_at = new Date();
   milestone.payout_status = "pending";
   await milestone.save();
 
+  await auditMilestoneEvent({
+    actor: auditContext.actor,
+    correlationId: auditContext.correlationId,
+    eventType: "MILESTONE_APPROVED",
+    action: "milestone.approved",
+    entityType: "milestone",
+    entityId: milestone._id,
+    previousState,
+    newState: milestone.status,
+  });
+
   return { milestone, payout_pending: true, release_required: true };
 }
 
-export async function releaseApprovedMilestone(milestoneId, requestingUserId) {
+export async function releaseApprovedMilestone(milestoneId, requestingUserId, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -330,10 +423,21 @@ export async function releaseApprovedMilestone(milestoneId, requestingUserId) {
   }
 
   if (milestone.status !== "release_pending") {
+    const previousState = milestone.status;
     milestone.status = "release_pending";
     milestone.payout_status = "pending";
     await milestone.save();
+    await auditMilestoneEvent({
+      actor: auditContext.actor,
+      correlationId: auditContext.correlationId,
+      eventType: "MILESTONE_RELEASE_REQUESTED",
+      action: "milestone.release_requested",
+      entityType: "milestone",
+      entityId: milestone._id,
+      previousState,
+      newState: milestone.status,
+    });
   }
 
-  return completeRelease(milestone, contract, requestingUserId);
+  return completeRelease(milestone, contract, requestingUserId, auditContext);
 }

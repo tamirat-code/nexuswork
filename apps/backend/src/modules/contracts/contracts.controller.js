@@ -1,29 +1,12 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
-import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { NotFoundError } from "../../shared/exceptions/AppError.js";
+import { assertContractParty } from "../../shared/authorization/resource-authorization.js";
 import {
   getContract,
   listForUser,
   reviewContract,
   signContract,
 } from "./contracts.service.js";
-
-function getId(value) {
-  return String(value?._id || value);
-}
-
-function assertContractParty(contract, user) {
-  if (user.role === "admin") {
-    return;
-  }
-
-  const userId = String(user._id);
-  const clientId = getId(contract.client_id);
-  const studentId = getId(contract.student_id);
-
-  if (clientId !== userId && studentId !== userId) {
-    throw new ForbiddenError("Not a party to this contract");
-  }
-}
 
 export const getMyContracts = asyncHandler(async (req, res) => {
   const contracts = await listForUser(req.user._id);
@@ -41,7 +24,7 @@ export const getOne = asyncHandler(async (req, res) => {
     throw new NotFoundError("Contract not found");
   }
 
-  assertContractParty(contract, req.user);
+  await assertContractParty({ contractId: req.params.id, req, allowAdmin: true });
 
   res.json({
     success: true,
@@ -50,9 +33,11 @@ export const getOne = asyncHandler(async (req, res) => {
 });
 
 export const review = asyncHandler(async (req, res) => {
+  await assertContractParty({ contractId: req.params.id, req });
   const contract = await reviewContract(
     req.params.id,
-    req.user._id
+    req.user._id,
+    { actor: req.user, correlationId: req.correlationId }
   );
 
   res.json({
@@ -62,12 +47,15 @@ export const review = asyncHandler(async (req, res) => {
 });
 
 export const sign = asyncHandler(async (req, res) => {
+  await assertContractParty({ contractId: req.params.id, req });
   const contract = await signContract(
     req.params.id,
     req.user._id,
     {
       ip: req.ip,
       userAgent: req.get("user-agent") || "",
+      actor: req.user,
+      correlationId: req.correlationId,
     }
   );
 

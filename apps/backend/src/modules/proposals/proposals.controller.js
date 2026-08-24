@@ -139,7 +139,8 @@ export const accept =
     const result =
       await acceptProposal(
         req.params.id,
-        req.user
+        req.user,
+        { correlationId: req.correlationId }
       );
 
 

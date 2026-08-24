@@ -3,6 +3,8 @@ import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { buildContractTerms } from "../contracts/contracts.service.js";
 import User from "../users/users.model.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import crypto from "node:crypto";
 
 import {
   isOrgMember,
@@ -375,7 +377,8 @@ async function assertCanManageProposal(
 
 export async function acceptProposal(
   proposalId,
-  requestingUser
+  requestingUser,
+  auditContext = {}
 ) {
 
   const proposal =
@@ -514,6 +517,18 @@ export async function acceptProposal(
     version: 1,
     terms,
     terms_fingerprint,
+  });
+
+  await recordEvent({
+    actor: requestingUser,
+    eventType: "CONTRACT_CREATED",
+    action: "contract.created",
+    entityType: "contract",
+    entityId: contract._id,
+    previousState: null,
+    newState: contract.status,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { proposalId: proposal._id, projectId: project._id },
   });
 
 

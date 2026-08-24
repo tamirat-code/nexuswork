@@ -45,7 +45,7 @@ export async function handleStripeWebhook(req, res) {
   try {
     switch (event.type) {
       case "payment_intent.succeeded":
-        await confirmFunding(event.data.object.id);
+        await confirmFunding(event.data.object.id, null, { correlationId: req.correlationId });
         break;
 
       case "payment_intent.payment_failed":
