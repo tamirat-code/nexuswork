@@ -32,7 +32,7 @@ import { listMilestoneSubmissions } from "../../services/api/submissions.api.js"
 import FundMilestoneDialog from "./FundMilestoneDialog.jsx";
 import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
-import { deleteFile, uploadFile } from "../../services/api/files.api.js";
+import { deleteFile, uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -89,7 +89,7 @@ function MilestoneStatusDot({ status }) {
   return <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${color[status] || "bg-slate-400"}`} />;
 }
 
-function SubmissionFiles({ submission }) {
+function SubmissionFiles({ submission, token }) {
   const files = submission?.file_ids || [];
   const legacyUrls = submission?.file_urls || (submission?.file_url ? [submission.file_url] : []);
 
@@ -100,18 +100,26 @@ function SubmissionFiles({ submission }) {
   return (
     <div className="space-y-2">
       {files.map((file) => (
-        <a
+        <button
           key={file._id}
-          href={file.url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-3 rounded-control border border-ink-300 bg-ink-50 p-2.5 transition hover:border-brass/40"
+          type="button"
+          onClick={async () => {
+            try {
+              const blob = await fetchFileBlob(file._id, token);
+              const url = URL.createObjectURL(blob);
+              window.open(url, "_blank", "noopener,noreferrer");
+              window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+            } catch (error) {
+              toast.error(error.message || "Could not open file");
+            }
+          }}
+          className="flex w-full items-center gap-3 rounded-control border border-ink-300 bg-ink-50 p-2.5 text-left transition hover:border-brass/40"
         >
           <FileText className="h-4 w-4 shrink-0 text-brass" />
           <span className="min-w-0 flex-1 truncate text-sm text-slate">{file.original_name}</span>
           <span className="shrink-0 text-xs text-slate-300">{formatBytes(file.size)}</span>
           <Download className="h-4 w-4 shrink-0 text-slate-300" />
-        </a>
+        </button>
       ))}
       {legacyUrls.map((url, index) => (
         <a
@@ -379,7 +387,7 @@ function SubmissionReviewDialog({ milestone, submissions, token, onChanged }) {
 
             <div>
               <p className="mb-2 text-sm font-semibold text-slate">Deliverables</p>
-              <SubmissionFiles submission={latest} />
+              <SubmissionFiles submission={latest} token={token} />
             </div>
 
             {latest.revision_reason && (
