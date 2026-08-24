@@ -17,9 +17,19 @@ function unique(prefix) {
 }
 
 export function signToken(user) {
-  return jwt.sign({ sub: user._id, role: user.role }, authConfig.jwtSecret, {
-    expiresIn: "1h",
-  });
+  return jwt.sign(
+    {
+      sub: user._id.toString(),
+      role: user.role,
+    },
+    authConfig.jwtSecret,
+    {
+      expiresIn: "1h",
+      jwtid: `test-${user._id}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`,
+    }
+  );
 }
 
 

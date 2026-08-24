@@ -237,22 +237,37 @@ export async function requestWithdrawal(userId, amount) {
 
   if (!wallet) {
     const existingWallet = await Wallet.findOne({ user_id: userId });
+
     if (!existingWallet || !existingWallet.stripe_account_id) {
-      throw new ValidationError("Complete payout account setup before requesting a withdrawal");
+      throw new ValidationError(
+        "Complete payout account setup before requesting a withdrawal"
+      );
     }
-    throw new ValidationError("Another withdrawal is being processed. Please try again in a few seconds.");
+
+    throw new ValidationError(
+      "Another withdrawal is being processed. Please try again in a few seconds."
+    );
   }
 
   let withdrawal;
+
   try {
     const status = await syncStripeAccountStatus(wallet);
+
     if (!status.payouts_enabled) {
-      throw new ValidationError("Complete Stripe payout verification before requesting a withdrawal");
+      throw new ValidationError(
+        "Complete Stripe payout verification before requesting a withdrawal"
+      );
     }
 
-    const contractIds = await Contract.find({ student_id: userId }).distinct("_id");
+    const contractIds = await Contract.find({
+      student_id: userId,
+    }).distinct("_id");
+
     const milestoneIds = contractIds.length
-      ? await Milestone.find({ contract_id: { $in: contractIds } }).distinct("_id")
+      ? await Milestone.find({
+          contract_id: { $in: contractIds },
+        }).distinct("_id")
       : [];
 
     const [releaseTotals, withdrawalTotals] = await Promise.all([
@@ -270,9 +285,15 @@ export async function requestWithdrawal(userId, amount) {
                 ],
               },
             },
-            { $group: { _id: null, total: { $sum: "$amount" } } },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: "$amount" },
+              },
+            },
           ])
         : [],
+
       Withdrawal.aggregate([
         {
           $match: {
@@ -281,28 +302,41 @@ export async function requestWithdrawal(userId, amount) {
             currency: paymentConfig.currency,
           },
         },
-        { $group: { _id: "$status", total: { $sum: "$amount" } } },
+        {
+          $group: {
+            _id: "$status",
+            total: { $sum: "$amount" },
+          },
+        },
       ]),
     ]);
 
     const released = Number(releaseTotals[0]?.total || 0);
+
     const paidWithdrawals = Number(
       withdrawalTotals.find((item) => item._id === "paid")?.total || 0
     );
+
     const pendingWithdrawals = Number(
       withdrawalTotals.find((item) => item._id === "pending")?.total || 0
     );
-    const available = Math.max(0, released - paidWithdrawals - pendingWithdrawals);
+
+    const available = Math.max(
+      0,
+      released - paidWithdrawals - pendingWithdrawals
+    );
 
     if (amount > available + 1e-9) {
       throw new ValidationError(
-        `Insufficient wallet balance. Available balance: ${available.toFixed(2)} ${paymentConfig.currency.toUpperCase()}`
+        `Insufficient wallet balance. Available balance: ${available.toFixed(
+          2
+        )} ${paymentConfig.currency.toUpperCase()}`
       );
     }
 
-    // The wallet row is atomically locked above. Creating the pending withdrawal
-    // while that lock is held makes the reservation visible before another
-    // withdrawal request can acquire the lock.
+    // The wallet row is atomically locked above. Creating the pending
+    // withdrawal while that lock is held makes the reservation visible
+    // before another withdrawal request can acquire the lock.
     withdrawal = await Withdrawal.create({
       user_id: userId,
       amount,
@@ -317,10 +351,21 @@ export async function requestWithdrawal(userId, amount) {
   }
 
   try {
-    const currentWallet = await Wallet.findById(userId);
+    // Wallet documents are keyed by user_id, not by the user's _id.
+    const currentWallet = await Wallet.findOne({ user_id: userId });
+
+    if (!currentWallet?.stripe_account_id) {
+      throw new Error(
+        "The student's payout account is no longer available"
+      );
+    }
+
     const platformAvailable = await getPlatformAvailableBalance();
+
     if (platformAvailable < amount) {
-      throw new Error("The platform does not currently have enough available funds to complete this withdrawal");
+      throw new Error(
+        "The platform does not have enough available funds to complete this withdrawal"
+      );
     }
 
     const transfer = await stripe.transfers.create(
@@ -333,19 +378,36 @@ export async function requestWithdrawal(userId, amount) {
           user_id: String(userId),
         },
       },
-      { idempotencyKey: `nexuswork-withdrawal-${withdrawal._id}` }
+      {
+        idempotencyKey: `nexuswork-withdrawal-${withdrawal._id}`,
+      }
     );
 
     withdrawal.status = "paid";
     withdrawal.stripe_payout_id = transfer.id;
+    withdrawal.failure_reason = undefined;
+
     await withdrawal.save();
   } catch (err) {
+    const reason =
+      err?.message ||
+      err?.raw?.message ||
+      "Payout provider could not complete the transfer";
+
     withdrawal.status = "failed";
-    withdrawal.failure_reason = "Payout provider could not complete the transfer";
+    withdrawal.failure_reason = reason;
+
     await withdrawal.save();
-    logger.error(`[wallet] withdrawal ${withdrawal._id} failed:`, err.message, err.stack);
-    throw new ValidationError("Withdrawal could not be completed. Your wallet balance has been released back to you.");
+
+    logger.error(
+      `[wallet] withdrawal ${withdrawal._id} failed:`,
+      err.message,
+      err.stack
+    );
+
+    throw new ValidationError(`Withdrawal failed: ${reason}`);
   }
 
   return withdrawal;
 }
+
