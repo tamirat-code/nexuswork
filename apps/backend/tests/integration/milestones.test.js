@@ -151,6 +151,17 @@ describe("Milestones module", () => {
       expect(updated.status).toBe("release_failed");
       expect(updated.payout_status).toBe("failed");
       expect(await Payment.findOne({ milestone_id: milestone._id, direction: "release", status: "failed" })).not.toBeNull();
+
+      stripeMock.transfers.create.mockResolvedValue({ id: "tr_retry_1" });
+      const retry = await request(app)
+        .post(`/v1/milestones/${milestone._id}/release`)
+        .set("Authorization", `Bearer ${clientToken}`)
+        .send();
+
+      expect(retry.status).toBe(200);
+      const recovered = await Milestone.findById(milestone._id);
+      expect(recovered.status).toBe("released");
+      expect(await Payment.countDocuments({ milestone_id: milestone._id, direction: "release" })).toBe(1);
     });
 
     it("rejects approval by a user who is not the contract's client", async () => {

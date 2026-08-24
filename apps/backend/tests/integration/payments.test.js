@@ -16,6 +16,7 @@ const { createUser, createActiveContractWithMilestone, fundMilestone } = await i
 );
 const { default: Payment } = await import("../../src/modules/payments/payments.model.js");
 const { default: Milestone } = await import("../../src/modules/milestones/milestones.model.js");
+const { default: WebhookEvent } = await import("../../src/modules/webhooks/webhookEvent.model.js");
 
 beforeAll(async () => {
   await connectTestDB();
@@ -284,6 +285,41 @@ describe("Payments module", () => {
         .send({ anything: true });
 
       expect(res.status).toBe(400);
+    });
+
+    it("reclaims a stale processing webhook event", async () => {
+      const { user: client } = await createUser("client");
+      const { user: student } = await createUser("student");
+      const { milestone } = await createActiveContractWithMilestone({ client, student });
+      const payment = await Payment.create({
+        milestone_id: milestone._id,
+        amount: milestone.amount,
+        currency: "usd",
+        direction: "deposit",
+        status: "pending",
+        stripe_payment_intent_id: "pi_stale_1",
+      });
+      await WebhookEvent.create({
+        event_id: "evt_stale_1",
+        type: "payment_intent.payment_failed",
+        status: "processing",
+        processing_at: new Date(Date.now() - 10 * 60 * 1000),
+      });
+
+      stripeMock.webhooks.constructEvent.mockReturnValue({
+        id: "evt_stale_1",
+        type: "payment_intent.payment_failed",
+        data: { object: { id: "pi_stale_1" } },
+      });
+
+      const res = await request(app)
+        .post("/webhooks/stripe")
+        .set("stripe-signature", "test-sig")
+        .send({ stale: true });
+
+      expect(res.status).toBe(200);
+      expect((await Payment.findById(payment._id)).status).toBe("failed");
+      expect((await WebhookEvent.findOne({ event_id: "evt_stale_1" })).status).toBe("succeeded");
     });
   });
 });

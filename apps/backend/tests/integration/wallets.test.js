@@ -199,4 +199,40 @@ describe("Wallets module — withdrawals", () => {
     expect(res.body.data.status).toBe("paid");
     expect(res.body.data.stripe_payout_id).toBe("tr_test_1");
   });
+
+  it("returns the original withdrawal for a duplicate idempotency key", async () => {
+    const { user: client } = await createUser("client");
+    const { user: student, token } = await createUser("student");
+    const { milestone } = await createActiveContractWithMilestone({ client, student, milestoneAmount: 100 });
+    await fundMilestone(milestone);
+
+    await createWallet(student, { stripe_account_id: "acct_test_1" });
+    stripeMock.accounts.retrieve.mockResolvedValue(payoutReadyAccount());
+    stripeMock.balance.retrieve.mockResolvedValue({ available: [{ amount: 100000, currency: "usd" }] });
+    stripeMock.transfers.create.mockResolvedValue({ id: "tr_idempotent_1" });
+
+    await (await import("../../src/modules/payments/payments.model.js")).default.create({
+      milestone_id: milestone._id,
+      amount: 90,
+      currency: "usd",
+      direction: "release",
+      status: "succeeded",
+    });
+
+    const first = await request(app)
+      .post("/v1/wallets/me/withdrawals")
+      .set("Authorization", `Bearer ${token}`)
+      .set("Idempotency-Key", "withdrawal-test-key-1")
+      .send({ amount: 50 });
+    const second = await request(app)
+      .post("/v1/wallets/me/withdrawals")
+      .set("Authorization", `Bearer ${token}`)
+      .set("Idempotency-Key", "withdrawal-test-key-1")
+      .send({ amount: 50 });
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(second.body.data._id).toBe(first.body.data._id);
+    expect(stripeMock.transfers.create).toHaveBeenCalledTimes(1);
+  });
 });

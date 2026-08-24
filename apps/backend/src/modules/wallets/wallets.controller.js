@@ -30,6 +30,10 @@ export const getMyTransactions = asyncHandler(async (req, res) => {
 
 export const postWithdrawal = asyncHandler(async (req, res) => {
   requireFields(req.body, ["amount"]);
-  const withdrawal = await requestWithdrawal(req.user._id, Number(req.body.amount));
+  const withdrawal = await requestWithdrawal(req.user._id, Number(req.body.amount), {
+    actor: req.user,
+    correlationId: req.correlationId,
+    idempotencyKey: req.headers["idempotency-key"],
+  });
   res.status(201).json({ success: true, data: withdrawal });
 });

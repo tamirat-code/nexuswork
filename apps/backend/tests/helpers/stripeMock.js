@@ -9,6 +9,7 @@ export function createStripeMock() {
     },
     transfers: {
       create: jest.fn(),
+      retrieve: jest.fn(),
     },
     refunds: {
       create: jest.fn(),

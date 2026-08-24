@@ -40,6 +40,7 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       amount: payout,
       stripeAccountId: studentWallet?.stripe_account_id,
       transferToStripe: true,
+      auditContext,
     });
 
     await Payment.findOneAndUpdate(

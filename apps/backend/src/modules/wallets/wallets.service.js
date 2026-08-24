@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { stripe } from "../payments/stripe.client.js";
 import { logger } from "../../shared/logger/logger.js";
 import Wallet from "./wallets.model.js";
@@ -8,6 +9,7 @@ import Milestone from "../milestones/milestones.model.js";
 import Payment from "../payments/payments.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { logAction } from "../audit-logs/audit-logs.service.js";
 
 async function getPlatformAvailableBalance() {
   const balance = await stripe.balance.retrieve();
@@ -213,10 +215,17 @@ export async function listTransactions(userId, { limit = 50 } = {}) {
     .slice(0, Number(limit));
 }
 
-export async function requestWithdrawal(userId, amount) {
+export async function requestWithdrawal(userId, amount, { actor, correlationId, idempotencyKey } = {}) {
   if (!(amount > 0) || !Number.isFinite(amount)) {
     throw new ValidationError("Withdrawal amount must be greater than zero");
   }
+
+  const operationKey = String(idempotencyKey || crypto.randomUUID()).trim();
+  if (operationKey.length < 8 || operationKey.length > 255) {
+    throw new ValidationError("Idempotency-Key must be between 8 and 255 characters");
+  }
+  const existingWithdrawal = await Withdrawal.findOne({ idempotency_key: operationKey, user_id: userId });
+  if (existingWithdrawal) return existingWithdrawal;
 
   const lockUntil = new Date(Date.now() + 30_000);
   const wallet = await Wallet.findOneAndUpdate(
@@ -342,6 +351,20 @@ export async function requestWithdrawal(userId, amount) {
       amount,
       currency: paymentConfig.currency,
       status: "pending",
+      idempotency_key: operationKey,
+      processing_at: new Date(),
+    });
+
+    await logAction({
+      actor_id: actor?.id || actor?._id,
+      actor_role: actor?.role || "system",
+      action_type: "WITHDRAWAL_REQUESTED",
+      eventType: "WITHDRAWAL_REQUESTED",
+      action: "withdrawal.requested",
+      entity_type: "payment",
+      entity_id: withdrawal._id,
+      metadata: { amount, currency: paymentConfig.currency, operationKey },
+      correlationId: correlationId || crypto.randomUUID(),
     });
   } finally {
     await Wallet.updateOne(
@@ -386,8 +409,21 @@ export async function requestWithdrawal(userId, amount) {
     withdrawal.status = "paid";
     withdrawal.stripe_payout_id = transfer.id;
     withdrawal.failure_reason = undefined;
+    withdrawal.processing_at = undefined;
 
     await withdrawal.save();
+
+    await logAction({
+      actor_id: actor?.id || actor?._id,
+      actor_role: actor?.role || "system",
+      action_type: "WITHDRAWAL_SUCCEEDED",
+      eventType: "WITHDRAWAL_SUCCEEDED",
+      action: "withdrawal.succeeded",
+      entity_type: "payment",
+      entity_id: withdrawal._id,
+      metadata: { amount, currency: paymentConfig.currency, transferId: transfer.id },
+      correlationId: correlationId || crypto.randomUUID(),
+    });
   } catch (err) {
     const reason =
       err?.message ||
@@ -396,8 +432,21 @@ export async function requestWithdrawal(userId, amount) {
 
     withdrawal.status = "failed";
     withdrawal.failure_reason = reason;
+    withdrawal.processing_at = undefined;
 
     await withdrawal.save();
+
+    await logAction({
+      actor_id: actor?.id || actor?._id,
+      actor_role: actor?.role || "system",
+      action_type: "WITHDRAWAL_FAILED",
+      eventType: "WITHDRAWAL_FAILED",
+      action: "withdrawal.failed",
+      entity_type: "payment",
+      entity_id: withdrawal._id,
+      metadata: { amount, currency: paymentConfig.currency, error: reason },
+      correlationId: correlationId || crypto.randomUUID(),
+    });
 
     logger.error(
       `[wallet] withdrawal ${withdrawal._id} failed:`,
@@ -410,4 +459,3 @@ export async function requestWithdrawal(userId, amount) {
 
   return withdrawal;
 }
-

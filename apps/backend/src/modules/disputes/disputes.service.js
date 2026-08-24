@@ -95,7 +95,7 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
   const previousDisputeState = dispute.status;
   const previousMilestoneState = milestone.status;
   if (outcome === "refund_client") {
-    await refundClient(milestone._id);
+    await refundClient(milestone._id, auditContext);
     milestone.status = "not_funded";
   } else if (outcome === "release_student") {
     const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
@@ -104,6 +104,7 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
       milestoneId: milestone._id,
       amount: payout,
       stripeAccountId: studentWallet?.stripe_account_id,
+      auditContext,
     });
     milestone.status = "released";
   } else {

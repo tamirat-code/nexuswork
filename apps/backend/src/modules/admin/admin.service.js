@@ -1,6 +1,5 @@
 import User from "../users/users.model.js";
 import Dispute from "../disputes/disputes.model.js";
-import Milestone from "../milestones/milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Payment from "../payments/payments.model.js";
 import Withdrawal from "../wallets/withdrawal.model.js";
@@ -10,6 +9,7 @@ import { logAction } from "../audit-logs/audit-logs.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { ROLES } from "../../shared/enums/roles.enum.js";
 import { paymentConfig } from "../../config/payment.config.js";
+import { resolveDispute as resolveDisputeCanonical } from "../disputes/disputes.service.js";
 
 
 export async function suspendUser(admin_id, admin_role, user_id, reason) {
@@ -196,36 +196,11 @@ export async function listDisputes({ status, limit = 50, skip = 0 }) {
  * Resolve a dispute with admin decision.
  */
 export async function resolveDispute(admin_id, admin_role, dispute_id, resolution, outcome) {
-  const dispute = await Dispute.findById(dispute_id);
-  if (!dispute) throw new NotFoundError("Dispute not found");
-
-  
-  if (outcome === "resume_work") {
-    const milestone = await Milestone.findById(dispute.milestone_id);
-    if (milestone && milestone.status === "disputed") {
-      milestone.status = dispute.pre_dispute_status || "funded";
-      await milestone.save();
-    }
-  }
-
-  dispute.status = "resolved";
-  dispute.resolution_summary = resolution;
-  dispute.resolved_by = admin_id;
-  dispute.resolved_at = new Date();
-  dispute.outcome = outcome; // e.g., 'client_favored', 'freelancer_favored', 'split', 'resume_work'
-  await dispute.save();
-
-  await logAction({
-    actor_id: admin_id,
-    actor_role: admin_role,
-    action_type: "dispute_resolved",
-    entity_type: "dispute",
-    entity_id: dispute_id,
-    reason: resolution,
-    details: { outcome },
-  });
-
-  return dispute;
+  return resolveDisputeCanonical(
+    dispute_id,
+    { resolution_summary: resolution, outcome },
+    { actor: { id: admin_id, role: admin_role } }
+  );
 }
 
 /**

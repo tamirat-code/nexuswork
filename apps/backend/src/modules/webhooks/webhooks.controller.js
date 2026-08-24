@@ -6,6 +6,8 @@ import { markOnboardingStatus } from "../wallets/wallets.service.js";
 import { logger } from "../../shared/logger/logger.js";
 import WebhookEvent from "./webhookEvent.model.js";
 
+const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000;
+
 export async function handleStripeWebhook(req, res) {
   const signature = req.headers["stripe-signature"];
   let event;
@@ -22,24 +24,41 @@ export async function handleStripeWebhook(req, res) {
   }
 
   try {
-    try {
-      await WebhookEvent.create({ event_id: event.id, type: event.type, status: "processing" });
-    } catch (err) {
-      if (err.code === 11000) {
-        const retry = await WebhookEvent.findOneAndUpdate(
-          { event_id: event.id, status: "failed" },
-          { $set: { status: "processing" }, $unset: { error_message: 1 } },
-          { new: true }
-        );
-        if (!retry) return res.json({ received: true, duplicate: true });
-      } else {
-        throw err;
-      }
-    }
+    await WebhookEvent.create({
+      event_id: event.id,
+      type: event.type,
+      status: "processing",
+      processing_at: new Date(),
+    });
   } catch (err) {
-    // A database read failure must not be treated as an already-processed event.
-    logger.error("[webhook] failed to check stored event:", err.message);
-    return res.status(503).json({ success: false, message: "Webhook processing temporarily unavailable" });
+    if (err.code !== 11000) {
+      logger.error("[webhook] failed to store event:", err.message);
+      return res.status(503).json({ success: false, message: "Webhook processing temporarily unavailable" });
+    }
+
+    const staleBefore = new Date(Date.now() - PROCESSING_TIMEOUT_MS);
+    let retry;
+    try {
+      retry = await WebhookEvent.findOneAndUpdate(
+        {
+          event_id: event.id,
+          $or: [
+            { status: "failed" },
+            { status: "processing", processing_at: { $lt: staleBefore } },
+            { status: "processing", processing_at: null, createdAt: { $lt: staleBefore } },
+          ],
+        },
+        {
+          $set: { status: "processing", processing_at: new Date(), type: event.type },
+          $unset: { error_message: 1, processed_at: 1 },
+        },
+        { new: true }
+      );
+    } catch (retryError) {
+      logger.error("[webhook] failed to recover stored event:", retryError.message);
+      return res.status(503).json({ success: false, message: "Webhook processing temporarily unavailable" });
+    }
+    if (!retry) return res.json({ received: true, duplicate: true });
   }
 
   try {
@@ -67,7 +86,7 @@ export async function handleStripeWebhook(req, res) {
 
     await WebhookEvent.updateOne(
       { event_id: event.id },
-      { $set: { status: "succeeded", processed_at: new Date() } }
+      { $set: { status: "succeeded", processed_at: new Date() }, $unset: { processing_at: 1, error_message: 1 } }
     );
 
     return res.json({ received: true });

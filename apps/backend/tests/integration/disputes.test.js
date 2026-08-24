@@ -97,6 +97,11 @@ describe("Disputes module", () => {
 
       const updatedMilestone = await Milestone.findById(milestone._id);
       expect(updatedMilestone.status).toBe("not_funded");
+
+      const { refundClient } = await import("../../src/modules/payments/payments.service.js");
+      const duplicate = await refundClient(milestone._id);
+      expect(duplicate._id.toString()).toBe(refundPayment._id.toString());
+      expect(stripeMock.refunds.create).toHaveBeenCalledTimes(1);
     });
 
     it("fails the resolution instead of issuing a phantom refund when no succeeded deposit exists", async () => {

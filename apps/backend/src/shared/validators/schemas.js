@@ -405,7 +405,7 @@ export const updateUserRoleSchema = z.object({
 
 export const resolveAdminDisputeSchema = z.object({
   resolution: z.string().trim().min(10, "Resolution must be at least 10 characters").max(2000),
-  outcome: z.string().trim().min(1).max(100),
+  outcome: z.enum(["refund_client", "release_student", "resume_work"]),
 });
 
 // --- Analytics ---

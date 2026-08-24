@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { stripe } from "./stripe.client.js";
 import Payment from "./payments.model.js";
 import Milestone from "../milestones/milestones.model.js";
@@ -9,6 +10,24 @@ import { logAction } from "../audit-logs/audit-logs.service.js";
 
 function toStripeAmount(dollars) {
   return Math.round(dollars * 100);
+}
+
+async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
+  payment.status = "failed";
+  payment.failure_message = error.message;
+  payment.processing_at = undefined;
+  await payment.save();
+  await logAction({
+    action_type: "RELEASE_FAILED",
+    eventType: "RELEASE_FAILED",
+    action: "release.failed",
+    actor_id: auditContext.actor?.id || auditContext.actor?._id,
+    actor_role: auditContext.actor?.role || "system",
+    entity_type: "milestone",
+    entity_id: milestoneId,
+    metadata: { amount: payment.amount, currency: payment.currency, error: error.message },
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+  });
 }
 
 export async function createDepositIntent(milestone) {
@@ -156,77 +175,90 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
   return payment;
 }
 
-export async function releaseToStudent({ milestoneId, amount, stripeAccountId, transferToStripe = true }) {
-  const existing = await Payment.findOne({
-    milestone_id: milestoneId,
-    direction: "release",
-    status: "succeeded",
-  });
-
-  if (existing) return existing;
-
-  // By default milestone approval only creates the student's NexusWork
-  // wallet credit — no Stripe account is required for this path. The Stripe
-  // transfer is performed when the student explicitly withdraws the wallet
-  // balance (requestWithdrawal). Keeping transferToStripe as an explicit
-  // opt-in preserves the existing Stripe release capability for any future
-  // caller that still needs it.
+export async function releaseToStudent({ milestoneId, amount, stripeAccountId, transferToStripe = true, auditContext = {} }) {
   if (!transferToStripe) {
-    let payment;
-    try {
-      payment = await Payment.findOneAndUpdate(
-        { milestone_id: milestoneId, direction: "release", status: "succeeded" },
-        {
-          $setOnInsert: {
-            milestone_id: milestoneId,
-            amount,
-            currency: paymentConfig.currency,
-            direction: "release",
-            status: "succeeded",
-          },
-        },
-        { upsert: true, new: true }
-      );
-    } catch (err) {
-      if (err.code !== 11000) throw err;
-      payment = await Payment.findOne({ milestone_id: milestoneId, direction: "release", status: "succeeded" });
-    }
-
-    if (!payment) throw new ValidationError("Unable to record milestone release");
-
-    await logAction({
-      action_type: "payment_released",
-      entity_type: "milestone",
-      entity_id: milestoneId,
-      details: {
-        amount,
-        currency: paymentConfig.currency,
-        wallet_credit: true,
-      },
-    });
-
-    return payment;
+    throw new ValidationError("Milestone release must use Stripe Connect; wallet credits are not supported");
   }
 
-  if (!stripeAccountId) {
-    throw new ValidationError(
-      "The student's payout account has not been connected yet."
+  let payment = await Payment.findOne({
+    milestone_id: milestoneId,
+    direction: "release",
+    status: { $in: ["pending", "succeeded"] },
+  });
+
+  if (payment?.status === "succeeded") return payment;
+
+  if (!payment) {
+    payment = await Payment.findOneAndUpdate(
+      { milestone_id: milestoneId, direction: "release", status: "failed" },
+      {
+        $set: {
+          status: "pending",
+          amount,
+          currency: paymentConfig.currency,
+          stripe_account_id: stripeAccountId,
+          processing_at: new Date(),
+          failure_message: undefined,
+        },
+        $setOnInsert: {
+          provider_operation_key: `milestone-release-${milestoneId}`,
+        },
+      },
+      { new: true }
     );
+  }
+
+  if (!payment) {
+    try {
+      payment = await Payment.create({
+        milestone_id: milestoneId,
+        amount,
+        currency: paymentConfig.currency,
+        direction: "release",
+        status: "pending",
+        stripe_account_id: stripeAccountId,
+        provider_operation_key: `milestone-release-${milestoneId}`,
+        processing_at: new Date(),
+      });
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      payment = await Payment.findOne({ milestone_id: milestoneId, direction: "release", status: { $in: ["pending", "succeeded"] } });
+      if (payment?.status === "succeeded") return payment;
+    }
+  }
+
+  const operationKey = payment.provider_operation_key || `milestone-release-${milestoneId}`;
+  await logAction({
+    actor_id: auditContext.actor?.id || auditContext.actor?._id,
+    actor_role: auditContext.actor?.role || "system",
+    action_type: "RELEASE_REQUESTED",
+    eventType: "RELEASE_REQUESTED",
+    action: "release.requested",
+    entity_type: "payment",
+    entity_id: payment._id,
+    metadata: { milestoneId, amount, currency: paymentConfig.currency, operationKey },
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+  });
+
+  if (!stripeAccountId) {
+    const error = new ValidationError("The student's payout account has not been connected yet.");
+    await failReleasePayment(payment, milestoneId, error, auditContext);
+    throw error;
   }
 
   let account;
   try {
     account = await stripe.accounts.retrieve(stripeAccountId);
   } catch (err) {
-    throw new ValidationError(
-      "The student's Stripe payout account could not be verified."
-    );
+    const error = new ValidationError("The student's Stripe payout account could not be verified.");
+    await failReleasePayment(payment, milestoneId, error, auditContext);
+    throw error;
   }
 
   if (!account.payouts_enabled) {
-    throw new ValidationError(
-      "The student's Stripe payout account is not ready yet. They must complete payout setup before funds can be released."
-    );
+    const error = new ValidationError("The student's Stripe payout account is not ready yet. They must complete payout setup before funds can be released.");
+    await failReleasePayment(payment, milestoneId, error, auditContext);
+    throw error;
   }
 
   let transfer;
@@ -238,55 +270,40 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
         destination: stripeAccountId,
         metadata: { milestone_id: String(milestoneId) },
       },
-      { idempotencyKey: `milestone-release-${milestoneId}` }
+      { idempotencyKey: operationKey }
     );
   } catch (err) {
-    await Payment.create({
-      milestone_id: milestoneId,
-      amount,
-      currency: paymentConfig.currency,
-      direction: "release",
-      status: "failed",
-    });
-
-    await logAction({
-      action_type: "payment_release_failed",
-      entity_type: "milestone",
-      entity_id: milestoneId,
-      details: {
-        amount,
-        currency: paymentConfig.currency,
-        error: err.message,
-      },
-    });
+    await failReleasePayment(payment, milestoneId, err, auditContext);
 
     throw err;
   }
 
-  const payment = await Payment.create({
-    milestone_id: milestoneId,
-    amount,
-    currency: paymentConfig.currency,
-    direction: "release",
-    status: "succeeded",
-    stripe_transfer_id: transfer.id,
-  });
+  payment.status = "succeeded";
+  payment.stripe_transfer_id = transfer.id;
+  payment.processing_at = undefined;
+  payment.failure_message = undefined;
+  await payment.save();
 
   await logAction({
-    action_type: "payment_released",
+    action_type: "RELEASE_SUCCEEDED",
+    eventType: "RELEASE_SUCCEEDED",
+    action: "release.succeeded",
+    actor_id: auditContext.actor?.id || auditContext.actor?._id,
+    actor_role: auditContext.actor?.role || "system",
     entity_type: "milestone",
     entity_id: milestoneId,
-    details: {
+    metadata: {
       amount,
       currency: paymentConfig.currency,
       transfer_id: transfer.id,
     },
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
   });
 
   return payment;
 }
 
-export async function refundClient(milestoneId) {
+export async function refundClient(milestoneId, auditContext = {}) {
   const depositPayment = await Payment.findOne({
     milestone_id: milestoneId,
     direction: "deposit",
@@ -299,31 +316,158 @@ export async function refundClient(milestoneId) {
     );
   }
 
-  const refund = await stripe.refunds.create({
-    payment_intent: depositPayment.stripe_payment_intent_id,
+  let payment = await Payment.findOne({
+    milestone_id: milestoneId,
+    direction: "refund",
+    status: { $in: ["pending", "succeeded"] },
+  });
+  if (payment?.status === "succeeded") return payment;
+  if (!payment) {
+    try {
+      payment = await Payment.create({
+        milestone_id: milestoneId,
+        amount: depositPayment.amount,
+        currency: depositPayment.currency,
+        direction: "refund",
+        status: "pending",
+        provider_operation_key: `milestone-refund-${milestoneId}`,
+        processing_at: new Date(),
+      });
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      payment = await Payment.findOne({ milestone_id: milestoneId, direction: "refund", status: { $in: ["pending", "succeeded"] } });
+      if (payment?.status === "succeeded") return payment;
+    }
+  }
+
+  const operationKey = payment.provider_operation_key || `milestone-refund-${milestoneId}`;
+  await logAction({
+    actor_id: auditContext.actor?.id || auditContext.actor?._id,
+    actor_role: auditContext.actor?.role || "system",
+    action_type: "REFUND_REQUESTED",
+    eventType: "REFUND_REQUESTED",
+    action: "refund.requested",
+    entity_type: "payment",
+    entity_id: payment._id,
+    metadata: { milestoneId, amount: payment.amount, currency: payment.currency, operationKey },
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
   });
 
-  const payment = await Payment.create({
-    milestone_id: milestoneId,
-    amount: depositPayment.amount,
-    currency: paymentConfig.currency,
-    direction: "refund",
-    status: "succeeded",
-    stripe_refund_id: refund.id,
-  });
+  let refund;
+  try {
+    refund = await stripe.refunds.create({
+      payment_intent: depositPayment.stripe_payment_intent_id,
+    }, { idempotencyKey: operationKey });
+    payment.status = "succeeded";
+    payment.stripe_refund_id = refund.id;
+    payment.processing_at = undefined;
+    payment.failure_message = undefined;
+    await payment.save();
+  } catch (err) {
+    payment.status = "failed";
+    payment.failure_message = err.message;
+    payment.processing_at = undefined;
+    await payment.save();
+    await logAction({
+      actor_id: auditContext.actor?.id || auditContext.actor?._id,
+      actor_role: auditContext.actor?.role || "system",
+      action_type: "REFUND_FAILED",
+      eventType: "REFUND_FAILED",
+      action: "refund.failed",
+      entity_type: "payment",
+      entity_id: payment._id,
+      metadata: { milestoneId, error: err.message },
+      correlationId: auditContext.correlationId || crypto.randomUUID(),
+    });
+    throw err;
+  }
 
   await logAction({
-    action_type: "payment_refunded",
+    action_type: "REFUND_SUCCEEDED",
+    eventType: "REFUND_SUCCEEDED",
+    action: "refund.succeeded",
+    actor_id: auditContext.actor?.id || auditContext.actor?._id,
+    actor_role: auditContext.actor?.role || "system",
     entity_type: "milestone",
     entity_id: milestoneId,
-    details: {
+    metadata: {
       amount: depositPayment.amount,
       currency: paymentConfig.currency,
       refund_id: refund.id,
     },
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
   });
 
   return payment;
+}
+
+/**
+ * Reconcile release payments left pending by a provider timeout or process
+ * crash. Stripe idempotency makes retrying the same operation safe.
+ */
+export async function reconcilePendingReleases({ limit = 100, auditContext = {} } = {}) {
+  const pending = await Payment.find({
+    direction: "release",
+    status: "pending",
+  }).sort({ createdAt: 1 }).limit(Number(limit));
+
+  const results = { checked: pending.length, succeeded: 0, failed: 0 };
+  for (const payment of pending) {
+    try {
+      if (payment.stripe_transfer_id && typeof stripe.transfers.retrieve === "function") {
+        await stripe.transfers.retrieve(payment.stripe_transfer_id);
+        payment.status = "succeeded";
+        payment.processing_at = undefined;
+        await payment.save();
+      } else {
+        await releaseToStudent({
+          milestoneId: payment.milestone_id,
+          amount: payment.amount,
+          stripeAccountId: payment.stripe_account_id,
+          auditContext,
+        });
+      }
+
+      await Milestone.updateOne(
+        { _id: payment.milestone_id, status: { $in: ["release_pending", "release_failed"] } },
+        {
+          $set: {
+            status: "released",
+            payout_status: "paid",
+            payout_failure_reason: "",
+            released_at: new Date(),
+          },
+        }
+      );
+      await logAction({
+        action_type: "RELEASE_SUCCEEDED",
+        eventType: "RELEASE_SUCCEEDED",
+        action: "release.succeeded",
+        entity_type: "milestone",
+        entity_id: payment.milestone_id,
+        metadata: { amount: payment.amount, currency: payment.currency, transfer_id: payment.stripe_transfer_id },
+        correlationId: auditContext.correlationId || crypto.randomUUID(),
+      });
+      results.succeeded += 1;
+    } catch (err) {
+      results.failed += 1;
+      await Payment.updateOne(
+        { _id: payment._id, status: "pending" },
+        { $set: { status: "failed", failure_message: err.message, processing_at: undefined } }
+      );
+      await logAction({
+        action_type: "RELEASE_FAILED",
+        eventType: "RELEASE_FAILED",
+        action: "release.failed",
+        entity_type: "milestone",
+        entity_id: payment.milestone_id,
+        metadata: { amount: payment.amount, currency: payment.currency, error: err.message },
+        correlationId: auditContext.correlationId || crypto.randomUUID(),
+      });
+    }
+  }
+
+  return results;
 }
 
 export async function listForUser(userId) {
