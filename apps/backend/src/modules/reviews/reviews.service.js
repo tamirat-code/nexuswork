@@ -11,12 +11,23 @@ export async function submitReview(contractId, reviewerId, { reviewee_id, rating
     err.status = 404;
     throw err;
   }
-  const isParty = [String(contract.client_id), String(contract.student_id)].includes(String(reviewerId));
-  if (!isParty) {
+  if (contract.status !== "completed") {
+    throw new ValidationError("Reviews are available only after the contract is completed.");
+  }
+
+  const reviewerIsClient = String(contract.client_id) === String(reviewerId);
+  const reviewerIsStudent = String(contract.student_id) === String(reviewerId);
+  if (!reviewerIsClient && !reviewerIsStudent) {
     const err = new Error("Only contract parties can leave a review");
     err.status = 403;
     throw err;
   }
+
+  const expectedReviewee = reviewerIsClient ? String(contract.student_id) : String(contract.client_id);
+  if (String(reviewee_id) !== expectedReviewee) {
+    throw new ValidationError("You can only review the other party in this contract.");
+  }
+
   try {
     return await Review.create({ contract_id: contractId, reviewer_id: reviewerId, reviewee_id, rating, text });
   } catch (err) {
