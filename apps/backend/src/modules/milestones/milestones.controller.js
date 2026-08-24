@@ -17,6 +17,7 @@ export const create = asyncHandler(async (req, res) => {
 export const listByContract = asyncHandler(async (req, res) => {
   const milestones = await milestonesService.listForContract(
     req.params.contractId,
+    req.user._id,
     {
       limit: req.query.limit,
       skip: req.query.skip,
@@ -27,7 +28,7 @@ export const listByContract = asyncHandler(async (req, res) => {
 });
 
 export const getOne = asyncHandler(async (req, res) => {
-  const milestone = await milestonesService.getById(req.params.id);
+  const milestone = await milestonesService.getById(req.params.id, req.user._id);
   res.json({ success: true, data: milestone });
 });
 
@@ -44,7 +45,8 @@ export const confirmFunding = asyncHandler(async (req, res) => {
   requireFields(req.body, ["payment_intent_id"]);
 
   const milestone = await milestonesService.confirmFunding(
-    req.body.payment_intent_id
+    req.body.payment_intent_id,
+    req.user._id
   );
 
   if (!milestone) {

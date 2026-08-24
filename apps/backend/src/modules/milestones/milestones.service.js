@@ -161,7 +161,14 @@ export async function createMilestone(contractId, requestingUserId, data) {
   });
 }
 
-export async function listForContract(contractId, { limit = 100, skip = 0 } = {}) {
+export async function listForContract(contractId, requestingUserId, { limit = 100, skip = 0 } = {}) {
+  const contract = await Contract.findById(contractId).select("client_id student_id");
+  if (!contract) throw new NotFoundError("Contract not found");
+  if (![String(contract.client_id), String(contract.student_id)].includes(String(requestingUserId))) {
+    const allowed = await isOrgMember(contract.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("You are not a party to this contract");
+  }
+
   const [milestones, total] = await Promise.all([
     Milestone.find({ contract_id: contractId })
       .sort({ sequence: 1, createdAt: 1 })
@@ -174,9 +181,15 @@ export async function listForContract(contractId, { limit = 100, skip = 0 } = {}
   return { milestones, total, limit: Number(limit), skip: Number(skip) };
 }
 
-export async function getById(id) {
+export async function getById(id, requestingUserId) {
   const milestone = await Milestone.findById(id);
   if (!milestone) throw new NotFoundError("Milestone not found");
+  const contract = await Contract.findById(milestone.contract_id).select("client_id student_id");
+  if (!contract) throw new NotFoundError("Contract not found");
+  if (![String(contract.client_id), String(contract.student_id)].includes(String(requestingUserId))) {
+    const allowed = await isOrgMember(contract.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("You are not a party to this contract");
+  }
   return milestone;
 }
 
@@ -198,12 +211,22 @@ export async function initiateFunding(milestoneId, requestingUserId) {
   return createDepositIntent(milestone);
 }
 
-export async function confirmFunding(paymentIntentId) {
+export async function confirmFunding(paymentIntentId, requestingUserId = null) {
   const payment = await markDepositSucceeded(paymentIntentId);
   if (!payment) return null;
 
-  const milestone = await Milestone.findById(payment.milestone_id);
+  const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
   if (!milestone) return null;
+
+  // Browser confirmation must be authorized against the actual milestone owner.
+  // Webhook processing passes no user ID because Stripe itself is the source of truth.
+  if (requestingUserId) {
+    await assertClient(milestone.contract_id, requestingUserId);
+  }
+
+  if (!["not_funded", "funded"].includes(milestone.status)) {
+    throw new ValidationError(`Cannot confirm funding for milestone in status ${milestone.status}`);
+  }
 
   if (milestone.status === "not_funded") {
     milestone.status = "funded";
@@ -234,7 +257,7 @@ export async function startWork(milestoneId, requestingUserId) {
   return milestone;
 }
 
-export async function submitWork(milestoneId, requestingUserId, { file_url, note } = {}) {
+export async function submitWork(milestoneId, requestingUserId, { file_ids = [], file_url, note } = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -248,7 +271,7 @@ export async function submitWork(milestoneId, requestingUserId, { file_url, note
     throw new ValidationError("Milestone must be funded or awaiting revision before work is submitted");
   }
 
-  const submission = await addSubmission(milestone._id, requestingUserId, { file_url, note });
+  const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note });
 
   milestone.status = "submitted";
   milestone.delivered_at = new Date();
