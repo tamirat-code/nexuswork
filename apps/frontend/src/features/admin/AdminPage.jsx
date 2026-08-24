@@ -6,6 +6,7 @@ import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, Trendi
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
+import { fetchFileBlob } from "../../services/api/files.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/shadcn/card.jsx";
@@ -178,6 +179,17 @@ function ResolveDisputeDialog({ dispute, token }) {
 // its email domain only made it eligible to apply. This is the only place in
 // the app that turns a pending request into actual contact_staff membership
 // (see staff-verifications.service.js reviewStaffVerification).
+async function openPrivateFile(file, token) {
+  try {
+    const blob = await fetchFileBlob(file._id, token);
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    toast.error(error.message || "Could not open document");
+  }
+}
+
 function ReviewStaffVerificationDialog({ verification, token, defaultOpen = false }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(defaultOpen);
@@ -238,15 +250,14 @@ function ReviewStaffVerificationDialog({ verification, token, defaultOpen = fals
           </div>
 
           {verification.document_file_id?.url ? (
-            <a
-              href={verification.document_file_id.url}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => openPrivateFile(verification.document_file_id, token)}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-brass underline-offset-4 hover:underline"
             >
               <FileText className="h-4 w-4" />
               View uploaded document ({verification.document_file_id.original_name || "file"})
-            </a>
+            </button>
           ) : (
             <p className="text-sm text-brick">No document on file — reject and ask them to resubmit with proof.</p>
           )}
