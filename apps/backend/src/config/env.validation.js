@@ -15,6 +15,21 @@ export function validateEnv() {
     if (!process.env.CLIENT_URL || process.env.CLIENT_URL === "*") {
       missing.push("CLIENT_URL (must be set to the allowed origin in production)");
     }
+    if ((process.env.STORAGE_DRIVER || "local").toLowerCase() === "local") {
+      missing.push("STORAGE_DRIVER (production must use durable object storage, not local disk)");
+    }
+    if ((process.env.STORAGE_DRIVER || "local").toLowerCase() === "s3") {
+      if (!process.env.S3_BUCKET) missing.push("S3_BUCKET");
+      if (!process.env.S3_ACCESS_KEY) missing.push("S3_ACCESS_KEY");
+      if (!process.env.S3_SECRET_KEY) missing.push("S3_SECRET_KEY");
+    }
+    if ((process.env.PAYMENT_PROVIDER || "").toLowerCase() === "stripe" && String(process.env.STRIPE_SECRET_KEY || "").startsWith("sk_test_")) {
+      throw new Error("Production cannot use a Stripe test secret key (sk_test_*)");
+    }
+    const aiProvider = (process.env.AI_PROVIDER || "none").toLowerCase();
+    if (!["none", "groq", "anthropic"].includes(aiProvider)) {
+      throw new Error(`Unsupported AI_PROVIDER: ${aiProvider}. Use none, groq, or anthropic.`);
+    }
   }
 
 
