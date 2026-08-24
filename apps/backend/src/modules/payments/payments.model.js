@@ -21,5 +21,21 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.index({ stripe_payment_intent_id: 1 });
+paymentSchema.index(
+  { milestone_id: 1, direction: 1 },
+  { unique: true, partialFilterExpression: { direction: "deposit", status: { $in: ["pending", "succeeded"] } } }
+);
+paymentSchema.index(
+  { milestone_id: 1, direction: 1 },
+  { unique: true, partialFilterExpression: { direction: "deposit", status: { $in: ["pending", "succeeded"] } } }
+);
+paymentSchema.index(
+  { milestone_id: 1, direction: 1 },
+  { unique: true, partialFilterExpression: { direction: "release", status: "succeeded" } }
+);
+paymentSchema.index(
+  { milestone_id: 1, direction: 1 },
+  { unique: true, partialFilterExpression: { direction: "commission", status: "succeeded" } }
+);
 
 export default mongoose.model("Payment", paymentSchema);

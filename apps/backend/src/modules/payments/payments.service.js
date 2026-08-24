@@ -12,6 +12,27 @@ function toStripeAmount(dollars) {
 }
 
 export async function createDepositIntent(milestone) {
+  const existing = await Payment.findOne({
+    milestone_id: milestone._id,
+    direction: "deposit",
+    status: { $in: ["pending", "succeeded"] },
+  });
+
+  if (existing?.status === "succeeded") {
+    return { payment_intent_id: existing.stripe_payment_intent_id, already_succeeded: true };
+  }
+
+  if (existing?.stripe_payment_intent_id) {
+    const existingIntent = await stripe.paymentIntents.retrieve(existing.stripe_payment_intent_id);
+    if (["requires_payment_method", "requires_confirmation", "requires_action", "processing"].includes(existingIntent.status)) {
+      return { client_secret: existingIntent.client_secret, payment_intent_id: existingIntent.id, already_pending: true };
+    }
+    if (existingIntent.status === "succeeded") {
+      await markDepositSucceeded(existingIntent.id);
+      return { payment_intent_id: existingIntent.id, already_succeeded: true };
+    }
+  }
+
   const intent = await stripe.paymentIntents.create({
     amount: toStripeAmount(milestone.amount),
     currency: paymentConfig.currency,
@@ -44,13 +65,43 @@ export async function createDepositIntent(milestone) {
 }
 
 export async function markDepositSucceeded(paymentIntentId) {
-  const payment = await Payment.findOneAndUpdate(
-    { stripe_payment_intent_id: paymentIntentId, direction: "deposit" },
-    { status: "succeeded" },
-    { new: true }
-  );
+  if (!paymentIntentId || !/^pi_[A-Za-z0-9_]+$/.test(String(paymentIntentId))) {
+    throw new ValidationError("Invalid Stripe PaymentIntent ID");
+  }
 
-  if (payment) {
+  const payment = await Payment.findOne({
+    stripe_payment_intent_id: paymentIntentId,
+    direction: "deposit",
+  });
+  if (!payment) return null;
+
+  // Never trust the browser or webhook payload alone. Re-read the PaymentIntent
+  // from Stripe and verify the exact payment our database expects.
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (intent.status !== "succeeded") {
+    throw new ValidationError(`Stripe payment is not succeeded (status: ${intent.status})`);
+  }
+
+  if (String(intent.metadata?.milestone_id || "") !== String(payment.milestone_id)) {
+    throw new ValidationError("Stripe payment does not belong to this milestone");
+  }
+
+  const expectedAmount = toStripeAmount(payment.amount);
+  if (Number(intent.amount_received || intent.amount) !== expectedAmount) {
+    throw new ValidationError("Stripe payment amount does not match the milestone amount");
+  }
+
+  if (String(intent.currency).toLowerCase() !== String(payment.currency).toLowerCase()) {
+    throw new ValidationError("Stripe payment currency does not match the milestone currency");
+  }
+
+  const wasAlreadySucceeded = payment.status === "succeeded";
+  if (!wasAlreadySucceeded) {
+    payment.status = "succeeded";
+    await payment.save();
+  }
+
+  if (!wasAlreadySucceeded) {
     await logAction({
       action_type: "payment_deposit_succeeded",
       entity_type: "milestone",
@@ -110,13 +161,27 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
   // opt-in preserves the existing Stripe release capability for any future
   // caller that still needs it.
   if (!transferToStripe) {
-    const payment = await Payment.create({
-      milestone_id: milestoneId,
-      amount,
-      currency: paymentConfig.currency,
-      direction: "release",
-      status: "succeeded",
-    });
+    let payment;
+    try {
+      payment = await Payment.findOneAndUpdate(
+        { milestone_id: milestoneId, direction: "release", status: "succeeded" },
+        {
+          $setOnInsert: {
+            milestone_id: milestoneId,
+            amount,
+            currency: paymentConfig.currency,
+            direction: "release",
+            status: "succeeded",
+          },
+        },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      payment = await Payment.findOne({ milestone_id: milestoneId, direction: "release", status: "succeeded" });
+    }
+
+    if (!payment) throw new ValidationError("Unable to record milestone release");
 
     await logAction({
       action_type: "payment_released",
