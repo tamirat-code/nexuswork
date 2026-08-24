@@ -5,6 +5,7 @@ import Dispute from "../../modules/disputes/disputes.model.js";
 import Invoice from "../../modules/invoices/invoices.model.js";
 import File from "../../modules/files/files.model.js";
 import Message from "../../modules/messaging/messaging.model.js";
+import Project from "../../modules/projects/projects.model.js";
 import { isOrgMember } from "../../modules/clients/clients.service.js";
 import { ForbiddenError, NotFoundError } from "../exceptions/AppError.js";
 import { ROLES } from "../enums/roles.enum.js";
@@ -107,10 +108,15 @@ export async function assertSubmissionAccess({ submissionId, user, req, role } =
   return { submission, ...context };
 }
 
-export async function assertDisputeAccess({ disputeId, user, req, role } = {}) {
+export async function assertDisputeAccess({ disputeId, user, req, role, allowAdmin = false } = {}) {
   const authenticated = authenticatedUser(user, req);
   const dispute = await Dispute.findById(disputeId).select("milestone_id opened_by status");
   if (!dispute) throw new NotFoundError("Dispute not found");
+  if (allowAdmin && authenticated.role === ROLES.ADMIN) {
+    const milestone = await Milestone.findById(dispute.milestone_id).select("contract_id status");
+    if (!milestone) throw new NotFoundError("Milestone not found");
+    return { dispute, milestone, contract: await loadContract(milestone.contract_id) };
+  }
   const context = await assertMilestoneAccess({ milestoneId: dispute.milestone_id, user: authenticated, role });
   return { dispute, ...context };
 }
@@ -138,24 +144,55 @@ export async function assertFileAccess({ fileId, user, req } = {}) {
   const authenticated = authenticatedUser(user, req);
   const file = await File.findById(fileId).select("owner_id related_type related_id");
   if (!file) throw new NotFoundError("File not found");
-  if (sameId(file.owner_id, authenticated._id)) return file;
-
   if (file.related_type === "contract") {
+    if (authenticated.role === ROLES.ADMIN) throw new ForbiddenError("You do not have access to this file");
     await assertContractParty({ contractId: file.related_id, user: authenticated });
   } else if (file.related_type === "submission") {
     await assertSubmissionAccess({ submissionId: file.related_id, user: authenticated });
   } else if (file.related_type === "message_attachment") {
-    await assertMessageAccess({ messageId: file.related_id, user: authenticated });
+    await assertMessageAccess({ messageId: file.related_id, user: authenticated, allowAdmin: true });
+  } else if (file.related_type === "project_attachment") {
+    const project = await Project.findById(file.related_id).select("client_id");
+    if (!project) throw new NotFoundError("Project not found");
+    if (authenticated.role === ROLES.ADMIN || sameId(project.client_id, authenticated._id)) return file;
+    if (authenticated.role === ROLES.CLIENT && await isOrgMember(project.client_id, authenticated._id)) return file;
+    throw new ForbiddenError("You do not have access to this project attachment");
+  } else if (["verification_document", "staff_verification_document", "portfolio"].includes(file.related_type)) {
+    // The module service retains the detailed owner/staff/publication checks.
+    return file;
+  } else if (authenticated.role === ROLES.ADMIN) {
+    return file;
+  } else if (sameId(file.owner_id, authenticated._id)) {
+    return file;
   } else {
     throw new ForbiddenError("You do not have access to this file");
   }
   return file;
 }
 
-export async function assertMessageAccess({ messageId, user, req } = {}) {
+export async function assertFileUploadAccess({ relatedType, relatedId, user, req } = {}) {
+  const authenticated = authenticatedUser(user, req);
+  if (!["contract", "submission", "project_attachment"].includes(relatedType)) return authenticated;
+  if (!relatedId) throw new NotFoundError(`${relatedType} resource not found`);
+  if (relatedType === "contract") {
+    await assertContractParty({ contractId: relatedId, user: authenticated });
+  } else if (relatedType === "submission") {
+    await assertSubmissionAccess({ submissionId: relatedId, user: authenticated });
+  } else {
+    const project = await Project.findById(relatedId).select("client_id");
+    if (!project) throw new NotFoundError("Project not found");
+    if (authenticated.role !== ROLES.ADMIN && !(authenticated.role === ROLES.CLIENT && (sameId(project.client_id, authenticated._id) || await isOrgMember(project.client_id, authenticated._id)))) {
+      throw new ForbiddenError("You do not have access to this project");
+    }
+  }
+  return authenticated;
+}
+
+export async function assertMessageAccess({ messageId, user, req, allowAdmin = false } = {}) {
   const authenticated = authenticatedUser(user, req);
   const message = await Message.findById(messageId).select("contract_id sender_id");
   if (!message) throw new NotFoundError("Message not found");
+  if (allowAdmin && authenticated.role === ROLES.ADMIN) return { message, contract: await loadContract(message.contract_id) };
   const contract = await assertContractParty({ contractId: message.contract_id, user: authenticated });
   return { message, contract };
 }

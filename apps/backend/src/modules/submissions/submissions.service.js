@@ -4,7 +4,7 @@ import Contract from "../contracts/contracts.model.js";
 import File from "../files/files.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";
-import { logAction } from "../audit-logs/audit-logs.service.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
 async function getMilestoneContext(milestoneId) {
@@ -17,7 +17,8 @@ async function getMilestoneContext(milestoneId) {
   return { milestone, contract };
 }
 
-async function assertContractParty(contract, userId) {
+async function assertContractParty(contract, userId, allowAdmin = false) {
+  if (allowAdmin) return;
   const isParty = [String(contract.client_id), String(contract.student_id)].includes(String(userId));
   if (isParty) return;
 
@@ -25,7 +26,7 @@ async function assertContractParty(contract, userId) {
   if (!allowed) throw new ForbiddenError("You are not a party to this contract");
 }
 
-export async function addSubmission(milestoneId, studentId, { file_ids = [], file_url, note } = {}) {
+export async function addSubmission(milestoneId, studentId, { file_ids = [], file_url, note } = {}, auditContext = {}) {
   const { milestone, contract } = await getMilestoneContext(milestoneId);
 
   if (String(contract.student_id) !== String(studentId)) {
@@ -90,12 +91,16 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
   milestone.delivered_at = new Date();
   await milestone.save();
 
-  await logAction({
-    action_type: "milestone_work_submitted",
-    entity_type: "submission",
-    entity_id: submission._id,
-    actor_id: studentId,
-    details: {
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "SUBMISSION_CREATED",
+    action: "submission.created",
+    entityType: "submission",
+    entityId: submission._id,
+    previousState: null,
+    newState: submission.review_status,
+    correlationId: auditContext.correlationId,
+    metadata: {
       milestone_id: milestoneId,
       version: nextVersion,
       file_count: normalizedFileIds.length,
@@ -112,9 +117,9 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
   return Submission.findById(submission._id).populate("file_ids").lean();
 }
 
-export async function listForMilestone(milestoneId, requestingUserId) {
+export async function listForMilestone(milestoneId, requestingUserId, { allowAdmin = false } = {}) {
   const { contract } = await getMilestoneContext(milestoneId);
-  await assertContractParty(contract, requestingUserId);
+  await assertContractParty(contract, requestingUserId, allowAdmin);
 
   return Submission.find({ milestone_id: milestoneId })
     .sort({ version: 1 })
@@ -127,7 +132,7 @@ export async function getLatestForMilestone(milestoneId) {
   return Submission.findOne({ milestone_id: milestoneId }).sort({ version: -1 });
 }
 
-export async function requestRevision(submissionId, requestingUserId, reason = "") {
+export async function requestRevision(submissionId, requestingUserId, reason = "", auditContext = {}) {
   const submission = await Submission.findById(submissionId);
   if (!submission) throw new NotFoundError("Submission not found");
 
@@ -166,12 +171,16 @@ export async function requestRevision(submissionId, requestingUserId, reason = "
   submission.reviewed_at = new Date();
   await submission.save();
 
-  await logAction({
-    action_type: "milestone_revision_requested",
-    entity_type: "submission",
-    entity_id: submission._id,
-    actor_id: requestingUserId,
-    details: {
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "SUBMISSION_REVISION_REQUESTED",
+    action: "submission.revision_requested",
+    entityType: "submission",
+    entityId: submission._id,
+    previousState: "pending_review",
+    newState: submission.review_status,
+    correlationId: auditContext.correlationId,
+    metadata: {
       milestone_id: milestone._id,
       version: submission.version,
       revision_count: milestone.revision_count,
@@ -193,7 +202,7 @@ export async function requestRevision(submissionId, requestingUserId, reason = "
   return Submission.findById(submission._id).populate("file_ids").lean();
 }
 
-export async function approveSubmission(milestoneId, requestingUserId) {
+export async function approveSubmission(milestoneId, requestingUserId, auditContext = {}) {
   const { milestone, contract } = await getMilestoneContext(milestoneId);
   if (String(contract.client_id) !== String(requestingUserId)) {
     const allowed = await isOrgMember(contract.client_id, requestingUserId);
@@ -214,6 +223,18 @@ export async function approveSubmission(milestoneId, requestingUserId) {
   latest.reviewer_id = requestingUserId;
   latest.reviewed_at = new Date();
   await latest.save();
+
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "SUBMISSION_APPROVED",
+    action: "submission.approved",
+    entityType: "submission",
+    entityId: latest._id,
+    previousState: "pending_review",
+    newState: latest.review_status,
+    correlationId: auditContext.correlationId,
+    metadata: { milestone_id: milestoneId, reviewer_id: requestingUserId },
+  });
 
   return latest;
 }

@@ -1,6 +1,8 @@
 import Message from "./messaging.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { emitToContract } from "../../websocket/socket.registry.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import crypto from "node:crypto";
 
 async function assertParty(contractId, userId) {
   const contract = await Contract.findById(contractId);
@@ -19,7 +21,7 @@ async function assertParty(contractId, userId) {
 
 import File from "../files/files.model.js";
 
-export async function sendMessage(contractId, senderId, { body, attachments }) {
+export async function sendMessage(contractId, senderId, { body, attachments }, auditContext = {}) {
   await assertParty(contractId, senderId);
 
   const attachmentsInput = attachments || [];
@@ -63,6 +65,18 @@ export async function sendMessage(contractId, senderId, { body, attachments }) {
     .populate({ path: "sender_id", select: "name avatarUrl" })
     .populate({ path: "attachments" })
     .lean();
+
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "MESSAGE_CREATED",
+    action: "message.created",
+    entityType: "message",
+    entityId: created._id,
+    previousState: null,
+    newState: null,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { contractId, attachmentCount: attachmentIds.length },
+  });
 
   emitToContract(contractId, "message:new", message);
   return message;

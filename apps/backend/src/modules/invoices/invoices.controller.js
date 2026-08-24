@@ -4,9 +4,11 @@ import { ValidationError } from "../../shared/exceptions/AppError.js";
 import { createInvoice, listInvoicesForUser, getInvoiceById, getInvoiceForDownload, updateInvoiceStatus } from "./invoices.service.js";
 import { renderInvoicePdf } from "../../templates/invoice/invoice.pdf.js";
 import { renderInvoiceCsv } from "../../templates/invoice/invoice.csv.js";
+import { assertClientOnContract, assertInvoiceAccess } from "../../shared/authorization/resource-authorization.js";
 
 export const postInvoice = asyncHandler(async (req, res) => {
   requireFields(req.body, ["contract_id", "amount", "line_items"]);
+  await assertClientOnContract({ contractId: req.body.contract_id, req });
   const invoice = await createInvoice({
     contractId: req.body.contract_id,
     requestingUserId: req.user._id,
@@ -15,6 +17,7 @@ export const postInvoice = asyncHandler(async (req, res) => {
     dueDate: req.body.due_date,
     lineItems: req.body.line_items,
     milestoneId: req.body.milestone_id,
+    auditContext: { actor: req.user, correlationId: req.correlationId },
   });
   res.status(201).json({ success: true, data: invoice });
 });
@@ -25,6 +28,7 @@ export const getInvoices = asyncHandler(async (req, res) => {
 });
 
 export const getInvoice = asyncHandler(async (req, res) => {
+  await assertInvoiceAccess({ invoiceId: req.params.id, req, role: req.user.role });
   const invoice = await getInvoiceById(req.params.id, req.user._id);
   res.json({ success: true, data: invoice });
 });
@@ -35,6 +39,7 @@ export const downloadInvoice = asyncHandler(async (req, res) => {
     throw new ValidationError("format must be 'pdf' or 'csv'");
   }
 
+  await assertInvoiceAccess({ invoiceId: req.params.id, req, role: req.user.role });
   const invoice = await getInvoiceForDownload(req.params.id, req.user._id);
   const filename = `${invoice.invoice_number}.${format}`;
 
@@ -53,6 +58,10 @@ export const downloadInvoice = asyncHandler(async (req, res) => {
 
 export const patchInvoiceStatus = asyncHandler(async (req, res) => {
   requireFields(req.body, ["status"]);
-  const invoice = await updateInvoiceStatus(req.params.id, req.user._id, { status: req.body.status });
+  await assertInvoiceAccess({ invoiceId: req.params.id, req, role: "client" });
+  const invoice = await updateInvoiceStatus(req.params.id, req.user._id, { status: req.body.status }, {
+    actor: req.user,
+    correlationId: req.correlationId,
+  });
   res.json({ success: true, data: invoice });
 });

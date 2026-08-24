@@ -7,10 +7,12 @@ import { listForMilestone as listSubmissionsForMilestone } from "../submissions/
 import { refundClient, releaseToStudent } from "../payments/payments.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import crypto from "node:crypto";
 
 const VALID_OUTCOMES = ["refund_client", "release_student", "resume_work"];
 
-export async function openDispute(milestoneId, openedBy, reason) {
+export async function openDispute(milestoneId, openedBy, reason, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -26,7 +28,31 @@ export async function openDispute(milestoneId, openedBy, reason) {
   const preDisputeStatus = milestone.status;
   milestone.status = "disputed";
   await milestone.save();
-  return Dispute.create({ milestone_id: milestoneId, opened_by: openedBy, reason, pre_dispute_status: preDisputeStatus });
+  const dispute = await Dispute.create({ milestone_id: milestoneId, opened_by: openedBy, reason, pre_dispute_status: preDisputeStatus });
+  const correlationId = auditContext.correlationId || crypto.randomUUID();
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "MILESTONE_DISPUTED",
+    action: "milestone.disputed",
+    entityType: "milestone",
+    entityId: milestone._id,
+    previousState: preDisputeStatus,
+    newState: milestone.status,
+    correlationId,
+    metadata: { disputeId: dispute._id },
+  });
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "DISPUTE_OPENED",
+    action: "dispute.opened",
+    entityType: "dispute",
+    entityId: dispute._id,
+    previousState: null,
+    newState: dispute.status,
+    correlationId,
+    metadata: { milestoneId: milestone._id },
+  });
+  return dispute;
 }
 
 
@@ -45,14 +71,14 @@ export async function getDisputeEvidence(disputeId, requestingUser) {
   }
 
   const [submissions, messages] = await Promise.all([
-    listSubmissionsForMilestone(milestone._id, requestingUser._id),
+    listSubmissionsForMilestone(milestone._id, requestingUser._id, { allowAdmin: requestingUser.role === "admin" }),
     Message.find({ contract_id: contract._id }).sort({ createdAt: 1 }).populate({ path: "attachments" }).lean(),
   ]);
 
   return { dispute, milestone, contract, submissions, messages };
 }
 
-export async function resolveDispute(disputeId, { resolution_summary, outcome }) {
+export async function resolveDispute(disputeId, { resolution_summary, outcome }, auditContext = {}) {
   if (!VALID_OUTCOMES.includes(outcome)) {
     throw new ValidationError(`outcome must be one of: ${VALID_OUTCOMES.join(", ")}`);
   }
@@ -66,6 +92,8 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome })
   if (!milestone) throw new NotFoundError("Milestone not found");
   const contract = milestone.contract_id;
 
+  const previousDisputeState = dispute.status;
+  const previousMilestoneState = milestone.status;
   if (outcome === "refund_client") {
     await refundClient(milestone._id);
     milestone.status = "not_funded";
@@ -89,6 +117,17 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome })
   dispute.outcome = outcome;
   dispute.resolved_at = new Date();
   await dispute.save();
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "DISPUTE_RESOLVED",
+    action: "dispute.resolved",
+    entityType: "dispute",
+    entityId: dispute._id,
+    previousState: previousDisputeState,
+    newState: dispute.status,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { outcome, previousMilestoneState, newMilestoneState: milestone.status },
+  });
   return dispute;
 }
 

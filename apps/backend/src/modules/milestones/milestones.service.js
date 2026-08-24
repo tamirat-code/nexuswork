@@ -32,9 +32,10 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
   const payout = milestone.amount * (1 - paymentConfig.commissionRate);
   const commissionAmount = milestone.amount - payout;
   const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
+  let releasePayment;
 
   try {
-    const releasePayment = await releaseToStudent({
+    releasePayment = await releaseToStudent({
       milestoneId: milestone._id,
       amount: payout,
       stripeAccountId: studentWallet?.stripe_account_id,
@@ -60,18 +61,6 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
     milestone.payout_failure_reason = "";
     milestone.released_at = new Date();
     await milestone.save();
-
-    await auditMilestoneEvent({
-      actor: auditContext.actor,
-      correlationId: auditContext.correlationId,
-      eventType: "MILESTONE_RELEASED",
-      action: "milestone.released",
-      entityType: "milestone",
-      entityId: milestone._id,
-      previousState: "release_pending",
-      newState: milestone.status,
-      metadata: { payout, commissionAmount },
-    });
 
     // A contract is "finished" once every one of its milestones has been
     // released — nothing else ever moves it out of "active", so without
@@ -107,6 +96,7 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
             unit_price: milestone.amount,
           },
         ],
+        auditContext,
       });
 
       invoice.status = "paid";
@@ -119,7 +109,6 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       );
     }
 
-    return { milestone, payout, releasePayment, payout_pending: false };
   } catch (err) {
     milestone.status = "release_failed";
     milestone.payout_status = "failed";
@@ -134,6 +123,20 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       payout_message: err.message,
     };
   }
+
+  await auditMilestoneEvent({
+    actor: auditContext.actor,
+    correlationId: auditContext.correlationId,
+    eventType: "MILESTONE_RELEASED",
+    action: "milestone.released",
+    entityType: "milestone",
+    entityId: milestone._id,
+    previousState: "release_pending",
+    newState: milestone.status,
+    metadata: { payout, commissionAmount },
+  });
+
+  return { milestone, payout, releasePayment, payout_pending: false };
 }
 
 export async function createMilestone(contractId, requestingUserId, data, auditContext = {}) {
@@ -336,7 +339,7 @@ export async function submitWork(milestoneId, requestingUserId, { file_ids = [],
     throw new ValidationError("Milestone must be funded or awaiting revision before work is submitted");
   }
 
-  const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note });
+  const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note }, auditContext);
 
   const previousState = milestone.status;
   milestone.status = "submitted";

@@ -9,8 +9,10 @@ import Message from "../messaging/messaging.model.js";
 import { storageConfig } from "../../config/storage.config.js";
 import { putPrivateObject, getPrivateObject, deletePrivateObject } from "../../shared/utils/private-storage.client.js";
 import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { isOrgMember } from "../clients/clients.service.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
-export async function createFileRecord({ ownerId, multerFile, related_type, related_id }) {
+export async function createFileRecord({ ownerId, multerFile, related_type, related_id, auditContext = {} }) {
   const filename = storageConfig.driver === "s3"
     ? `${crypto.randomUUID()}${path.extname(multerFile.originalname)}`
     : multerFile.filename;
@@ -37,6 +39,17 @@ export async function createFileRecord({ ownerId, multerFile, related_type, rela
 
   file.url = `/v1/files/content/${file._id}`;
   await file.save();
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "FILE_CREATED",
+    action: "file.created",
+    entityType: "file",
+    entityId: file._id,
+    previousState: null,
+    newState: null,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { relatedType: file.related_type, relatedId: file.related_id, ownerId },
+  });
   return file;
 }
 
@@ -83,7 +96,7 @@ async function assertProjectAttachmentAccess(file, requestingUser) {
   const project = await Project.findById(file.related_id).select("client_id status");
   if (!project) throw new NotFoundError("Project not found");
   if (String(project.client_id) === String(requestingUser._id)) return;
-  if (project.status === "open") return;
+  if (requestingUser.role === "client" && await isOrgMember(project.client_id, requestingUser._id)) return;
   throw new ForbiddenError("You don't have access to this file");
 }
 
@@ -185,7 +198,7 @@ export async function getPrivateContent(file) {
   return { Body: fs.createReadStream(diskPath) };
 }
 
-export async function deleteFile(id, requestingUserId) {
+export async function deleteFile(id, requestingUserId, auditContext = {}) {
   const file = await File.findById(id);
   if (!file) throw new NotFoundError("File not found");
 
@@ -209,5 +222,16 @@ export async function deleteFile(id, requestingUserId) {
   }
 
   await file.deleteOne();
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "FILE_DELETED",
+    action: "file.deleted",
+    entityType: "file",
+    entityId: file._id,
+    previousState: "stored",
+    newState: "deleted",
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { relatedType: file.related_type, relatedId: file.related_id, ownerId: file.owner_id },
+  });
   return { deleted: true };
 }

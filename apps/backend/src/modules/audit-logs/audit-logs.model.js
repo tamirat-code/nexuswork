@@ -13,6 +13,8 @@ const AUDIT_ACTION_TYPES = [
   "CONTRACT_REVIEWED", "MILESTONE_FUNDING_REQUESTED", "MILESTONE_WORK_STARTED",
   "MILESTONE_SUBMITTED", "MILESTONE_REVISION_REQUESTED", "MILESTONE_APPROVED",
   "MILESTONE_DISPUTED", "MILESTONE_RELEASE_REQUESTED", "MILESTONE_RELEASED",
+  "SUBMISSION_CREATED", "SUBMISSION_APPROVED", "SUBMISSION_REVISION_REQUESTED",
+  "MESSAGE_CREATED", "INVOICE_CREATED", "INVOICE_STATUS_UPDATED", "FILE_CREATED", "FILE_DELETED",
   "PAYMENT_CREATED", "PAYMENT_SUCCEEDED", "PAYMENT_FAILED", "REFUND_REQUESTED",
   "REFUND_SUCCEEDED", "REFUND_FAILED", "DISPUTE_OPENED", "DISPUTE_RESOLVED",
 ];
@@ -41,9 +43,9 @@ const auditLogsSchema = new mongoose.Schema(
       required: true,
       immutable: true,
     },
-    entity_type: {
+      entity_type: {
       type: String,
-      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission"],
+      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice"],
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },

@@ -1,6 +1,8 @@
 import Invoice from "./invoices.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import crypto from "node:crypto";
 
 function generateInvoiceNumber() {
   const date = new Date();
@@ -10,7 +12,7 @@ function generateInvoiceNumber() {
   return `INV-${yyyy}${mm}-${rand}`;
 }
 
-export async function createInvoice({ contractId, requestingUserId, amount, currency, dueDate, lineItems, milestoneId }) {
+export async function createInvoice({ contractId, requestingUserId, amount, currency, dueDate, lineItems, milestoneId, auditContext = {} }) {
   if (!lineItems || !lineItems.length) {
     throw new ValidationError("At least one line item is required");
   }
@@ -32,6 +34,18 @@ export async function createInvoice({ contractId, requestingUserId, amount, curr
     currency: currency || "usd",
     due_date: dueDate,
     line_items: lineItems,
+  });
+
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "INVOICE_CREATED",
+    action: "invoice.created",
+    entityType: "invoice",
+    entityId: invoice._id,
+    previousState: null,
+    newState: invoice.status,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { contractId, milestoneId, amount: invoice.amount },
   });
 
   return invoice;
@@ -69,15 +83,37 @@ export async function getInvoiceForDownload(id, userId) {
   return invoice;
 }
 
-export async function updateInvoiceStatus(id, userId, { status }) {
+export async function updateInvoiceStatus(id, userId, { status }, auditContext = {}) {
   const invoice = await Invoice.findById(id);
   if (!invoice) throw new NotFoundError("Invoice not found");
 
-  const isParty = [String(invoice.client_id), String(invoice.student_id)].includes(String(userId));
-  if (!isParty) throw new ForbiddenError("Not a party to this invoice");
+  if (String(invoice.client_id) !== String(userId)) throw new ForbiddenError("Only the contract client can update invoice status");
 
+  const allowedTransitions = {
+    draft: ["sent", "cancelled"],
+    sent: ["paid", "overdue", "cancelled"],
+    overdue: ["paid", "cancelled"],
+    paid: [],
+    cancelled: [],
+  };
+  if (!allowedTransitions[invoice.status]?.includes(status)) {
+    throw new ValidationError(`Cannot change invoice status from ${invoice.status} to ${status}`);
+  }
+
+  const previousState = invoice.status;
   invoice.status = status;
   if (status === "paid") invoice.paid_at = new Date();
   await invoice.save();
+  await recordEvent({
+    actor: auditContext.actor,
+    eventType: "INVOICE_STATUS_UPDATED",
+    action: "invoice.status_updated",
+    entityType: "invoice",
+    entityId: invoice._id,
+    previousState,
+    newState: invoice.status,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { updatedBy: userId },
+  });
   return invoice;
 }

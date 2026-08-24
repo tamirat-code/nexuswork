@@ -1,6 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { ValidationError, NotFoundError } from "../../shared/exceptions/AppError.js";
 import * as filesService from "./files.service.js";
+import { assertFileAccess, assertFileUploadAccess } from "../../shared/authorization/resource-authorization.js";
 
 const VALID_RELATED_TYPES = new Set([
   "project_attachment",
@@ -36,27 +37,33 @@ export const uploadFile = asyncHandler(async (req, res) => {
     }
   }
 
+  await assertFileUploadAccess({ relatedType, relatedId, req });
+
   const file = await filesService.createFileRecord({
     ownerId: req.user._id,
     multerFile: req.file,
     related_type: relatedType,
     related_id: relatedId,
+    auditContext: { actor: req.user, correlationId: req.correlationId },
   });
 
   res.status(201).json({ success: true, data: file });
 });
 
 export const getForContract = asyncHandler(async (req, res) => {
+  await assertFileUploadAccess({ relatedType: "contract", relatedId: req.params.contractId, req });
   const files = await filesService.listForContract(req.params.contractId, req.user._id);
   res.json({ success: true, data: files });
 });
 
 export const getOne = asyncHandler(async (req, res) => {
+  await assertFileAccess({ fileId: req.params.id, req });
   const file = await filesService.getById(req.params.id, req.user);
   res.json({ success: true, data: file });
 });
 
 export const content = asyncHandler(async (req, res) => {
+  await assertFileAccess({ fileId: req.params.id, req });
   const file = await filesService.getById(req.params.id, req.user);
   const object = await filesService.getPrivateContent(file);
 
@@ -68,6 +75,10 @@ export const content = asyncHandler(async (req, res) => {
 });
 
 export const remove = asyncHandler(async (req, res) => {
-  const result = await filesService.deleteFile(req.params.id, req.user._id);
+  await assertFileAccess({ fileId: req.params.id, req });
+  const result = await filesService.deleteFile(req.params.id, req.user._id, {
+    actor: req.user,
+    correlationId: req.correlationId,
+  });
   res.json({ success: true, data: result });
 });
