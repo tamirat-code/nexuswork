@@ -3,9 +3,15 @@ import Milestone from "../milestones/milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
+import File from "../files/files.model.js";
 
 export async function createPortfolioItem(userId, data) {
-  return PortfolioItem.create({
+  if (data.file_id) {
+    const file = await File.findOne({ _id: data.file_id, owner_id: userId });
+    if (!file) throw new ForbiddenError("Portfolio file must belong to you");
+  }
+
+  const item = await PortfolioItem.create({
     user_id: userId,
     title: data.title,
     description: data.description || "",
@@ -15,6 +21,11 @@ export async function createPortfolioItem(userId, data) {
     tags: data.tags || [],
     is_published: data.is_published !== undefined ? data.is_published : true,
   });
+
+  if (data.file_id) {
+    await File.findByIdAndUpdate(data.file_id, { related_type: "portfolio", related_id: item._id });
+  }
+  return item;
 }
 
 export async function listForUser(userId, { publishedOnly = false } = {}) {
