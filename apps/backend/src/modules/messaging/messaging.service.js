@@ -52,6 +52,13 @@ export async function sendMessage(contractId, senderId, { body, attachments }) {
 
   const created = await Message.create({ contract_id: contractId, sender_id: senderId, body, attachments: attachmentIds });
 
+  if (attachmentIds.length) {
+    await File.updateMany(
+      { _id: { $in: attachmentIds } },
+      { $set: { related_type: "message_attachment", related_id: created._id } }
+    );
+  }
+
   const message = await Message.findById(created._id)
     .populate({ path: "sender_id", select: "name avatarUrl" })
     .populate({ path: "attachments" })
