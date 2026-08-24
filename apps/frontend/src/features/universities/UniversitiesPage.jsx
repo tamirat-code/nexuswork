@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BadgeCheck, GraduationCap, ShieldCheck, XCircle, FileText } from "lucide-react";
 import { getVerifications, getVerificationStats, reviewVerification } from "../../services/api/verifications.api.js";
+import { fetchFileBlob } from "../../services/api/files.api.js";
 import { listUniversities, getMyUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
@@ -22,6 +23,17 @@ import {
   DialogFooter,
 } from "../../components/ui/shadcn/dialog.jsx";
 import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
+
+async function openPrivateFile(file, token) {
+  try {
+    const blob = await fetchFileBlob(file._id, token);
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    toast.error(error.message || "Could not open document");
+  }
+}
 
 function RejectDialog({ open, onOpenChange, onConfirm, loading }) {
   const [reason, setReason] = useState("");
@@ -130,14 +142,13 @@ function VerificationQueue({ token }) {
               <p className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-brass" />
                 {v.document_file_id?.url ? (
-                  <a
-                    href={v.document_file_id.url}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => openPrivateFile(v.document_file_id, token)}
                     className="font-semibold text-brass underline-offset-2 hover:underline"
                   >
                     View uploaded document ({v.document_file_id.original_name || "file"})
-                  </a>
+                  </button>
                 ) : (
                   <span className="font-medium text-brick">No document on file — do not approve without evidence</span>
                 )}
