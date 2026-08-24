@@ -9,10 +9,10 @@ const projectSchema = new mongoose.Schema(
     description: { type: String, required: true },
     required_skills: [{ type: String }],
     category: { type: String },
-    experience_level: { type: String, enum: ["entry", "intermediate", "advanced"] },
+    experience_level: { type: String, enum: ["beginner", "intermediate", "advanced", "expert"] },
     budget: { type: Number, required: true },
     deadline: { type: Date, required: true },
-    attachments: [{ url: String, filename: String }],
+    attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
     status: {
       type: String,
       enum: ["open", "in_progress", "completed", "cancelled"],

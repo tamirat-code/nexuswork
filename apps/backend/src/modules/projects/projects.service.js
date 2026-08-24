@@ -2,6 +2,7 @@ import Project from "./projects.model.js";
 import ClientProfile from "../clients/clients.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { ForbiddenError } from "../../shared/exceptions/AppError.js";
+import File from "../files/files.model.js";
 
 export async function createProject(actingUserId, data) {
   const { on_behalf_of_client_id, ...projectData } = data;
@@ -15,7 +16,25 @@ export async function createProject(actingUserId, data) {
     ownerId = on_behalf_of_client_id;
   }
 
-  return Project.create({ client_id: ownerId, created_by: actingUserId, ...projectData });
+  const attachmentIds = [...new Set((projectData.attachments || []).map(String))];
+  if (attachmentIds.length) {
+    const files = await File.find({ _id: { $in: attachmentIds }, owner_id: actingUserId });
+    if (files.length !== attachmentIds.length) {
+      throw new ForbiddenError("One or more project attachments do not belong to you");
+    }
+    projectData.attachments = attachmentIds;
+  } else {
+    delete projectData.attachments;
+  }
+
+  const project = await Project.create({ client_id: ownerId, created_by: actingUserId, ...projectData });
+  if (attachmentIds.length) {
+    await File.updateMany(
+      { _id: { $in: attachmentIds } },
+      { $set: { related_type: "project_attachment", related_id: project._id } }
+    );
+  }
+  return project;
 }
 
 const SORT_STAGES = {
