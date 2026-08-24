@@ -1,21 +1,43 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import File from "./files.model.js";
 import Contract from "../contracts/contracts.model.js";
+import Project from "../projects/projects.model.js";
+import PortfolioItem from "../portfolios/portfolios.model.js";
+import Message from "../messaging/messaging.model.js";
 import { storageConfig } from "../../config/storage.config.js";
+import { putPrivateObject, getPrivateObject, deletePrivateObject } from "../../shared/utils/private-storage.client.js";
 import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 
-export async function createFileRecord({ ownerId, multerFile, baseUrl, related_type, related_id }) {
-  return File.create({
+export async function createFileRecord({ ownerId, multerFile, related_type, related_id }) {
+  const filename = storageConfig.driver === "s3"
+    ? `${crypto.randomUUID()}${path.extname(multerFile.originalname)}`
+    : multerFile.filename;
+
+  if (storageConfig.driver === "s3") {
+    await putPrivateObject({
+      key: filename,
+      body: multerFile.buffer,
+      contentType: multerFile.mimetype,
+    });
+  }
+
+  const file = new File({
     owner_id: ownerId,
-    filename: multerFile.filename,
+    filename,
     original_name: multerFile.originalname,
     mimetype: multerFile.mimetype,
     size: multerFile.size,
-    url: `${baseUrl}/uploads/${multerFile.filename}`,
+    // Private content is served only through the authenticated file endpoint.
+    url: "",
     related_type: related_type || "other",
     related_id: related_id || undefined,
   });
+
+  file.url = `/v1/files/content/${file._id}`;
+  await file.save();
+  return file;
 }
 
 async function assertContractParty(contractId, userId) {
@@ -54,6 +76,34 @@ export async function assertSubmissionParty(submissionId, requestingUserId) {
   return submission;
 }
 
+
+async function assertProjectAttachmentAccess(file, requestingUser) {
+  if (!requestingUser) throw new ForbiddenError("You don't have access to this file");
+  if (String(file.owner_id) === String(requestingUser._id) || requestingUser.role === "admin") return;
+  const project = await Project.findById(file.related_id).select("client_id status");
+  if (!project) throw new NotFoundError("Project not found");
+  if (String(project.client_id) === String(requestingUser._id)) return;
+  if (project.status === "open") return;
+  throw new ForbiddenError("You don't have access to this file");
+}
+
+async function assertPortfolioFileAccess(file, requestingUser) {
+  if (!requestingUser) throw new ForbiddenError("You don't have access to this file");
+  if (String(file.owner_id) === String(requestingUser._id) || requestingUser.role === "admin") return;
+  const portfolio = await PortfolioItem.findById(file.related_id).select("user_id is_published consent_status");
+  if (!portfolio) throw new NotFoundError("Portfolio item not found");
+  if (portfolio.is_published && portfolio.consent_status !== "denied") return;
+  throw new ForbiddenError("You don't have access to this file");
+}
+
+async function assertMessageAttachmentAccess(file, requestingUser) {
+  if (!requestingUser) throw new ForbiddenError("You don't have access to this file");
+  if (String(file.owner_id) === String(requestingUser._id) || requestingUser.role === "admin") return;
+  const message = await Message.findById(file.related_id).select("contract_id");
+  if (!message) throw new NotFoundError("Message not found");
+  await assertContractParty(message.contract_id, requestingUser._id);
+}
+
 export async function getById(id, requestingUser) {
   const file = await File.findById(id);
   if (!file) throw new NotFoundError("File not found");
@@ -72,6 +122,24 @@ export async function getById(id, requestingUser) {
 
   if (file.related_type === "submission") {
     await assertSubmissionParty(file.related_id, requestingUser?._id);
+  }
+
+  if (file.related_type === "project_attachment") {
+    await assertProjectAttachmentAccess(file, requestingUser);
+  }
+
+  if (file.related_type === "portfolio") {
+    await assertPortfolioFileAccess(file, requestingUser);
+  }
+
+  if (file.related_type === "message_attachment") {
+    await assertMessageAttachmentAccess(file, requestingUser);
+  }
+
+  if (file.related_type === "other") {
+    if (!requestingUser || (String(file.owner_id) !== String(requestingUser._id) && requestingUser.role !== "admin")) {
+      throw new ForbiddenError("You don't have access to this file");
+    }
   }
 
   return file;
@@ -100,16 +168,21 @@ async function assertCanViewVerificationDocument(file, requestingUser) {
   throw new ForbiddenError("You don't have access to this document");
 }
 
-// Staff verification requests (proof that a university_staff registrant really
-// works at the university) are only ever reviewed by a platform admin, never
-// by other university_staff — so there is deliberately no contact_staff
-// carve-out here.
 async function assertCanViewStaffVerificationDocument(file, requestingUser) {
   if (!requestingUser) throw new ForbiddenError("You don't have access to this document");
   if (String(file.owner_id) === String(requestingUser._id)) return;
   if (requestingUser.role === "admin") return;
 
   throw new ForbiddenError("You don't have access to this document");
+}
+
+export async function getPrivateContent(file) {
+  if (storageConfig.driver === "s3") {
+    return getPrivateObject(file.filename);
+  }
+  const diskPath = path.join(storageConfig.absoluteUploadDir, file.filename);
+  if (!fs.existsSync(diskPath)) throw new NotFoundError("File content not found");
+  return { Body: fs.createReadStream(diskPath) };
 }
 
 export async function deleteFile(id, requestingUserId) {
@@ -128,8 +201,12 @@ export async function deleteFile(id, requestingUserId) {
     throw new ForbiddenError("Only the uploader can delete this file");
   }
 
-  const diskPath = path.join(storageConfig.absoluteUploadDir, file.filename);
-  fs.unlink(diskPath, () => {});
+  if (storageConfig.driver === "s3") {
+    await deletePrivateObject(file.filename);
+  } else {
+    const diskPath = path.join(storageConfig.absoluteUploadDir, file.filename);
+    fs.unlink(diskPath, () => {});
+  }
 
   await file.deleteOne();
   return { deleted: true };

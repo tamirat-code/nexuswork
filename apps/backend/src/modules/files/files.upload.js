@@ -10,7 +10,7 @@ const BLOCKED_EXTENSIONS = new Set([
   ".exe", ".bat", ".cmd", ".sh", ".ps1", ".msi", ".dll", ".com", ".vbs", ".js", ".jar",
 ]);
 
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
   destination(req, file, cb) {
     fs.mkdirSync(storageConfig.absoluteUploadDir, { recursive: true });
     cb(null, storageConfig.absoluteUploadDir);
@@ -28,6 +28,8 @@ function fileFilter(req, file, cb) {
   }
   cb(null, true);
 }
+
+const storage = storageConfig.driver === "s3" ? multer.memoryStorage() : diskStorage;
 
 export const upload = multer({
   storage,

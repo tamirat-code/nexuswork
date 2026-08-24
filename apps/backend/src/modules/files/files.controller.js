@@ -1,5 +1,5 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
-import { ValidationError } from "../../shared/exceptions/AppError.js";
+import { ValidationError, NotFoundError } from "../../shared/exceptions/AppError.js";
 import * as filesService from "./files.service.js";
 
 const VALID_RELATED_TYPES = new Set([
@@ -36,11 +36,9 @@ export const uploadFile = asyncHandler(async (req, res) => {
     }
   }
 
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
   const file = await filesService.createFileRecord({
     ownerId: req.user._id,
     multerFile: req.file,
-    baseUrl,
     related_type: relatedType,
     related_id: relatedId,
   });
@@ -56,6 +54,17 @@ export const getForContract = asyncHandler(async (req, res) => {
 export const getOne = asyncHandler(async (req, res) => {
   const file = await filesService.getById(req.params.id, req.user);
   res.json({ success: true, data: file });
+});
+
+export const content = asyncHandler(async (req, res) => {
+  const file = await filesService.getById(req.params.id, req.user);
+  const object = await filesService.getPrivateContent(file);
+
+  res.setHeader("Content-Type", file.mimetype);
+  res.setHeader("Content-Length", String(file.size));
+  res.setHeader("Content-Disposition", `inline; filename="${String(file.original_name).replace(/[\"\r\n]/g, "_")}"`);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  object.Body.pipe(res);
 });
 
 export const remove = asyncHandler(async (req, res) => {
