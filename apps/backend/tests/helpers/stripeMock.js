@@ -22,6 +22,10 @@ export function createStripeMock() {
     balance: {
       retrieve: jest.fn(),
     },
+    payouts: {
+      create: jest.fn(),
+      retrieve: jest.fn(),
+    },
     webhooks: {
      
       constructEvent: jest.fn(),

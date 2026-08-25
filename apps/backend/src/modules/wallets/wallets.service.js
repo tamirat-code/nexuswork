@@ -11,14 +11,6 @@ import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 
-async function getPlatformAvailableBalance() {
-  const balance = await stripe.balance.retrieve();
-  const available = balance.available.find(
-    (b) => b.currency === paymentConfig.currency
-  );
-  return Number(available?.amount || 0) / 100;
-}
-
 async function syncStripeAccountStatus(wallet) {
   if (!wallet?.stripe_account_id) {
     return {
@@ -205,8 +197,12 @@ export async function listTransactions(userId, { limit = 50 } = {}) {
     description:
       w.status === "failed"
         ? `Withdrawal failed: ${w.failure_reason || "unknown error"}`
+        : w.status === "pending"
+          ? "Withdrawal pending — processing by Stripe"
         : "Withdrawal to bank account",
     amount: w.amount,
+    status: w.status,
+    stripe_payout_id: w.stripe_payout_id,
     createdAt: w.createdAt,
   }));
 
@@ -383,45 +379,56 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       );
     }
 
-    const platformAvailable = await getPlatformAvailableBalance();
+    // Released milestone funds are already in the student's connected
+    // account. Withdrawals must use that account's balance and payout rail.
+    const connectedBalance = await stripe.balance.retrieve(
+      {},
+      { stripeAccount: currentWallet.stripe_account_id }
+    );
+    const connectedAvailable = Number(
+      connectedBalance.available?.find((b) => b.currency === paymentConfig.currency)?.amount || 0
+    ) / 100;
 
-    if (platformAvailable < amount) {
+    if (connectedAvailable + 1e-9 < amount) {
       throw new Error(
-        "The platform does not have enough available funds to complete this withdrawal"
+        "The connected Stripe account does not have enough available funds to complete this withdrawal"
       );
     }
 
-    const transfer = await stripe.transfers.create(
+    const payout = await stripe.payouts.create(
       {
         amount: Math.round(amount * 100),
         currency: paymentConfig.currency,
-        destination: currentWallet.stripe_account_id,
         metadata: {
           withdrawal_id: String(withdrawal._id),
           user_id: String(userId),
         },
       },
       {
+        stripeAccount: currentWallet.stripe_account_id,
         idempotencyKey: `nexuswork-withdrawal-${withdrawal._id}`,
       }
     );
 
-    withdrawal.status = "paid";
-    withdrawal.stripe_payout_id = transfer.id;
+    withdrawal.status = payout.status === "paid" ? "paid" : payout.status === "failed" ? "failed" : "pending";
+    withdrawal.stripe_payout_id = payout.id;
     withdrawal.failure_reason = undefined;
     withdrawal.processing_at = undefined;
+    if (withdrawal.status === "failed") {
+      withdrawal.failure_reason = payout.failure_message || payout.failure_code || "Stripe payout failed";
+    }
 
     await withdrawal.save();
 
     await logAction({
       actor_id: actor?.id || actor?._id,
       actor_role: actor?.role || "system",
-      action_type: "WITHDRAWAL_SUCCEEDED",
-      eventType: "WITHDRAWAL_SUCCEEDED",
-      action: "withdrawal.succeeded",
+      action_type: withdrawal.status === "paid" ? "WITHDRAWAL_SUCCEEDED" : withdrawal.status === "failed" ? "WITHDRAWAL_FAILED" : "WITHDRAWAL_REQUESTED",
+      eventType: withdrawal.status === "paid" ? "WITHDRAWAL_SUCCEEDED" : withdrawal.status === "failed" ? "WITHDRAWAL_FAILED" : "WITHDRAWAL_REQUESTED",
+      action: withdrawal.status === "paid" ? "withdrawal.succeeded" : withdrawal.status === "failed" ? "withdrawal.failed" : "withdrawal.pending",
       entity_type: "payment",
       entity_id: withdrawal._id,
-      metadata: { amount, currency: paymentConfig.currency, transferId: transfer.id },
+      metadata: { amount, currency: paymentConfig.currency, payoutId: payout.id, payoutStatus: withdrawal.status },
       correlationId: correlationId || crypto.randomUUID(),
     });
   } catch (err) {
@@ -457,5 +464,57 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
     throw new ValidationError(`Withdrawal failed: ${reason}`);
   }
 
+  return withdrawal;
+}
+
+const PAYOUT_STATUS_MAP = {
+  "payout.created": "pending",
+  "payout.updated": null,
+  "payout.paid": "paid",
+  "payout.failed": "failed",
+  "payout.canceled": "failed",
+};
+
+export async function updateWithdrawalFromPayoutEvent(eventType, payout, { connectedAccountId, correlationId } = {}) {
+  const withdrawalId = payout?.metadata?.withdrawal_id;
+  let withdrawal = withdrawalId
+    ? await Withdrawal.findById(withdrawalId)
+    : await Withdrawal.findOne({ stripe_payout_id: payout?.id });
+  if (!withdrawal) return null;
+
+  if (connectedAccountId) {
+    const wallet = await Wallet.findOne({ user_id: withdrawal.user_id, stripe_account_id: connectedAccountId });
+    if (!wallet) throw new ValidationError("Stripe payout account does not match the withdrawal owner");
+  }
+
+  const nextStatus = PAYOUT_STATUS_MAP[eventType];
+  if (!nextStatus) return withdrawal;
+  if (withdrawal.status === "paid" && nextStatus !== "paid") return withdrawal;
+  if (withdrawal.status === "failed" && nextStatus === "pending") return withdrawal;
+
+  const previousStatus = withdrawal.status;
+  withdrawal.status = nextStatus;
+  withdrawal.stripe_payout_id = payout.id || withdrawal.stripe_payout_id;
+  withdrawal.processing_at = undefined;
+  if (nextStatus === "failed") {
+    withdrawal.failure_reason = payout.failure_message || payout.failure_code || "Stripe payout failed";
+  } else {
+    withdrawal.failure_reason = undefined;
+  }
+  await withdrawal.save();
+
+  if (previousStatus !== nextStatus) {
+    const action = nextStatus === "paid" ? "succeeded" : nextStatus === "failed" ? "failed" : "pending";
+    await logAction({
+      actor_role: "system",
+      action_type: nextStatus === "paid" ? "WITHDRAWAL_SUCCEEDED" : nextStatus === "failed" ? "WITHDRAWAL_FAILED" : "WITHDRAWAL_REQUESTED",
+      eventType: nextStatus === "paid" ? "WITHDRAWAL_SUCCEEDED" : nextStatus === "failed" ? "WITHDRAWAL_FAILED" : "WITHDRAWAL_REQUESTED",
+      action: `withdrawal.${action}`,
+      entity_type: "payment",
+      entity_id: withdrawal._id,
+      metadata: { payoutId: withdrawal.stripe_payout_id, previousStatus, status: nextStatus },
+      correlationId: correlationId || crypto.randomUUID(),
+    });
+  }
   return withdrawal;
 }

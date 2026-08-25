@@ -2,7 +2,7 @@ import { stripe } from "../payments/stripe.client.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { confirmFunding } from "../milestones/milestones.service.js";
 import { markDepositFailed } from "../payments/payments.service.js";
-import { markOnboardingStatus } from "../wallets/wallets.service.js";
+import { markOnboardingStatus, updateWithdrawalFromPayoutEvent } from "../wallets/wallets.service.js";
 import { logger } from "../../shared/logger/logger.js";
 import WebhookEvent from "./webhookEvent.model.js";
 
@@ -79,6 +79,17 @@ export async function handleStripeWebhook(req, res) {
         await markOnboardingStatus(account.id, isComplete);
         break;
       }
+
+      case "payout.created":
+      case "payout.updated":
+      case "payout.paid":
+      case "payout.failed":
+      case "payout.canceled":
+        await updateWithdrawalFromPayoutEvent(event.type, event.data.object, {
+          connectedAccountId: event.account,
+          correlationId: req.correlationId,
+        });
+        break;
 
       default:
         break;

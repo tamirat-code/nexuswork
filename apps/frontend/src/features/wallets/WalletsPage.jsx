@@ -17,11 +17,18 @@ import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
+import { Badge } from "../../components/ui/shadcn/badge.jsx";
 
 const TONE = {
   deposit: "text-escrow",
   withdrawal: "text-brick",
   payout: "text-brass",
+};
+
+const WITHDRAWAL_STATUS = {
+  pending: { label: "Pending", variant: "warning" },
+  paid: { label: "Paid", variant: "success" },
+  failed: { label: "Failed", variant: "danger" },
 };
 
 export default function WalletsPage() {
@@ -211,6 +218,7 @@ export default function WalletsPage() {
                     <TableRow>
                       <TableHead>Type</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead className="text-right">Date</TableHead>
                     </TableRow>
@@ -219,7 +227,7 @@ export default function WalletsPage() {
                     {tLoading &&
                       [...Array(3)].map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={4}>
+                          <TableCell colSpan={5}>
                             <Skeleton className="h-8 w-full" />
                           </TableCell>
                         </TableRow>
@@ -227,7 +235,7 @@ export default function WalletsPage() {
 
                     {!tLoading && txs.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-10 text-center text-slate-300">
+                        <TableCell colSpan={5} className="py-10 text-center text-slate-300">
                           No transactions yet.
                         </TableCell>
                       </TableRow>
@@ -237,6 +245,15 @@ export default function WalletsPage() {
                       <TableRow key={tx._id}>
                         <TableCell className="text-sm capitalize text-slate-300">{tx.type}</TableCell>
                         <TableCell className="text-sm text-slate-300">{tx.description || "—"}</TableCell>
+                        <TableCell>
+                          {tx.type === "withdrawal" && tx.status ? (
+                            <Badge variant={WITHDRAWAL_STATUS[tx.status]?.variant || "neutral"}>
+                              {WITHDRAWAL_STATUS[tx.status]?.label || tx.status}
+                            </Badge>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className={`text-right font-mono ${TONE[tx.type] || "text-slate-300"}`}>
                           {tx.type === "deposit" ? "+" : tx.type === "withdrawal" ? "−" : ""}
                           {formatCurrency(Math.abs(tx.amount ?? 0))}
