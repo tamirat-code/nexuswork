@@ -670,7 +670,7 @@ export default function ProposalsPage() {
 
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-up">
+    <div className="w-full animate-fade-up">
 
       {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-300 pb-5">

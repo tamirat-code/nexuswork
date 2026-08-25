@@ -90,26 +90,31 @@ export default function ProjectListPage() {
   const projects = data?.data ?? [];
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <header className="flex flex-col items-start justify-between gap-4 border-b border-ink-300 pb-6 sm:flex-row sm:items-end">
+    <div className="w-full">
+      <header className="lm-dashboard-header flex flex-col items-start justify-between gap-4 rounded-2xl border border-ink-300 bg-ink-50 px-7 py-7 shadow-card sm:flex-row sm:items-center">
         <div>
-          <h1 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">
-            Open projects
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">
+            Marketplace Briefs
+          </p>
+          <h1 className="mt-1 font-display font-extrabold text-2xl leading-tight tracking-tight text-slate sm:text-3xl">
+            Explore Open Projects
           </h1>
-          <p className="mt-1.5 text-sm text-slate-300">
+          <p className="mt-2 text-sm leading-relaxed text-slate-300">
             {isLoading
               ? "Loading briefs…"
-              : `${projects.length} brief${projects.length === 1 ? "" : "s"} matching your filters`}
+              : `Showing ${projects.length} brief${projects.length === 1 ? "" : "s"} matching your criteria`}
           </p>
         </div>
         {user?.role === "client" && (
           <Link to="/projects/new">
-            <Button>Post a project</Button>
+            <Button size="md" className="shadow-elevated">
+              Post a project
+            </Button>
           </Link>
         )}
       </header>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 border-b border-ink-300 pb-6">
+      <div className="mt-7 flex flex-wrap items-center gap-3 rounded-card border border-ink-300 bg-ink-50 p-4 shadow-card">
         <label htmlFor="project-search" className="sr-only">
           Search projects
         </label>
@@ -118,8 +123,8 @@ export default function ProjectListPage() {
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search by title, skill or keyword"
-          className="h-10 min-w-[220px] flex-1 rounded-control border border-ink-300 bg-ink-50 px-4 text-sm text-slate transition-colors placeholder:text-slate-300 focus:border-brass/50 focus:outline-none"
+          placeholder="Search by title, skill or keyword..."
+          className="h-10 min-w-[240px] flex-1 rounded-control border border-ink-300 bg-ink-100 px-4 text-sm text-slate transition-colors placeholder:text-slate-400 focus:border-brass/60 focus:bg-ink-50 focus:outline-none"
         />
 
         <label htmlFor="project-category" className="sr-only">
@@ -175,14 +180,14 @@ export default function ProjectListPage() {
           <button
             type="button"
             onClick={clearFilters}
-            className="shrink-0 text-sm font-semibold text-brass transition-colors hover:text-brass-300"
+            className="shrink-0 text-sm font-bold text-brass transition-colors hover:text-brass-300"
           >
             Clear filters
           </button>
         )}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-8">
         {isLoading && (
           <div className="space-y-4">
             <CardSkeleton />
@@ -198,8 +203,8 @@ export default function ProjectListPage() {
         )}
 
         {!isLoading && !error && projects.length === 0 && (
-          <div className="rounded-card border border-ink-300 bg-ink-50 px-6 py-14 text-center">
-            <p className="font-display text-base tracking-tight text-slate">No projects match your filters</p>
+          <div className="rounded-card border border-ink-300 bg-ink-50 px-6 py-16 text-center shadow-card">
+            <p className="font-display text-lg font-bold tracking-tight text-slate">No projects match your filters</p>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-300">
               Try a broader category or clear the filters to see every open brief.
             </p>
@@ -219,6 +224,28 @@ export default function ProjectListPage() {
           </div>
         )}
       </div>
+
+      {/* ── Mid-page CTA Banner ── */}
+      <section className="mt-14 rounded-3xl border border-ink-300 bg-ink-50 p-8 shadow-elevated sm:p-10">
+        <div className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
+          <div className="max-w-xl">
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">
+              Hiring for a project?
+            </span>
+            <h2 className="mt-1.5 font-display text-2xl font-extrabold text-slate sm:text-3xl">
+              Post a brief & connect with verified student talent
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+              Posting is free. Escrow keeps your funds safe until deliverables are approved.
+            </p>
+          </div>
+          <Link to="/projects/new" className="shrink-0">
+            <Button size="lg" className="shadow-elevated">
+              Post a brief now
+            </Button>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Sidebar from "../common/Sidebar.jsx";
 import NotificationBell from "../common/NotificationBell.jsx";
+import ThemeToggle from "../common/ThemeToggle.jsx";
 import UserMenu from "../common/UserMenu.jsx";
 import NavIcon from "../common/NavIcon.jsx";
 import Button from "../ui/Button.jsx";
 import Drawer from "../ui/Drawer.jsx";
 import CommandPalette from "../common/CommandPalette.jsx";
+import WorkspaceFooter from "../common/WorkspaceFooter.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getWorkspacePageMeta } from "../../config/navigation.js";
 
@@ -21,16 +23,16 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-ink">
-      <div className="mx-auto flex w-full max-w-[100rem]">
+      <div className="flex w-full">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-ink-300 bg-ink-900/40 lg:block">
           <Sidebar role={user?.role} showBrand />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-ink-300 bg-ink/90 px-4 backdrop-blur sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-ink-300 bg-ink/95 px-4 backdrop-blur-md sm:px-5 lg:px-6">
             <Button
               variant="ghost"
-              size="sm"
+              size="md"
               iconOnly
               className="lg:hidden"
               aria-label="Open navigation"
@@ -42,29 +44,32 @@ export default function AppLayout({ children }) {
 
             {pageMeta ? (
               <div className="min-w-0 lg:hidden">
-                <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-slate-300/70">{pageMeta.section}</p>
-                <h1 className="truncate font-display text-sm leading-tight text-slate">{pageMeta.label}</h1>
+                <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-slate-300">{pageMeta.section}</p>
+                <h1 className="truncate font-display text-sm font-semibold leading-tight text-slate">{pageMeta.label}</h1>
               </div>
             ) : (
-              <span className="font-display text-base text-slate lg:hidden">NexusWork</span>
+              <span className="font-display text-sm font-bold text-slate lg:hidden">NexusWork</span>
             )}
 
             {pageMeta && (
               <div className="hidden min-w-0 lg:block">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-300/70">{pageMeta.section}</p>
-                <h1 className="truncate font-display text-base leading-tight text-slate">{pageMeta.label}</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-300">{pageMeta.section}</p>
+                <h1 className="truncate font-display text-sm font-semibold leading-tight text-slate">{pageMeta.label}</h1>
               </div>
             )}
 
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex items-center gap-2">
+              <ThemeToggle />
               <NotificationBell />
               <UserMenu />
             </div>
           </header>
 
           <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+            {children}
           </main>
+
+          <WorkspaceFooter />
         </div>
       </div>
 

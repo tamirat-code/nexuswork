@@ -106,7 +106,7 @@ export default function SearchPage() {
   const total = data?.data?.total ?? results.length;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
+    <div className="w-full">
       <header className="border-b border-ink-300 pb-6">
         <h1 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">Search</h1>
         <p className="mt-1.5 text-sm text-slate-300">

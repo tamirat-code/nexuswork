@@ -16,7 +16,7 @@ export default function SkillsPage() {
   }, {});
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-up">
+    <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Grow</p>
         <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Skill taxonomy</h1>

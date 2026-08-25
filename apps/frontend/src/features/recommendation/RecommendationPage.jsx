@@ -55,7 +55,7 @@ export default function RecommendationPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-up">
+    <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brass"><Sparkles className="h-3.5 w-3.5" /> AI matching</p>
         <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Recommended for you</h1>

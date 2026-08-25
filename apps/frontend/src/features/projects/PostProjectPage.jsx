@@ -127,7 +127,7 @@ export default function PostProjectPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl animate-fade-up">
+    <div className="w-full animate-fade-up">
       <header className="flex items-center gap-3">
         <Sparkles className="h-5 w-5 text-brass" />
         <div>

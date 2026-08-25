@@ -272,7 +272,7 @@ export default function ProjectDetailPage() {
   const clientName = project.client_id?.client_profile?.organization_name || project.client_id?.name || "Client";
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-up">
+    <div className="w-full animate-fade-up">
       <Link to="/projects" className="inline-flex items-center gap-1.5 text-sm text-slate-300 transition-colors hover:text-brass">
         <ArrowLeft className="h-4 w-4" /> All projects
       </Link>

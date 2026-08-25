@@ -255,9 +255,9 @@ export default function RegisterPage() {
           ))}
         </div>
         <div className="flex items-center justify-between text-xs text-slate-300">
-          <span className={step === 1 ? "font-semibold text-white" : ""}>1. Primary</span>
-          <span className={step === 2 ? "font-semibold text-white" : ""}>2. Profile</span>
-          <span className={step === 3 ? "font-semibold text-white" : ""}>3. Finish</span>
+          <span className={step === 1 ? "font-semibold text-brass" : ""}>1. Primary</span>
+          <span className={step === 2 ? "font-semibold text-brass" : ""}>2. Profile</span>
+          <span className={step === 3 ? "font-semibold text-brass" : ""}>3. Finish</span>
         </div>
 
         <RolePicker value={role} onChange={handleRoleChange} />
@@ -323,7 +323,7 @@ export default function RegisterPage() {
               {role === "student" && (
                 <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-white">Student information</p>
+                    <p className="text-sm font-semibold text-slate">Student information</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-300">
                       These details create your student profile and are used later for university verification.
                     </p>
@@ -384,7 +384,7 @@ export default function RegisterPage() {
               {role === "client" && (
                 <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-white">Client information</p>
+                    <p className="text-sm font-semibold text-slate">Client information</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-300">
                       Tell students whether you are hiring personally or on behalf of an organization.
                     </p>

@@ -1,80 +1,761 @@
-/* CollabFlow design tokens — dark teal theme */
-:root {
-  /* Surfaces */
-  --bg: #020f18;
-  --bg-alt: #071520;
-  --bg-nested: #0a1e2e;
-  --card: #051e2e;
-  --border: #0e3347;
-  --border-alt: #0a3347;
 
-  /* Teal accent */
-  --accent: #00c8b4;
-  --accent-hover: #00e5d1;
+html {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { transition: none !important; }
+}
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg:          #020f18;
+  --bg-alt:      #071520;
+  --bg-nested:   #0a1e2e;
+  --card:        #051e2e;
+  --border:      #0e3347;
+  --border-alt:  #0a3347;
+
+  /* Brand teal */
+  --accent:        #00c8b4;
+  --accent-hover:  #00e5d1;
   --accent-active: #009e8e;
-  --accent-dark: #006e62;
+  --accent-dark:   #006e62;
 
   /* Text */
-  --text-heading: #e0f5f2;
-  --text-body: #c0e8e4;
-  --text-bright: #f0fbfa;
-  --text-muted: #a0cdd8;
-  --text-faint: #3a7080;
+  --text-heading:   #e0f5f2;
+  --text-body:      #c0e8e4;
+  --text-bright:    #f0fbfa;
+  --text-muted:     #a0cdd8;
+  --text-faint:     #3a7080;
   --text-faint-alt: #2a6070;
 
   /* Status */
-  --danger: #f87171;
-  --danger-alt: #ff6b6b;
-  --danger-bg: #2d0a0a;
-  --warning: #f59e0b;
-  --warning-bg: #2d1f05;
-  --success: #22c55e;
+  --danger:      #f87171;
+  --danger-alt:  #ff6b6b;
+  --danger-bg:   #2d0a0a;
+  --warning:     #f59e0b;
+  --warning-bg:  #2d1f05;
+  --success:     #22c55e;
   --success-alt: #34d399;
-  --success-bg: #052e1a;
-  --info: #60a5fa;
-  --purple: #7C3AED;
+  --success-bg:  #052e1a;
+  --info:        #60a5fa;
+  --purple:      #7C3AED;
 
-  /* ---- shadcn/ui tokens mapped to the NexusWork brand ---- */
-  --background: 192 100% 5%;
-  --foreground: 180 40% 88%;
-  --card: 198 100% 8%;
-  --card-foreground: 180 40% 88%;
-  --popover: 198 100% 6%;
-  --popover-foreground: 180 40% 88%;
-  --primary: 174 100% 39%;
-  --primary-foreground: 192 100% 5%;
-  --secondary: 198 100% 10%;
-  --secondary-foreground: 180 40% 85%;
-  --muted: 198 100% 10%;
-  --muted-foreground: 180 30% 55%;
-  --accent: 174 100% 39%;
-  --accent-foreground: 192 100% 5%;
-  --destructive: 0 90% 71%;
+  /* shadcn/ui HSL tokens */
+  --background:             192 100% 5%;
+  --foreground:             180 40% 88%;
+  --card:                   198 100% 8%;
+  --card-foreground:        180 40% 88%;
+  --popover:                198 100% 6%;
+  --popover-foreground:     180 40% 88%;
+  --primary:                174 100% 39%;
+  --primary-foreground:     192 100% 5%;
+  --secondary:              198 100% 10%;
+  --secondary-foreground:   180 40% 85%;
+  --muted:                  198 100% 10%;
+  --muted-foreground:       180 30% 55%;
+  --accent:                 174 100% 39%;
+  --accent-foreground:      192 100% 5%;
+  --destructive:            0 90% 71%;
   --destructive-foreground: 0 90% 10%;
-  --border: 198 67% 17%;
-  --input: 198 67% 17%;
-  --ring: 174 100% 45%;
-  --radius: 0.625rem;
+  --border:                 198 67% 17%;
+  --input:                  198 67% 17%;
+  --ring:                   174 100% 45%;
+  --radius:                 0.625rem;
 }
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces — real hierarchy */
+  --bg:          #e2e8f1;
+  --bg-alt:      #ffffff;
+  --bg-nested:   #edf2f9;
+  --card:        #ffffff;
+  --border:      #c7d1de;
+  --border-alt:  #b3c0d1;
+
+  /* Brand teal — rich, saturated */
+  --accent:        #00897b;
+  --accent-hover:  #00796b;
+  --accent-active: #004d40;
+  --accent-dark:   #00363a;
+
+  /* Typography — high-contrast hierarchy */
+  --text-heading:   #0d1b2a;
+  --text-body:      #2d3f54;
+  --text-bright:    #0d1b2a;
+  --text-muted:     #5a6e84;
+  --text-faint:     #8a9db4;
+  --text-faint-alt: #c4d0de;
+
+  /* Status */
+  --danger:      #c81c1c;
+  --danger-alt:  #ef4444;
+  --danger-bg:   #fef2f2;
+  --warning:     #c97a00;
+  --warning-bg:  #fefce8;
+  --success:     #14803c;
+  --success-alt: #22c55e;
+  --success-bg:  #f0fdf4;
+  --info:        #1d54bd;
+  --purple:      #6d28d9;
+
+  /* shadcn/ui HSL tokens */
+  --background:             216 28% 91%;
+  --foreground:             215 40% 11%;
+  --card:                   0 0% 100%;
+  --card-foreground:        215 40% 11%;
+  --popover:                0 0% 100%;
+  --popover-foreground:     215 40% 11%;
+  --primary:                174 100% 27%;
+  --primary-foreground:     0 0% 100%;
+  --secondary:              215 28% 94%;
+  --secondary-foreground:   215 40% 11%;
+  --muted:                  215 28% 94%;
+  --muted-foreground:       213 18% 47%;
+  --accent:                 174 100% 27%;
+  --accent-foreground:      0 0% 100%;
+  --destructive:            0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border:                 216 24% 84%;
+  --input:                  0 0% 100%;
+  --ring:                   174 100% 27%;
+  --radius:                 0.625rem;
+}
+
 
 body {
   background: var(--bg);
   color: var(--text-body);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Manrope", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none !important; }
 }
 
-/* Dark scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track  { background: var(--bg); }
+::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-alt); }
+
+[data-theme="light"] ::-webkit-scrollbar-track { background: #dde4ef; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #b8c5d6; }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #8fa2b8; }
+
+
+
+[data-theme="light"] body,
+[data-theme="light"] .bg-ink,
+[data-theme="light"] .min-h-screen.bg-ink {
+  background-color: #e2e8f1;
 }
-::-webkit-scrollbar-track {
-  background: var(--bg);
+
+/* Primary card / nav surface — pure white, elevated against canvas */
+[data-theme="light"] .bg-ink-50 {
+  background-color: #ffffff;
 }
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 5px;
+
+/* Secondary panel / nested section surface */
+[data-theme="light"] .bg-ink-100 {
+  background-color: #f3f6fb;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-alt);
+
+/* Inset / popover surface */
+[data-theme="light"] .bg-ink-700 {
+  background-color: #ffffff;
+}
+
+/* App sidebar — slightly cooler than pure white for distinction */
+[data-theme="light"] .bg-ink-900 {
+  background-color: #f7f9fc;
+}
+
+/* ── 2. BORDERS & DIVIDERS ───────────────────────────────────── */
+[data-theme="light"] .border-ink-300 {
+  border-color: #c7d1de;
+}
+[data-theme="light"] .divide-ink-300 > * + * {
+  border-color: #c7d1de;
+}
+[data-theme="light"] .border-ink-300\/60,
+[data-theme="light"] .border-ink-300\/70,
+[data-theme="light"] .border-ink-300\/80 {
+  border-color: rgba(212, 220, 232, 0.75);
+}
+[data-theme="light"] .bg-ink-300 {
+  background-color: #c7d1de;
+}
+
+/* ── 3. TYPOGRAPHY ──────────────────────────────────────────── */
+
+/* Headings — deep navy, strong hierarchy */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4 {
+  color: #0d1b2a;
+}
+
+/* Headings inside content get a size boost in light mode */
+[data-theme="light"] .font-display.text-2xl { font-size: 1.625rem; }
+[data-theme="light"] .font-display.text-3xl { font-size: 2rem; }
+
+[data-theme="light"] .text-slate {
+  color: #0d1b2a;
+}
+[data-theme="light"] .text-slate-200 {
+  color: #1a2d42;
+}
+[data-theme="light"] .text-slate-300 {
+  color: #2d3f54;
+}
+[data-theme="light"] .text-slate-400 {
+  color: #5a6e84;
+}
+[data-theme="light"] .text-slate-300\/70 {
+  color: #5a6e84;
+}
+
+/* Hardcoded text-white safety override — keep white on colored surfaces only */
+[data-theme="light"] .text-white:not(.bg-brass *):not([class*="bg-brass"] *):not(.bg-escrow *):not(.bg-brick *):not(.surface-featured *):not(.lm-dark *) {
+  color: #0d1b2a;
+}
+
+/* ── 4. BRAND ACCENT (teal/brass) ────────────────────────────── */
+[data-theme="light"] .text-brass {
+  color: #00766e;
+}
+[data-theme="light"] .hover\:text-brass:hover {
+  color: #00524d;
+}
+[data-theme="light"] .hover\:text-brass-300:hover {
+  color: #00524d;
+}
+[data-theme="light"] .text-brass\/30 {
+  color: rgba(0, 118, 110, 0.5);
+}
+
+[data-theme="light"] .bg-brass {
+  background-color: #00897b;
+}
+[data-theme="light"] .hover\:bg-brass-300:hover {
+  background-color: #00766e;
+}
+[data-theme="light"] .active\:bg-brass-700:active {
+  background-color: #004d40;
+}
+
+/* Soft teal tint — active nav, badges, highlighted sections */
+[data-theme="light"] .bg-brass\/10,
+[data-theme="light"] .bg-brass\/12,
+[data-theme="light"] .bg-brass\/15 {
+  background-color: #e0f5f2;
+}
+
+/* Teal borders */
+[data-theme="light"] .border-brass\/20 { border-color: rgba(0, 137, 123, 0.25); }
+[data-theme="light"] .border-brass\/30 { border-color: rgba(0, 137, 123, 0.32); }
+[data-theme="light"] .border-brass\/40 { border-color: rgba(0, 137, 123, 0.40); }
+[data-theme="light"] .border-brass\/50 { border-color: rgba(0, 137, 123, 0.55); }
+[data-theme="light"] .border-brass\/60 { border-color: rgba(0, 137, 123, 0.65); }
+[data-theme="light"] .border-brass      { border-color: #00897b; }
+[data-theme="light"] .ring-brass\/30    { --tw-ring-color: rgba(0, 137, 123, 0.3); }
+
+/* Text on solid teal stays crisp white */
+[data-theme="light"] .bg-brass,
+[data-theme="light"] button.bg-brass,
+[data-theme="light"] a.bg-brass {
+  color: #ffffff !important;
+}
+
+/* ── 5. CARDS & ELEVATION SYSTEM ─────────────────────────────── */
+
+/*
+ * Real shadows make cards feel lifted off the #e8edf4 canvas.
+ * Dark Mode has heavy shadows (rgba black 0.2–0.35) — those stay.
+ * Light Mode needs gentle cool-neutral shadows.
+ */
+[data-theme="light"] .shadow-card {
+  box-shadow:
+    0 1px 3px 0 rgba(15, 30, 55, 0.06),
+    0 4px 12px -2px rgba(15, 30, 55, 0.08);
+  /* Real border stays visible — do not blank it out. Elements without an
+     explicit border-ink-300 class still get a clean hairline here. */
+  border-color: #c7d1de;
+}
+
+[data-theme="light"] .shadow-elevated {
+  box-shadow:
+    0 4px 8px -2px rgba(15, 30, 55, 0.08),
+    0 12px 28px -4px rgba(15, 30, 55, 0.12);
+  border-color: #b3c0d1;
+}
+
+
+[data-theme="light"] .border-ink-300.shadow-card,
+[data-theme="light"] .border-ink-300.shadow-elevated {
+  border-color: #c7d1de;
+}
+
+/* Card hover — lift + teal accent border */
+[data-theme="light"] .hover\:border-brass\/40:hover,
+[data-theme="light"] .hover\:border-brass\/50:hover,
+[data-theme="light"] .hover\:border-brass\/60:hover,
+[data-theme="light"] .hover\:border-brass:hover {
+  border-color: rgba(0, 137, 123, 0.45) !important;
+  box-shadow:
+    0 6px 16px -4px rgba(0, 137, 123, 0.15),
+    0 2px 6px -1px rgba(15, 30, 55, 0.06),
+    0 0 0 1px rgba(0, 137, 123, 0.2) !important;
+}
+
+/* Interactive card hover state */
+[data-theme="light"] .hover\:bg-ink-50:hover {
+  background-color: #f7f9fc;
+}
+[data-theme="light"] .hover\:bg-ink-700:hover {
+  background-color: #edf2f9;
+}
+
+/* ── 6. NAVBAR & HEADER ──────────────────────────────────────── */
+[data-theme="light"] header.sticky,
+[data-theme="light"] header[class*="sticky"] {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  border-bottom-color: #c7d1de !important;
+  box-shadow:
+    0 1px 2px 0 rgba(15, 30, 55, 0.05),
+    0 3px 8px -2px rgba(15, 30, 55, 0.06) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+[data-theme="light"] header nav a {
+  color: #2d3f54;
+  font-weight: 500;
+}
+[data-theme="light"] header nav a:hover {
+  color: #00766e;
+}
+[data-theme="light"] header nav a.font-semibold.text-brass {
+  color: #00897b !important;
+}
+
+/* AppLayout workspace header subtitle */
+[data-theme="light"] header .text-slate-300\/70 {
+  color: #8a9db4;
+}
+
+/* ── 7. SIDEBAR NAVIGATION ───────────────────────────────────── */
+
+/* Sidebar container — distinct from canvas, slightly lighter */
+[data-theme="light"] aside {
+  background-color: #f7f9fc !important;
+  border-right-color: #c7d1de !important;
+  box-shadow: 2px 0 8px -2px rgba(15, 30, 55, 0.06) !important;
+}
+
+/* Sidebar nav item — inactive */
+[data-theme="light"] aside nav a,
+[data-theme="light"] aside nav [role="link"] {
+  color: #2d3f54;
+}
+
+/* Sidebar section labels */
+[data-theme="light"] aside nav p[class*="tracking-widest"] {
+  color: #8a9db4 !important;
+  font-weight: 700;
+}
+
+/* Sidebar hover */
+[data-theme="light"] aside nav a:hover {
+  background-color: #edf2f9 !important;
+  color: #0d1b2a !important;
+}
+
+/* Active sidebar item — clear brand teal treatment */
+[data-theme="light"] aside nav a.border-brass,
+[data-theme="light"] aside nav a[class*="bg-brass/12"],
+[data-theme="light"] aside nav a[class*="border-brass"] {
+  background-color: #e0f5f2 !important;
+  border-left-color: #00897b !important;
+  color: #00766e !important;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(0, 137, 123, 0.12);
+}
+
+/* Sidebar brand name */
+[data-theme="light"] aside .text-slate {
+  color: #0d1b2a;
+}
+
+/* ── 8. BUTTONS ─────────────────────────────────────────────── */
+
+/* Primary — confident teal */
+[data-theme="light"] button.bg-brass,
+[data-theme="light"] a.bg-brass {
+  background-color: #00897b;
+  box-shadow: 0 2px 6px -1px rgba(0, 137, 123, 0.40), 0 1px 3px rgba(0,0,0,0.06);
+}
+[data-theme="light"] button.bg-brass:hover,
+[data-theme="light"] a.bg-brass:hover {
+  background-color: #00766e;
+  box-shadow: 0 4px 12px -2px rgba(0, 137, 123, 0.50);
+}
+
+/* Secondary / ghost — clean on white card */
+[data-theme="light"] button.border-ink-300,
+[data-theme="light"] .bg-ink-50.border-ink-300 {
+  background-color: #ffffff;
+  border-color: #c0ccd8;
+  color: #0d1b2a;
+}
+[data-theme="light"] button.border-ink-300:hover,
+[data-theme="light"] .bg-ink-50.border-ink-300:hover {
+  background-color: #f3f6fb;
+  border-color: #8a9db4;
+}
+
+/* Ghost button */
+[data-theme="light"] .text-slate-300.hover\:bg-ink-50:hover {
+  background-color: #edf2f9;
+  color: #0d1b2a;
+}
+
+/* ── 9. FORM CONTROLS ───────────────────────────────────────── */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background-color: #ffffff;
+  border-color: #c0ccd8;
+  color: #0d1b2a;
+  box-shadow: 0 1px 2px 0 rgba(15, 30, 55, 0.04) inset;
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #8a9db4;
+}
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  border-color: #00897b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 137, 123, 0.18);
+}
+/* hover pre-focus */
+[data-theme="light"] input:not(:focus):hover,
+[data-theme="light"] select:not(:focus):hover,
+[data-theme="light"] textarea:not(:focus):hover {
+  border-color: #8a9db4;
+}
+
+/* Label text */
+[data-theme="light"] label {
+  color: #1a2d42;
+  font-weight: 500;
+}
+
+
+/* ── 10. SECTION-LEVEL LIGHT COLORFUL TINT RHYTHM ───────────── */
+
+/* Hero section */
+[data-theme="light"] section[aria-label="Hero"] {
+  background: linear-gradient(135deg, #052030 0%, #08334a 55%, #0d4a63 100%);
+}
+[data-theme="light"] section[aria-label="Hero"] > .absolute.inset-0 {
+  opacity: 1;
+}
+[data-theme="light"] section[aria-label="Hero"] canvas {
+  mix-blend-mode: screen;
+  filter: saturate(1.15) brightness(1.05);
+}
+[data-theme="light"] section[aria-label="Hero"] .bg-gradient-to-b {
+  background: linear-gradient(to bottom, transparent 0%, #0d4a63 100%);
+}
+[data-theme="light"] section[aria-label="Hero"] .rounded-full.border-brass\/40 {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(94, 234, 212, 0.45);
+  color: #5eead4;
+}
+[data-theme="light"] section[aria-label="Hero"] h1 {
+  color: #f3fbfa;
+}
+[data-theme="light"] section[aria-label="Hero"] h1 em {
+  color: #5eead4;
+}
+[data-theme="light"] section[aria-label="Hero"] p {
+  color: #bcdce2;
+}
+[data-theme="light"] section[aria-label="Hero"] .text-slate-300 {
+  color: #9fc7ce;
+}
+[data-theme="light"] section[aria-label="Hero"] .text-brass {
+  color: #5eead4;
+}
+[data-theme="light"] section[aria-label="Hero"] .border-ink-300\/60 {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+[data-theme="light"] section[aria-label="Hero"] a.border-ink-300 {
+  border-color: rgba(255, 255, 255, 0.35);
+  background-color: rgba(255, 255, 255, 0.07);
+  color: #f3fbfa;
+}
+[data-theme="light"] section[aria-label="Hero"] a.border-ink-300:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(94, 234, 212, 0.55);
+}
+
+[data-theme="light"] section[aria-label="Hero"] .surface-featured {
+  background: linear-gradient(160deg, #ffffff 0%, #f2faf9 100%) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow:
+    0 30px 60px -12px rgba(2, 15, 24, 0.45),
+    0 10px 24px -6px rgba(2, 15, 24, 0.28) !important;
+}
+[data-theme="light"] section[aria-label="Hero"] .surface-featured p[aria-live="polite"],
+[data-theme="light"] section[aria-label="Hero"] .surface-featured .text-slate {
+  color: #0d1b2a !important;
+}
+[data-theme="light"] section[aria-label="Hero"] .surface-featured .text-slate-300,
+[data-theme="light"] section[aria-label="Hero"] .surface-featured .text-slate-400,
+[data-theme="light"] section[aria-label="Hero"] .surface-featured p {
+  color: #5a6e84 !important;
+}
+[data-theme="light"] section[aria-label="Hero"] .surface-featured .text-brass {
+  color: #00766e !important;
+}
+[data-theme="light"] section[aria-label="Hero"] .surface-featured .border-ink-300\/60 {
+  border-color: #e5ecf3 !important;
+}
+
+/* Trust signals — Upwork/Fiverr signature fresh mint-teal tint panel */
+[data-theme="light"] section[aria-label="Trust signals"] {
+  background-color: #e6f4f1;
+  border-color: #b2dfd7;
+}
+
+/* Open projects — crisp ice-slate tint section */
+[data-theme="light"] section[aria-label="Open projects"] {
+  background-color: #edf3f8;
+}
+
+/* Categories — rich saturated brand teal section fill */
+[data-theme="light"] section[aria-label="Categories"] {
+  background-color: #e0f5f2;
+  border-color: #9ee2d6;
+}
+
+/* How it works — clean teal-slate neutral section */
+[data-theme="light"] section[aria-label="How it works"] {
+  background-color: #f3f7f6;
+}
+
+/* FAQ — warm cream ivory section */
+[data-theme="light"] section[aria-label="Frequently asked questions"] {
+  background-color: #f7f5f0;
+  border-color: #e2d8c6;
+}
+
+/* Call to action section — Upwork/Fiverr style high-impact deep forest navy canvas */
+[data-theme="light"] section[aria-label="Call to action"] {
+  background: linear-gradient(180deg, #f7f5f0 0%, #e6f4f1 100%);
+}
+
+/* FAQ Accordion */
+[data-theme="light"] .border-t.border-ink-300,
+[data-theme="light"] .border-b.border-ink-300 {
+  border-color: #d8e2ee;
+}
+[data-theme="light"] .group-data-\[state\=open\]\:bg-brass\/10[data-state="open"] {
+  background-color: #e0f5f2;
+}
+[data-theme="light"] .group-data-\[state\=open\]\:border-brass[data-state="open"] {
+  border-color: #00897b;
+}
+[data-theme="light"] .group-data-\[state\=open\]\:text-brass[data-state="open"] {
+  color: #00766e;
+}
+
+[data-theme="light"] .lm-dashboard-header {
+  background: linear-gradient(135deg, #e5f5f2 0%, #edf3fb 60%, #f0f5ff 100%) !important;
+  border-color: rgba(0, 137, 123, 0.18) !important;
+  box-shadow:
+    0 2px 8px -2px rgba(0, 137, 123, 0.10),
+    0 1px 3px rgba(15, 30, 55, 0.06),
+    inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+
+/* ── 12. TABLES ──────────────────────────────────────────────── */
+[data-theme="light"] table {
+  background-color: #ffffff;
+}
+[data-theme="light"] thead tr,
+[data-theme="light"] tr.border-b {
+  border-bottom-color: #c7d1de;
+}
+[data-theme="light"] thead th {
+  background-color: #f3f6fb;
+  color: #2d3f54;
+  font-weight: 600;
+  border-bottom-color: #c0ccd8;
+}
+[data-theme="light"] tbody tr {
+  border-bottom-color: #edf2f9;
+}
+[data-theme="light"] tbody tr:hover {
+  background-color: #f7f9fc;
+}
+[data-theme="light"] td {
+  color: #2d3f54;
+}
+
+/* ── 13. BADGES & STATUS PILLS ───────────────────────────────── */
+[data-theme="light"] .rounded-full.border-ink-300,
+[data-theme="light"] .bg-ink.border-ink-300 {
+  background-color: #edf2f9;
+  border-color: #c0ccd8;
+  color: #2d3f54;
+}
+
+/* Semantic badge tones for light mode */
+[data-theme="light"] .border-escrow\/30.bg-escrow-100 {
+  background-color: #ecfdf5;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+[data-theme="light"] .border-brick\/30.bg-brick-100 {
+  background-color: #fef2f2;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Status colors */
+[data-theme="light"] .text-escrow { color: #14803c; }
+[data-theme="light"] .bg-escrow-100 { background-color: #ecfdf5; border-color: #a7f3d0; }
+
+[data-theme="light"] .text-brick { color: #b91c1c; }
+[data-theme="light"] .bg-brick-100 { background-color: #fef2f2; border-color: #fecaca; }
+
+[data-theme="light"] .text-warning { color: #b45309; }
+[data-theme="light"] .bg-warning-bg { background-color: #fefce8; border-color: #fde047; }
+
+[data-theme="light"] .text-info { color: #1d54bd; }
+[data-theme="light"] .bg-info-100 { background-color: #eff6ff; border-color: #bfdbfe; }
+
+/* ── 14. MODALS, DRAWERS & POPOVERS ──────────────────────────── */
+[data-theme="light"] [role="dialog"] {
+  background-color: #ffffff;
+  border-color: #c7d1de;
+  box-shadow:
+    0 20px 40px -8px rgba(15, 30, 55, 0.16),
+    0 8px 16px -4px rgba(15, 30, 55, 0.10),
+    0 0 0 1px rgba(15, 30, 55, 0.05);
+}
+[data-theme="light"] [role="menu"] {
+  background-color: #ffffff;
+  border-color: #c7d1de;
+  box-shadow:
+    0 8px 20px -4px rgba(15, 30, 55, 0.12),
+    0 2px 6px -1px rgba(15, 30, 55, 0.08),
+    0 0 0 1px rgba(15, 30, 55, 0.04);
+}
+
+/* Modal overlay */
+[data-theme="light"] .bg-ink-900\/80 {
+  background-color: rgba(13, 27, 42, 0.55) !important;
+}
+
+/* ── 15. TABS ─────────────────────────────────────────────────── */
+[data-theme="light"] [role="tablist"],
+[data-theme="light"] nav[aria-label$="Sections"] {
+  border-bottom-color: #c7d1de;
+}
+[data-theme="light"] [role="tab"].text-slate-300 {
+  color: #5a6e84;
+}
+[data-theme="light"] [role="tab"].text-slate-300:hover {
+  color: #0d1b2a;
+}
+[data-theme="light"] [role="tab"].text-brass {
+  color: #00766e;
+}
+
+/* ── 16. FOCUS RINGS ─────────────────────────────────────────── */
+[data-theme="light"] [class*="ring-offset-ink"],
+[data-theme="light"] .ring-offset-ink {
+  --tw-ring-offset-color: #e8edf4;
+}
+[data-theme="light"] [class*="ring-offset-ink-50"],
+[data-theme="light"] .ring-offset-ink-50 {
+  --tw-ring-offset-color: #ffffff;
+}
+
+/* ── 17. FOOTER ──────────────────────────────────────────────── */
+[data-theme="light"] footer {
+  background-color: #f7f9fc;
+  border-top-color: #c7d1de;
+}
+[data-theme="light"] footer .border-t {
+  border-top-color: #c7d1de;
+}
+
+/* ── 18. FEATURED / DARK LUXURY CARD ────────────────────────── */
+/*
+ * "surface-featured" and "lm-dark" — the single dark premium card
+ * per page (hero testimonial, featured CTA, etc.)
+ */
+[data-theme="light"] .surface-featured,
+[data-theme="light"] .lm-dark {
+  background: linear-gradient(145deg, #0a2030 0%, #0e2d44 100%) !important;
+  border-color: #1a4060 !important;
+  box-shadow:
+    0 24px 48px -8px rgba(10, 32, 48, 0.40),
+    0 8px 16px -4px rgba(10, 32, 48, 0.22) !important;
+}
+[data-theme="light"] .surface-featured h1,
+[data-theme="light"] .surface-featured h2,
+[data-theme="light"] .surface-featured h3,
+[data-theme="light"] .surface-featured p[aria-live="polite"],
+[data-theme="light"] .surface-featured .text-slate,
+[data-theme="light"] .lm-dark .text-slate {
+  color: #dff0f8 !important;
+}
+[data-theme="light"] .surface-featured .text-slate-300,
+[data-theme="light"] .surface-featured .text-slate-400,
+[data-theme="light"] .surface-featured p,
+[data-theme="light"] .lm-dark p {
+  color: #8ab8cc !important;
+}
+[data-theme="light"] .surface-featured .text-brass,
+[data-theme="light"] .lm-dark .text-brass {
+  color: #5eead4 !important;
+}
+[data-theme="light"] .surface-featured .border-ink-300\/60 {
+  border-color: rgba(26, 64, 96, 0.7) !important;
+}
+
+/* ── 19. BRAND-TINTED SECTION HIGHLIGHT (categories etc.) ────── */
+[data-theme="light"] .section-brand {
+  background-color: #e8f7f4;
+  border-color: #b3e8e1;
+}
+
+/* ── 20. ALERT COMPONENT ─────────────────────────────────────── */
+[data-theme="light"] .border-info\/30.bg-info-100 {
+  background-color: #eff6ff;
+  border-color: rgba(29, 84, 189, 0.25);
+}
+[data-theme="light"] .border-escrow\/30.bg-escrow-100 {
+  background-color: #ecfdf5;
+  border-color: rgba(20, 128, 60, 0.25);
+}
+[data-theme="light"] .border-amber\/30.bg-amber-100 {
+  background-color: #fefce8;
+  border-color: rgba(201, 122, 0, 0.3);
+}
+[data-theme="light"] .border-brick\/30.bg-brick-100 {
+  background-color: #fef2f2;
+  border-color: rgba(185, 28, 28, 0.25);
 }

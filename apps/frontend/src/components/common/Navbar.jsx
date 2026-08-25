@@ -7,14 +7,10 @@ import Button from "../ui/Button.jsx";
 import Drawer from "../ui/Drawer.jsx";
 import NavIcon from "./NavIcon.jsx";
 import NotificationBell from "./NotificationBell.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import UserMenu from "./UserMenu.jsx";
 import { cn } from "../../lib/cn.js";
 
-/**
- * A plain NavLink only compares `pathname`, so "/", "/#how-it-works" and
- * "/#faq" (all pathname "/") would light up together. This checks the hash
- * too, and falls back to prefix-matching for ordinary routes.
- */
 function isNavItemActive(to, pathname, hash) {
   const [toPath, toHash] = to.split("#");
   const path = toPath || "/";
@@ -27,7 +23,7 @@ function isNavItemActive(to, pathname, hash) {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-/** Public site header. Signed-in users get the workspace shell instead. */
+/** Public site header — sleek, professional single-line navigation bar. */
 export default function Navbar() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,25 +33,27 @@ export default function Navbar() {
 
   const linkClass = (active) =>
     cn(
-      "rounded-control px-1 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
-      active ? "font-semibold text-brass" : "text-slate-300 hover:text-brass"
+      "whitespace-nowrap shrink-0 rounded-control px-2.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
+      active ? "font-bold text-brass" : "text-slate-300 hover:text-brass"
     );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/90 backdrop-blur">
-      <div className="flex h-16 w-full items-center justify-between gap-4 px-6 sm:px-8 lg:px-10">
-        <Link to="/" className="flex items-center gap-2">
-          <SealMark className="h-6 w-6 text-brass" />
-          <span className="font-display text-lg text-slate">NexusWork</span>
+    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95 backdrop-blur-md">
+      <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:h-[68px] sm:px-8 lg:px-10">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5">
+          <SealMark className="h-7 w-7 text-brass" />
+          <span className="font-display text-xl font-bold tracking-tight text-slate">
+            NexusWork
+          </span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-6 md:flex">
+        <nav aria-label="Main" className="hidden items-center gap-2.5 lg:gap-5 md:flex">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
             return (
               <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
-                <span className="flex items-center gap-1.5">
-                  <NavIcon name={l.icon} className="h-4 w-4" />
+                <span className="flex items-center gap-1.5 whitespace-nowrap">
+                  <NavIcon name={l.icon} className="h-4 w-4 shrink-0" />
                   {l.label}
                 </span>
               </Link>
@@ -63,7 +61,8 @@ export default function Navbar() {
           })}
         </nav>
 
-                <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          <ThemeToggle />
           {user ? (
             <>
               <NotificationBell />
@@ -72,12 +71,14 @@ export default function Navbar() {
           ) : (
             <>
               <Link to="/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="font-semibold">
                   Log in
                 </Button>
               </Link>
               <Link to="/register">
-                <Button size="sm">Sign up</Button>
+                <Button size="sm" className="font-bold shadow-card">
+                  Sign up
+                </Button>
               </Link>
             </>
           )}
@@ -107,25 +108,25 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-control px-3 py-2.5 text-sm",
-                  active ? "bg-brass/12 font-semibold text-brass" : "text-slate-300 hover:bg-ink-50"
+                  "flex items-center gap-2.5 rounded-control px-3.5 py-2.5 text-sm font-semibold",
+                  active ? "bg-brass/15 font-bold text-brass" : "text-slate-300 hover:bg-ink-50"
                 )}
               >
-                <NavIcon name={l.icon} className="h-4 w-4" />
+                <NavIcon name={l.icon} className="h-4 w-4 shrink-0" />
                 {l.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-6 space-y-2 border-t border-ink-300 pt-6">
+        <div className="mt-6 space-y-2.5 border-t border-ink-300 pt-6">
           {user ? (
             <>
               <Link to="/dashboard" onClick={() => setMenuOpen(false)}>
-                <Button fullWidth>Go to dashboard</Button>
+                <Button fullWidth size="md">Go to dashboard</Button>
               </Link>
               <Link to="/notifications" onClick={() => setMenuOpen(false)}>
-                <Button variant="secondary" fullWidth>
+                <Button variant="secondary" fullWidth size="md">
                   Notifications
                 </Button>
               </Link>
@@ -133,15 +134,19 @@ export default function Navbar() {
           ) : (
             <>
               <Link to="/register" onClick={() => setMenuOpen(false)}>
-                <Button fullWidth>Create an account</Button>
+                <Button fullWidth size="md">Create an account</Button>
               </Link>
               <Link to="/login" onClick={() => setMenuOpen(false)}>
-                <Button variant="secondary" fullWidth>
+                <Button variant="secondary" fullWidth size="md">
                   Log in
                 </Button>
               </Link>
             </>
           )}
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-xs font-semibold text-slate-300">Theme</span>
+            <ThemeToggle />
+          </div>
         </div>
       </Drawer>
     </header>

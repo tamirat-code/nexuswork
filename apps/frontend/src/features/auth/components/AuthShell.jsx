@@ -13,7 +13,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
       <div className="flex flex-col px-6 py-10 sm:px-12 lg:px-20 lg:py-14">
         <Link to="/" className="inline-flex w-fit items-center gap-2.5">
           <SealMark className="h-7 w-7 text-brass" />
-          <span className="font-display text-lg font-medium tracking-tight text-white">NexusWork</span>
+          <span className="font-display text-lg font-medium tracking-tight text-slate">NexusWork</span>
         </Link>
 
         <div className="flex flex-1 items-center py-10">
@@ -26,7 +26,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
             {eyebrow && (
               <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-brass">{eyebrow}</p>
             )}
-            <h1 className="font-display text-[28px] leading-tight tracking-tight text-white sm:text-3xl">{title}</h1>
+            <h1 className="font-display text-[28px] leading-tight tracking-tight text-slate sm:text-3xl">{title}</h1>
             {subtitle && <p className="mt-2.5 text-sm leading-relaxed text-slate-300">{subtitle}</p>}
 
             <div className="mt-7">{children}</div>
@@ -44,14 +44,14 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
         <div
           className="absolute inset-0 opacity-[0.06]"
           style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+            backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
             backgroundSize: "28px 28px",
           }}
         />
         <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brass/10 blur-3xl" />
         <div className="relative w-full px-12 xl:px-16">
           <SealMark className="mb-7 h-12 w-12 text-brass" />
-          <p className="max-w-sm font-display text-[26px] leading-snug tracking-tight text-white">
+          <p className="max-w-sm font-display text-[26px] leading-snug tracking-tight text-slate">
             Verified student talent. Escrow-protected work.
           </p>
           <ul className="mt-8 space-y-3.5">

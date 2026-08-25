@@ -30,7 +30,7 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl animate-fade-up">
+    <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Money</p>
         <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Invoices</h1>

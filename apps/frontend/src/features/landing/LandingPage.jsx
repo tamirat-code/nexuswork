@@ -134,10 +134,10 @@ const TESTIMONIALS = [
 ];
 
 const btnPrimary =
-  "inline-flex items-center justify-center h-11 px-6 rounded-control bg-brass text-ink text-sm font-semibold tracking-tight hover:bg-brass-300 active:scale-[0.99] transition-all w-full sm:w-auto";
+  "inline-flex items-center justify-center h-11 px-6 rounded-control bg-brass text-ink text-[15px] font-bold tracking-tight hover:bg-brass-300 active:scale-[0.99] transition-all w-full sm:w-auto";
 
 const btnSecondary =
-  "inline-flex items-center justify-center h-11 px-6 rounded-control border border-ink-300 text-slate text-sm font-semibold tracking-tight hover:border-brass/40 hover:bg-ink-50 active:scale-[0.99] transition-all w-full sm:w-auto";
+  "inline-flex items-center justify-center h-11 px-6 rounded-control border border-ink-300 text-slate text-[15px] font-bold tracking-tight hover:border-brass/40 hover:bg-ink-50 active:scale-[0.99] transition-all w-full sm:w-auto";
 
 function SectionHeading({ eyebrow, title, subtitle, align = "left" }) {
   return (
@@ -149,10 +149,14 @@ function SectionHeading({ eyebrow, title, subtitle, align = "left" }) {
       className={align === "center" ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}
     >
       {eyebrow && (
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brass">{eyebrow}</p>
+        <p className="mb-2.5 text-xs font-bold uppercase tracking-[0.16em] text-brass">{eyebrow}</p>
       )}
-      <h2 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">{title}</h2>
-      {subtitle && <p className="mt-3 text-sm leading-relaxed text-slate-300">{subtitle}</p>}
+      <h2 className="font-display text-[1.75rem] font-extrabold leading-tight tracking-tight text-slate sm:text-[2.125rem]">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="mt-3.5 font-sans text-base leading-relaxed text-slate-300">{subtitle}</p>
+      )}
     </motion.div>
   );
 }
@@ -171,7 +175,7 @@ function OpenRightNow() {
         <SectionHeading title="Open right now" subtitle="Fresh briefs from clients hiring this week." />
         <Link
           to="/projects"
-          className="text-sm font-semibold text-brass transition-colors hover:text-brass-300"
+          className="text-sm font-bold text-brass transition-colors hover:text-brass-300"
         >
           See all projects →
         </Link>
@@ -184,7 +188,7 @@ function OpenRightNow() {
       )}
 
       {error && (
-        <p className="rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm text-brick">
+        <p className="rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm font-medium text-brick">
           {error.message}
         </p>
       )}
@@ -251,7 +255,7 @@ function HeroTestimonial() {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-md overflow-hidden rounded-card border border-ink-300/60 bg-gradient-to-b from-ink-50/90 to-ink-100/80 p-6 text-left shadow-elevated backdrop-blur-sm sm:p-8"
+      className="surface-featured relative mx-auto w-full max-w-md overflow-hidden rounded-card border p-6 text-left shadow-elevated sm:p-8"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -336,13 +340,6 @@ export default function LandingPage() {
           variants={STAGGER_CONTAINER}
         >
           <div className="text-center lg:max-w-xl lg:flex-shrink-0 lg:text-left">
-            <motion.div variants={FADE_UP} className="flex justify-center lg:justify-start">
-              <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brass">
-                <SealMark className="h-3.5 w-3.5" />
-                University-verified students only
-              </span>
-            </motion.div>
-
             <motion.h1
               variants={FADE_UP}
               className="font-display text-[2.5rem] leading-[1.05] tracking-tight text-slate sm:text-[3.5rem]"
@@ -391,11 +388,11 @@ export default function LandingPage() {
       </section>
 
       <section className="border-y border-ink-300 bg-ink-50" aria-label="Trust signals">
-        <div className="grid w-full grid-cols-1 gap-6 px-6 py-6 text-center sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-ink-300 sm:px-10 lg:px-24">
+        <div className="grid w-full grid-cols-1 gap-6 px-6 py-7 text-center sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-ink-300 sm:px-10 lg:px-24">
           {TRUST_SIGNALS.map(({ title, body }) => (
             <div key={title} className="px-4">
-              <p className="text-sm font-semibold tracking-tight text-slate">{title}</p>
-              <p className="mt-1 text-xs text-slate-300">{body}</p>
+              <p className="font-display text-base font-bold tracking-tight text-slate">{title}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{body}</p>
             </div>
           ))}
         </div>
@@ -423,9 +420,9 @@ export default function LandingPage() {
               <motion.div key={name} variants={FADE_UP}>
                 <Link
                   to={`/projects?category=${encodeURIComponent(name)}`}
-                  className="group block h-full rounded-card border border-ink-300 bg-ink p-5 shadow-card transition-colors hover:border-brass/40"
+                  className="group block h-full rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card transition-all hover:scale-[1.01] hover:border-brass/50"
                 >
-                  <p className="font-display text-base tracking-tight text-slate transition-colors group-hover:text-brass">
+                  <p className="font-display text-lg font-bold tracking-tight text-slate transition-colors group-hover:text-brass">
                     {name}
                   </p>
                   <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{desc}</p>
@@ -444,7 +441,7 @@ export default function LandingPage() {
           subtitle="NexusWork removes the two things that break student freelancing: unverified profiles and unpaid invoices."
         />
 
-        <p className="mb-4 mt-12 text-[11px] font-semibold uppercase tracking-[0.18em] text-brass">
+        <p className="mb-4 mt-12 text-xs font-bold uppercase tracking-[0.16em] text-brass">
           For clients
         </p>
         <motion.div
@@ -458,10 +455,12 @@ export default function LandingPage() {
             <motion.article
               key={step.n}
               variants={FADE_UP}
-              className="rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card"
+              className="rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card transition-all hover:border-brass/40"
             >
-              <p className="font-mono text-xs text-brass">{step.n}</p>
-              <h3 className="mt-2 font-display text-base tracking-tight text-slate">{step.title}</h3>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brass/12 font-mono text-xs font-bold text-brass">
+                {step.n}
+              </span>
+              <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-slate">{step.title}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{step.body}</p>
             </motion.article>
           ))}
@@ -469,13 +468,13 @@ export default function LandingPage() {
 
         <div className="mt-14 grid gap-8 lg:grid-cols-[300px_1fr] lg:items-start">
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brass">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-brass">
               For students
             </p>
-            <h3 className="font-display text-xl leading-snug tracking-tight text-slate sm:text-2xl">
+            <h3 className="font-display text-xl font-extrabold leading-snug tracking-tight text-slate sm:text-2xl">
               Paid, portfolio-grade work that fits around a degree
             </h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-300">
+            <p className="mt-3 text-base leading-relaxed text-slate-300">
               With the payment terms agreed before you write a line of code or open Figma.
             </p>
             <Link to="/register" className={`${btnPrimary} mt-6`}>
@@ -484,16 +483,18 @@ export default function LandingPage() {
           </div>
 
           <motion.div
-            className="grid gap-px overflow-hidden rounded-card border border-ink-300 bg-ink-300 sm:grid-cols-2"
+            className="grid gap-px overflow-hidden rounded-card border border-ink-300 bg-ink-300 shadow-card sm:grid-cols-2"
             initial="hidden"
             whileInView="show"
             viewport={VIEWPORT}
             variants={STAGGER_CONTAINER}
           >
             {STUDENT_STEPS.map((step) => (
-              <motion.article key={step.n} variants={FADE_UP} className="bg-ink p-5">
-                <p className="font-mono text-xs text-brass">{step.n}</p>
-                <h4 className="mt-2 font-display text-base tracking-tight text-slate">{step.title}</h4>
+              <motion.article key={step.n} variants={FADE_UP} className="bg-ink-50 p-5 sm:p-6 transition-colors hover:bg-ink-100/50">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brass/12 font-mono text-xs font-bold text-brass">
+                  {step.n}
+                </span>
+                <h4 className="mt-3 font-display text-base font-bold tracking-tight text-slate">{step.title}</h4>
                 <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{step.body}</p>
               </motion.article>
             ))}
@@ -518,7 +519,7 @@ export default function LandingPage() {
                 <AccordionPrimitive.Item key={q} value={`faq-${i}`} className="group border-b border-ink-300">
                   <AccordionPrimitive.Header>
                     <AccordionPrimitive.Trigger className="flex w-full items-center justify-between gap-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink-50">
-                      <span className="font-display text-base tracking-tight text-slate transition-colors group-hover:text-brass sm:text-lg">
+                      <span className="font-display text-lg font-bold tracking-tight text-slate transition-colors group-hover:text-brass sm:text-xl">
                         {q}
                       </span>
                       <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full border border-ink-300 text-slate transition-colors group-hover:border-brass/40 group-data-[state=open]:border-brass group-data-[state=open]:bg-brass/10 group-data-[state=open]:text-brass">
@@ -528,19 +529,42 @@ export default function LandingPage() {
                     </AccordionPrimitive.Trigger>
                   </AccordionPrimitive.Header>
                   <AccordionPrimitive.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                    <p className="pb-5 pr-14 text-sm leading-relaxed text-slate-300">{a}</p>
+                    <p className="pb-5 pr-14 text-[15px] leading-relaxed text-slate-300">{a}</p>
                   </AccordionPrimitive.Content>
                 </AccordionPrimitive.Item>
               ))}
             </AccordionPrimitive.Root>
           </div>
+        </div>
+      </section>
 
-          <div className="mt-14 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link to="/register" className={btnPrimary}>
-              Post a project
+      {/* ── Full-Width Edge-to-Edge CTA Section ── */}
+      <section className="surface-featured relative w-full overflow-hidden border-t border-b border-ink-300 py-24 sm:py-32 lg:py-40" aria-label="Call to action">
+        {/* Glow ambient background lights */}
+        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brass/20 blur-[100px]" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-brass/25 blur-[100px]" aria-hidden="true" />
+
+        <div className="relative z-10 mx-auto max-w-5xl px-6 text-center sm:px-10 lg:px-16">
+          <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+            Ready to hire top student talent or start earning?
+          </h2>
+
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-300 sm:text-xl">
+            Post your brief in three minutes. Milestones are safely funded in escrow before work starts and released when you approve.
+          </p>
+
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              to="/register"
+              className="inline-flex h-14 w-full items-center justify-center rounded-control bg-brass px-9 text-base font-extrabold tracking-tight text-ink shadow-elevated transition-all hover:bg-brass-300 hover:scale-[1.02] sm:w-auto"
+            >
+              Post a project brief
             </Link>
-            <Link to="/projects" className={btnSecondary}>
-              Browse open projects
+            <Link
+              to="/projects"
+              className="inline-flex h-14 w-full items-center justify-center rounded-control border-2 border-brass/50 bg-brass/10 px-9 text-base font-extrabold tracking-tight text-brass transition-all hover:bg-brass/20 hover:scale-[1.02] sm:w-auto"
+            >
+              Browse open briefs →
             </Link>
           </div>
         </div>

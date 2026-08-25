@@ -13,6 +13,7 @@ import {
   PageHeader,
   ProgressBar,
   Select,
+  Tabs,
   Textarea,
 } from "../../components/ui/index.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -45,6 +46,8 @@ const fromUser = (user) => ({
 export default function ProfilePage() {
   const { user, token, setLocalUser } = useAuth();
   const toast = useToast();
+
+  const [activeTab, setActiveTab] = useState("general");
 
   const initial = useMemo(() => fromUser(user), [user]);
   const [form, setForm] = useState(initial);
@@ -97,8 +100,6 @@ export default function ProfilePage() {
     mutationFn: (dataUrl) => updateMyAvatar(dataUrl, token),
     onMutate: () => setAvatarError(""),
     onSuccess: (res, dataUrl) => {
-      // Fall back to the cropped image so the UI reflects the change even when
-      // the API doesn't echo the stored URL back.
       setLocalUser?.({ ...user, avatarUrl: res?.data?.avatarUrl ?? dataUrl });
       toast.show("Profile photo updated.");
     },
@@ -142,12 +143,21 @@ export default function ProfilePage() {
     setSummary("");
   }
 
+  const tabItems = [
+    { value: "general", label: "General & Identity" },
+    {
+      value: "verification",
+      label: user?.universityVerified || user?.staffVerified ? "Verification ✓" : "Verification Request",
+    },
+    { value: "strength", label: "Strength & Security" },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="w-full">
       <PageHeader
         eyebrow="Account"
-        title="Profile & account"
-        description="Your profile is what clients and university staff see first. Keep it accurate — a complete profile ranks higher in search and recommendations."
+        title="Profile & settings"
+        description="Keep your profile up to date for client proposals and university verification."
         breadcrumbs={[{ label: "Workspace", to: "/dashboard" }, { label: "Profile" }]}
         actions={
           <>
@@ -161,9 +171,13 @@ export default function ProfilePage() {
         }
       />
 
+      {/* ── Compact Tab Bar to eliminate vertical scrolling ── */}
+      <div className="mb-6">
+        <Tabs items={tabItems} value={activeTab} onChange={setActiveTab} ariaLabel="Profile sections" />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <form id="profile-form" noValidate onSubmit={handleSubmit} className="space-y-6">
-          {/* Errors are announced once, in one place, before the fields. */}
           <div aria-live="polite">
             {summary && (
               <Alert live variant={save.isError ? "danger" : "warning"} title="Check your details">
@@ -172,146 +186,166 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <Card as="section">
-            <CardHeader
-              title="Identity"
-              description="Shown on your public profile, proposals and contracts."
-            />
-            <CardDivider className="my-5" />
-
-            <div className="space-y-5">
-              <div className="min-w-0">
-                <p className="font-display text-lg text-slate">{form.name || "Unnamed account"}</p>
-                <p className="mt-1 text-sm text-slate-300">{form.email || "No email on file"}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Badge>{ROLE_LABELS[user?.role] || "Member"}</Badge>
-                  {user?.universityVerified && <Badge tone="success">University verified</Badge>}
-                  {user?.staffVerified && <Badge tone="success">Staff verified</Badge>}
+          {/* TAB 1: General & Identity — Ultra-compact 2-column layout */}
+          {activeTab === "general" && (
+            <Card as="section" className="p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+                <div>
+                  <h2 className="font-display text-xl font-extrabold text-slate">General Profile</h2>
+                  <p className="text-xs text-slate-300">Identity, bio, and portfolio details shown on your public profile.</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge tone="brand">{ROLE_LABELS[user?.role] || "Member"}</Badge>
+                  {user?.universityVerified && <Badge tone="success">Verified ✓</Badge>}
                 </div>
               </div>
+              <CardDivider className="mb-5" />
 
-              <AvatarUploader
-                name={form.name || user?.name || ""}
-                src={user?.avatarUrl}
-                verified={Boolean(user?.universityVerified)}
-                uploading={avatarUpload.isPending}
-                removing={avatarRemove.isPending}
-                uploadError={avatarError}
-                onUpload={(dataUrl) => avatarUpload.mutateAsync(dataUrl)}
-                onRemove={() => avatarRemove.mutate()}
-              />
-            </div>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Left Column: Identity & Photo */}
+                <div className="space-y-4">
+                  <AvatarUploader
+                    name={form.name || user?.name || ""}
+                    src={user?.avatarUrl}
+                    verified={Boolean(user?.universityVerified)}
+                    uploading={avatarUpload.isPending}
+                    removing={avatarRemove.isPending}
+                    uploadError={avatarError}
+                    onUpload={(dataUrl) => avatarUpload.mutateAsync(dataUrl)}
+                    onRemove={() => avatarRemove.mutate()}
+                  />
 
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
-              <Input
-                id="profile-name"
-                label="Full name"
-                required
-                value={form.name}
-                onChange={set("name")}
-                onBlur={blur("name")}
-                error={touched.name ? errors.name : undefined}
-                autoComplete="name"
-                maxLength={PROFILE_LIMITS.name}
-              />
-              <Input
-                id="profile-email"
-                label="Email address"
-                type="email"
-                required
-                value={form.email}
-                onChange={set("email")}
-                onBlur={blur("email")}
-                error={touched.email ? errors.email : undefined}
-                hint="Used for sign-in and contract notices."
-                autoComplete="email"
-              />
-              <Input
-                id="profile-headline"
-                label="Professional headline"
-                optional
-                value={form.headline}
-                onChange={set("headline")}
-                onBlur={blur("headline")}
-                error={touched.headline ? errors.headline : undefined}
-                placeholder="Final-year CS student — React & data pipelines"
-                maxLength={PROFILE_LIMITS.headline}
-                wrapperClassName="sm:col-span-2"
-              />
-            </div>
-          </Card>
+                  <Input
+                    id="profile-name"
+                    label="Full name"
+                    required
+                    value={form.name}
+                    onChange={set("name")}
+                    onBlur={blur("name")}
+                    error={touched.name ? errors.name : undefined}
+                    autoComplete="name"
+                    maxLength={PROFILE_LIMITS.name}
+                  />
 
-          {user?.role === "student" && <UniversityVerificationCard user={user} token={token} />}
-          {user?.role === "university_staff" && <StaffVerificationCard user={user} token={token} />}
+                  <Input
+                    id="profile-email"
+                    label="Email address"
+                    type="email"
+                    required
+                    value={form.email}
+                    onChange={set("email")}
+                    onBlur={blur("email")}
+                    error={touched.email ? errors.email : undefined}
+                    autoComplete="email"
+                  />
 
-          <Card as="section">
-            <CardHeader title="About you" description="Context that helps clients judge fit quickly." />
-            <CardDivider className="my-5" />
+                  <Input
+                    id="profile-headline"
+                    label="Headline"
+                    optional
+                    value={form.headline}
+                    onChange={set("headline")}
+                    onBlur={blur("headline")}
+                    error={touched.headline ? errors.headline : undefined}
+                    placeholder="e.g. CS Student & Full-Stack Developer"
+                    maxLength={PROFILE_LIMITS.headline}
+                  />
+                </div>
 
-            <div className="grid gap-5">
-              <Textarea
-                id="profile-bio"
-                label="Short bio"
-                optional
-                rows={5}
-                value={form.bio}
-                onChange={set("bio")}
-                onBlur={blur("bio")}
-                error={touched.bio ? errors.bio : undefined}
-                maxLength={PROFILE_LIMITS.bio}
-                showCount
-                hint="Two or three sentences on what you build and the work you want."
-              />
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Input
-                  id="profile-location"
-                  label="Location"
-                  optional
-                  value={form.location}
-                  onChange={set("location")}
-                  onBlur={blur("location")}
-                  error={touched.location ? errors.location : undefined}
-                  placeholder="Addis Ababa, Ethiopia"
-                  maxLength={PROFILE_LIMITS.location}
-                />
-                <Input
-                  id="profile-university"
-                  label="University"
-                  optional
-                  value={form.university}
-                  onChange={set("university")}
-                  onBlur={blur("university")}
-                  error={touched.university ? errors.university : undefined}
-                  maxLength={PROFILE_LIMITS.university}
-                />
-                <Input
-                  id="profile-skills"
-                  label="Skills"
-                  optional
-                  value={form.skills}
-                  onChange={set("skills")}
-                  onBlur={blur("skills")}
-                  error={touched.skills ? errors.skills : undefined}
-                  hint="Comma separated, e.g. React, Figma, Python"
-                  maxLength={PROFILE_LIMITS.skills}
-                />
-                <Input
-                  id="profile-website"
-                  label="Portfolio or website"
-                  optional
-                  type="url"
-                  inputMode="url"
-                  value={form.website}
-                  onChange={set("website")}
-                  onBlur={blur("website")}
-                  error={touched.website ? errors.website : undefined}
-                  placeholder="https://your-portfolio.dev"
-                />
+                {/* Right Column: Bio & Portfolio Links */}
+                <div className="space-y-4">
+                  <Textarea
+                    id="profile-bio"
+                    label="Short bio"
+                    optional
+                    rows={3}
+                    value={form.bio}
+                    onChange={set("bio")}
+                    onBlur={blur("bio")}
+                    error={touched.bio ? errors.bio : undefined}
+                    maxLength={PROFILE_LIMITS.bio}
+                    placeholder="A brief overview of your expertise and goals..."
+                  />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      id="profile-location"
+                      label="Location"
+                      optional
+                      value={form.location}
+                      onChange={set("location")}
+                      onBlur={blur("location")}
+                      error={touched.location ? errors.location : undefined}
+                      placeholder="Addis Ababa"
+                      maxLength={PROFILE_LIMITS.location}
+                    />
+                    <Input
+                      id="profile-university"
+                      label="University"
+                      optional
+                      value={form.university}
+                      onChange={set("university")}
+                      onBlur={blur("university")}
+                      error={touched.university ? errors.university : undefined}
+                      maxLength={PROFILE_LIMITS.university}
+                    />
+                  </div>
+
+                  <Input
+                    id="profile-skills"
+                    label="Skills"
+                    optional
+                    value={form.skills}
+                    onChange={set("skills")}
+                    onBlur={blur("skills")}
+                    error={touched.skills ? errors.skills : undefined}
+                    placeholder="React, Python, Figma"
+                    maxLength={PROFILE_LIMITS.skills}
+                  />
+
+                  <Input
+                    id="profile-website"
+                    label="Portfolio URL"
+                    optional
+                    type="url"
+                    inputMode="url"
+                    value={form.website}
+                    onChange={set("website")}
+                    onBlur={blur("website")}
+                    error={touched.website ? errors.website : undefined}
+                    placeholder="https://portfolio.dev"
+                  />
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
-          {/* Mobile action bar: the header buttons scroll away on small screens. */}
+          {/* TAB 2: Verification */}
+          {activeTab === "verification" && (
+            <>
+              {user?.role === "student" && <UniversityVerificationCard user={user} token={token} />}
+              {user?.role === "university_staff" && <StaffVerificationCard user={user} token={token} />}
+              {user?.role !== "student" && user?.role !== "university_staff" && (
+                <Card as="section">
+                  <CardHeader title="Verification" description="Client profiles do not require university enrollment proof." />
+                  <p className="mt-4 text-base text-slate-300">
+                    Your account is registered as a Client. You can post projects and fund escrow directly.
+                  </p>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* TAB 3: Strength & Security */}
+          {activeTab === "strength" && (
+            <Card as="section">
+              <CardHeader title="Account Security & Settings" description="Manage password, preferences, and notifications." />
+              <CardDivider className="my-5" />
+              <CardFooterLinks />
+            </Card>
+          )}
+
+          {/* Mobile action bar */}
           <div className="flex flex-wrap gap-3 lg:hidden">
             <Button type="submit" loading={save.isPending} disabled={!dirty} fullWidth>
               Save changes
@@ -341,8 +375,8 @@ export default function ProfilePage() {
 
             {completeness.missing.length > 0 ? (
               <>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-brass">Still to add</p>
-                <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                <p className="mt-5 text-xs font-bold uppercase tracking-widest text-brass">Still to add</p>
+                <ul className="mt-2 space-y-1.5 text-sm font-medium text-slate-300">
                   {completeness.missing.map((item) => (
                     <li key={item.key} className="flex items-start gap-2">
                       <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
@@ -352,14 +386,14 @@ export default function ProfilePage() {
                 </ul>
               </>
             ) : (
-              <p className="mt-4 text-sm text-slate-300">
+              <p className="mt-4 text-sm font-medium text-slate-300">
                 Everything is filled in — nice work. Review it each term so it stays current.
               </p>
             )}
           </Card>
 
           <Card as="section">
-            <CardHeader titleAs="h2" title="Account" description="Security and preferences live in settings." />
+            <CardHeader titleAs="h2" title="Quick Links" description="Security and preferences." />
             <CardFooterLinks />
           </Card>
         </aside>
@@ -379,7 +413,7 @@ function UniversityVerificationCard({ user, token }) {
   const [fullName, setFullName] = useState(user?.name || "");
   const [studentIdNumber, setStudentIdNumber] = useState("");
   const [program, setProgram] = useState("");
-  const [uploadedDoc, setUploadedDoc] = useState(null); // { _id, original_name, size }
+  const [uploadedDoc, setUploadedDoc] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
   const { data: universitiesRes, isLoading: universitiesLoading } = useQuery({
@@ -394,17 +428,13 @@ function UniversityVerificationCard({ user, token }) {
 
   const universities = universitiesRes?.data ?? [];
   const verifications = verificationsRes?.data ?? [];
-  // Backend returns these newest-first.
   const latest = verifications[0];
 
-  
   const isApproved = latest?.status === "approved" || Boolean(user?.universityVerified);
 
   useEffect(() => {
     if (latest?.status === "approved" && !user?.universityVerified) {
-      refreshMe().catch(() => {
-        /* best-effort resync — the card already reflects the correct state either way */
-      });
+      refreshMe().catch(() => {});
     }
   }, [latest?.status, user?.universityVerified, refreshMe]);
 
@@ -514,8 +544,6 @@ function UniversityVerificationCard({ user, token }) {
             letter.
           </p>
 
-          {/* Not a <form>: this card is nested inside the page's main profile
-              <form>, and HTML doesn't allow forms inside forms. */}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Select
               id="verification-university"
@@ -591,11 +619,6 @@ function UniversityVerificationCard({ user, token }) {
   );
 }
 
-// Matching your university's email domain at registration only proves
-// eligibility to *apply* — it grants no real power. This card is how a
-// university_staff registrant submits secondary proof (staff ID, HR/offer
-// letter, department page) for a platform admin to actually approve before
-// they can review student verifications, certify skills, or see analytics.
 function StaffVerificationCard({ user, token }) {
   const toast = useToast();
   const qc = useQueryClient();
@@ -603,7 +626,7 @@ function StaffVerificationCard({ user, token }) {
   const [fullName, setFullName] = useState(user?.name || "");
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
-  const [uploadedDoc, setUploadedDoc] = useState(null); // { _id, original_name, size }
+  const [uploadedDoc, setUploadedDoc] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
   const { data: verificationsRes, isLoading: verificationsLoading } = useQuery({
@@ -613,15 +636,12 @@ function StaffVerificationCard({ user, token }) {
   });
 
   const verifications = verificationsRes?.data ?? [];
-  // Backend returns these newest-first.
   const latest = verifications[0];
   const isApproved = latest?.status === "approved" || Boolean(user?.staffVerified);
 
   useEffect(() => {
     if (latest?.status === "approved" && !user?.staffVerified) {
-      refreshMe().catch(() => {
-        /* best-effort resync — the card already reflects the correct state either way */
-      });
+      refreshMe().catch(() => {});
     }
   }, [latest?.status, user?.staffVerified, refreshMe]);
 
@@ -694,7 +714,7 @@ function StaffVerificationCard({ user, token }) {
     <Card as="section">
       <CardHeader
         title="Staff verification"
-        description="Your email domain only confirms you're eligible to apply. A platform admin has to approve real proof before you can review students, certify skills, or see analytics."
+        description="Secondary proof for platform admins."
       />
       <CardDivider className="my-5" />
 
@@ -709,8 +729,7 @@ function StaffVerificationCard({ user, token }) {
       ) : latest?.status === "pending" ? (
         <Alert variant="warning" title="Verification pending">
           Your request was submitted on {new Date(latest.createdAt).toLocaleDateString()} and is awaiting admin
-          review. You'll be notified once it's decided — you can't review students or certify skills until it's
-          approved.
+          review.
         </Alert>
       ) : (
         <>
@@ -720,14 +739,6 @@ function StaffVerificationCard({ user, token }) {
             </Alert>
           )}
 
-          <p className="text-sm leading-relaxed text-slate-300">
-            This goes to a platform admin, not to other staff at your university. Give them enough to confirm
-            you actually work there: your name as it appears on your ID, your job title, your department, and a
-            staff ID, HR/offer letter, or a link to your department's directory page.
-          </p>
-
-          {/* Not a <form>: this card is nested inside the page's main profile
-              <form>, and HTML doesn't allow forms inside forms. */}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Input
               id="staff-verification-full-name"
@@ -761,7 +772,7 @@ function StaffVerificationCard({ user, token }) {
             <div className="sm:col-span-2">
               <FileUpload
                 label="Proof of employment"
-                hint={`Staff ID, HR/offer letter, or department directory page · JPG, PNG or PDF · up to ${VERIFICATION_DOC_MAX_MB} MB`}
+                hint={`Staff ID, HR/offer letter, or directory page · JPG, PNG or PDF · up to ${VERIFICATION_DOC_MAX_MB} MB`}
                 accept={VERIFICATION_DOC_ACCEPT}
                 maxSizeMb={VERIFICATION_DOC_MAX_MB}
                 disabled={busy}
@@ -791,15 +802,15 @@ function StaffVerificationCard({ user, token }) {
 
 function CardFooterLinks() {
   return (
-    <ul className="mt-4 space-y-2 text-sm">
+    <ul className="mt-4 space-y-2.5 text-base font-semibold">
       <li>
         <Link className="text-brass underline-offset-4 hover:underline" to="/settings">
-          Password &amp; security
+          Password &amp; security settings →
         </Link>
       </li>
       <li>
-        <Link className="text-brass underline-offset-4 hover:underline" to="/notifications">
-          Notification preferences
+        <Link className="text-slate-300 underline-offset-4 hover:text-brass hover:underline" to="/contracts">
+          View my active contracts →
         </Link>
       </li>
     </ul>

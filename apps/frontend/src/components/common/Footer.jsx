@@ -30,20 +30,20 @@ const columns = [
 export default function Footer() {
   return (
     <footer className="mt-20 border-t border-ink-300 bg-ink">
-      <div className="grid w-full gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4 sm:px-10 lg:px-16">
+      <div className="grid w-full gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4 sm:px-10 lg:px-16">
         <div>
-          <Link to="/" className="flex items-center gap-2">
-            <SealMark className="h-6 w-6 text-brass" />
-            <span className="font-display text-lg text-slate">NexusWork</span>
+          <Link to="/" className="flex items-center gap-2.5">
+            <SealMark className="h-7 w-7 text-brass" />
+            <span className="font-display text-lg font-bold text-slate">NexusWork</span>
           </Link>
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-300">
+          <p className="mt-3.5 max-w-xs text-sm leading-relaxed text-slate-300">
             Student talent, real client work, milestones funded in escrow before anyone starts.
           </p>
         </div>
 
         {columns.map((col) => (
           <nav key={col.title} aria-label={col.title}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brass">{col.title}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brass">{col.title}</p>
             <ul className="mt-4 space-y-2.5 text-sm">
               {col.links.map((l) => (
                 <li key={l.to}>

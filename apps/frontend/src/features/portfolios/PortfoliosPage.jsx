@@ -36,7 +36,7 @@ export default function PortfoliosPage() {
   if (isLoading) return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Skeleton className="h-40 w-full" /><Skeleton className="h-40 w-full" /><Skeleton className="h-40 w-full" /></div>;
 
   return (
-    <div className="mx-auto max-w-6xl animate-fade-up">
+    <div className="w-full animate-fade-up">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-300 pb-6">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Showcase</p>

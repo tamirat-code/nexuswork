@@ -33,7 +33,7 @@ export default function RolePicker({ value, onChange }) {
               }`}
           >
             {selected && <Check className="absolute right-3 top-3 h-4 w-4 text-brass" />}
-            <p className={`text-sm font-semibold tracking-tight ${selected ? "text-white" : "text-slate"}`}>
+            <p className={`text-sm font-semibold tracking-tight ${selected ? "text-brass" : "text-slate"}`}>
               {opt.label}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-slate-300">{opt.hint}</p>

@@ -111,14 +111,14 @@ export default function MfaSetupPage() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Keep these codes private</p>
+              <p className="text-sm font-semibold text-slate">Keep these codes private</p>
               <p className="mt-1 text-xs leading-relaxed text-slate-300">
                 NexusWork will not show them again after you leave this page.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-ink-300 bg-black/20 p-4 font-mono text-sm text-white">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-ink-300 bg-ink-500/20 p-4 font-mono text-sm text-slate">
             {recoveryCodes.map((item) => (
               <div key={item} className="rounded-lg bg-ink-500/40 px-3 py-2 text-center tracking-wide">
                 {item}
@@ -157,11 +157,11 @@ export default function MfaSetupPage() {
 
           <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-xs font-semibold text-brass">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass/10 text-xs font-semibold text-brass">
                 2
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white">Add NexusWork</p>
+                <p className="text-sm font-semibold text-slate">Add NexusWork</p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-300">
                   If your app supports an OTP URI, use the value below. Otherwise, enter the manual setup key.
                 </p>
@@ -180,11 +180,11 @@ export default function MfaSetupPage() {
                   {copied ? "Copied" : "Copy"}
                 </button>
               </div>
-              <p className="mt-2 break-all font-mono text-sm leading-relaxed tracking-wide text-white">{setup.secret}</p>
+              <p className="mt-2 break-all font-mono text-sm leading-relaxed tracking-wide text-slate">{setup.secret}</p>
             </div>
 
             <details className="mt-3 rounded-xl border border-ink-300 bg-ink/20">
-              <summary className="cursor-pointer px-3 py-2.5 text-xs font-medium text-slate-300 hover:text-white">
+              <summary className="cursor-pointer px-3 py-2.5 text-xs font-medium text-slate-300 hover:text-brass">
                 Advanced: show OTP URI
               </summary>
               <div className="border-t border-ink-300 px-3 py-3">
@@ -202,11 +202,11 @@ export default function MfaSetupPage() {
 
           <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-xs font-semibold text-brass">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass/10 text-xs font-semibold text-brass">
                 3
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white">Verify your authenticator</p>
+                <p className="text-sm font-semibold text-slate">Verify your authenticator</p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-300">
                   Enter the current 6-digit code from your app. The code refreshes automatically every few seconds.
                 </p>
@@ -246,11 +246,11 @@ function SetupStep({ number, title, description }) {
   return (
     <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-xs font-semibold text-brass">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass/10 text-xs font-semibold text-brass">
           {number}
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">{title}</p>
+          <p className="text-sm font-semibold text-slate">{title}</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
         </div>
       </div>

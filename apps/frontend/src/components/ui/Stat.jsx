@@ -20,9 +20,9 @@ export default function Stat({
   className = "",
 }) {
   return (
-    <div className={cn("rounded-card border border-ink-300 bg-ink-700 p-5", className)}>
+    <div className={cn("rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card", className)}>
       <div className="flex items-start justify-between gap-3">
-        <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-300">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-300">
           {label}
           {hint && (
             <Tooltip content={hint}>
@@ -40,13 +40,15 @@ export default function Stat({
       </div>
 
       {loading ? (
-        <Skeleton className="mt-3 h-8 w-24" />
+        <Skeleton className="mt-3 h-9 w-24" />
       ) : (
-        <p className="mt-2 font-display text-2xl text-slate tabular-nums sm:text-3xl">{value}</p>
+        <p className="mt-2.5 font-display text-3xl font-extrabold leading-none tracking-tight text-slate tabular-nums sm:text-4xl">
+          {value}
+        </p>
       )}
 
       {delta && !loading && (
-        <p className={cn("mt-2 flex items-center gap-1 text-xs font-medium", deltaTones[deltaDirection])}>
+        <p className={cn("mt-2 flex items-center gap-1 text-xs font-semibold", deltaTones[deltaDirection])}>
           {deltaDirection !== "flat" && (
             <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true" className={cn("h-3 w-3", deltaDirection === "down" && "rotate-180")}>
               <path d="M6 9.5V2.5M3 5.5 6 2.5l3 3" strokeLinecap="round" strokeLinejoin="round" />
