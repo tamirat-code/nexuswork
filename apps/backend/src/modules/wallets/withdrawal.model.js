@@ -11,6 +11,8 @@ const withdrawalSchema = new mongoose.Schema(
     idempotency_key: { type: String, required: true },
     processing_at: { type: Date },
     failure_reason: { type: String },
+    ledger_transaction_id: { type: String },
+    ledger_reversal_transaction_id: { type: String },
   },
   { timestamps: true }
 );

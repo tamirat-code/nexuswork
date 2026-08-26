@@ -8,6 +8,7 @@ import { ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { money, moneyFromLegacyMajorUnits, moneyFromRecord } from "../../shared/money/money.js";
 import { paymentProvider } from "./providers/index.js";
+import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
 
 async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
   payment.status = "failed";
@@ -87,7 +88,7 @@ export async function createDepositIntent(milestone) {
   return { client_secret: intent.clientSecret, payment_intent_id: intent.id };
 }
 
-export async function markDepositSucceeded(paymentIntentId) {
+export async function markDepositSucceeded(paymentIntentId, auditContext = {}) {
   if (!paymentIntentId || !/^pi_[A-Za-z0-9_]+$/.test(String(paymentIntentId))) {
     throw new ValidationError("Invalid Stripe PaymentIntent ID");
   }
@@ -125,6 +126,22 @@ export async function markDepositSucceeded(paymentIntentId) {
   }
 
   if (!wasAlreadySucceeded) {
+    const milestone = await Milestone.findById(payment.milestone_id).select("contract_id currency");
+    await postJournal({
+      eventType: "payment.funded",
+      idempotencyKey: `payment-funded:${payment._id}`,
+      sourceType: "payment",
+      sourceId: payment._id,
+      providerEventId: paymentIntentId,
+      requestId: auditContext.requestId || auditContext.correlationId || "system",
+      actorId: auditContext.actor?._id || auditContext.actor?.id,
+      actorRole: auditContext.actor?.role || "system",
+      entries: [
+        { accountBase: "provider_clearing", debitMinor: expectedMoney.amountMinor, creditMinor: 0, currency: expectedMoney.currency },
+        { accountBase: "escrow_liability", debitMinor: 0, creditMinor: expectedMoney.amountMinor, currency: expectedMoney.currency },
+      ],
+      metadata: { milestoneId: milestone?._id, paymentIntentId },
+    });
     await logAction({
       action_type: "payment_deposit_succeeded",
       entity_type: "milestone",
@@ -352,6 +369,11 @@ export async function refundClient(milestoneId, auditContext = {}) {
   }
 
   const operationKey = payment.provider_operation_key || `milestone-refund-${milestoneId}`;
+  const refundMoney = moneyFromRecord(depositPayment);
+  const escrowBalance = await getAccountBalance(`escrow_liability:${refundMoney.currency}`);
+  if (escrowBalance.hasEntries && escrowBalance.balanceMinor < refundMoney.amountMinor) {
+    throw new ValidationError("Refund exceeds the funded escrow balance");
+  }
   await logAction({
     actor_id: auditContext.actor?.id || auditContext.actor?._id,
     actor_role: auditContext.actor?.role || "system",
@@ -375,6 +397,20 @@ export async function refundClient(milestoneId, auditContext = {}) {
     payment.processing_at = undefined;
     payment.failure_message = undefined;
     await payment.save();
+    await postJournal({
+      eventType: "payment.refunded",
+      idempotencyKey: `payment-refunded:${payment._id}`,
+      sourceType: "payment",
+      sourceId: payment._id,
+      requestId: auditContext.requestId || auditContext.correlationId || "system",
+      actorId: auditContext.actor?._id || auditContext.actor?.id,
+      actorRole: auditContext.actor?.role || "system",
+      entries: [
+        { accountBase: "escrow_liability", debitMinor: refundMoney.amountMinor, creditMinor: 0, currency: refundMoney.currency },
+        { accountBase: "provider_clearing", debitMinor: 0, creditMinor: refundMoney.amountMinor, currency: refundMoney.currency },
+      ],
+      metadata: { milestoneId, refundId: refund.id },
+    });
   } catch (err) {
     payment.status = "failed";
     payment.failure_message = err.message;

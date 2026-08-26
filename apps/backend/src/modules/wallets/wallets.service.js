@@ -11,6 +11,7 @@ import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
+import { getStudentPayableBalance, postJournal, reverseJournal } from "../financial-ledger/financial-ledger.service.js";
 
 async function syncStripeAccountStatus(wallet) {
   if (!wallet?.stripe_account_id) {
@@ -51,6 +52,20 @@ export async function getBalance(userId) {
   if (!wallet) throw new NotFoundError("Wallet not found");
 
   const payoutStatus = await syncStripeAccountStatus(wallet);
+
+  const ledgerBalance = await getStudentPayableBalance(userId, paymentConfig.currency);
+  if (ledgerBalance.hasEntries) {
+    const pending = await Withdrawal.aggregate([
+      { $match: { user_id: userId, status: "pending", currency: paymentConfig.currency } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    return {
+      available: ledgerBalance.balanceMinor / 100,
+      pending: Number(pending[0]?.total || 0),
+      currency: paymentConfig.currency,
+      ...payoutStatus,
+    };
+  }
 
   // NexusWork wallet balance is the internal earnings ledger. Stripe Connect
   // is only the payout rail; its balance must not be used as the wallet
@@ -252,6 +267,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
   }
 
   let withdrawal;
+  let ledgerJournal;
 
   try {
     const status = await syncStripeAccountStatus(wallet);
@@ -349,6 +365,35 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       processing_at: new Date(),
     });
 
+    try {
+      const payableBalance = await getStudentPayableBalance(userId, paymentConfig.currency);
+      if (payableBalance.hasEntries && payableBalance.balanceMinor < withdrawalMoney.amountMinor) {
+        throw new ValidationError("Insufficient ledger payable balance");
+      }
+      const posted = await postJournal({
+        eventType: "withdrawal.reserved",
+        idempotencyKey: `withdrawal-reserved:${withdrawal._id}`,
+        sourceType: "withdrawal",
+        sourceId: withdrawal._id,
+        requestId: correlationId || "system",
+        actorId: actor?._id || actor?.id,
+        actorRole: actor?.role || "system",
+        entries: [
+          { accountBase: "student_payable", ownerId: userId, debitMinor: withdrawalMoney.amountMinor, creditMinor: 0, currency: paymentConfig.currency },
+          { accountBase: "payout_clearing", debitMinor: 0, creditMinor: withdrawalMoney.amountMinor, currency: paymentConfig.currency },
+        ],
+        metadata: { withdrawalId: withdrawal._id, operationKey },
+      });
+      ledgerJournal = posted.journal;
+      withdrawal.ledger_transaction_id = ledgerJournal.transaction_id;
+      await withdrawal.save();
+    } catch (error) {
+      withdrawal.status = "failed";
+      withdrawal.failure_reason = error.message;
+      await withdrawal.save();
+      throw error;
+    }
+
     await logAction({
       actor_id: actor?.id || actor?._id,
       actor_role: actor?.role || "system",
@@ -434,6 +479,21 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
 
     await withdrawal.save();
 
+    if (ledgerJournal?.transaction_id) {
+      try {
+        const reversal = await reverseJournal(ledgerJournal.transaction_id, {
+          requestId: correlationId || "system",
+          actorId: actor?._id || actor?.id,
+          actorRole: actor?.role || "system",
+          idempotencyKey: `withdrawal-reversed:${withdrawal._id}`,
+        });
+        withdrawal.ledger_reversal_transaction_id = reversal.journal.transaction_id;
+        await withdrawal.save();
+      } catch (reversalError) {
+        logger.error(`[wallet] failed to reverse withdrawal ledger ${withdrawal._id}:`, reversalError.message);
+      }
+    }
+
     await logAction({
       actor_id: actor?.id || actor?._id,
       actor_role: actor?.role || "system",
@@ -493,6 +553,16 @@ export async function updateWithdrawalFromPayoutEvent(eventType, payout, { conne
     withdrawal.failure_reason = undefined;
   }
   await withdrawal.save();
+
+  if (nextStatus === "failed" && previousStatus !== "failed" && withdrawal.ledger_transaction_id) {
+    const reversal = await reverseJournal(withdrawal.ledger_transaction_id, {
+      requestId: correlationId || "system",
+      actorRole: "system",
+      idempotencyKey: `withdrawal-reversed:${withdrawal._id}`,
+    });
+    withdrawal.ledger_reversal_transaction_id = reversal.journal.transaction_id;
+    await withdrawal.save();
+  }
 
   if (previousStatus !== nextStatus) {
     const action = nextStatus === "paid" ? "succeeded" : nextStatus === "failed" ? "failed" : "pending";

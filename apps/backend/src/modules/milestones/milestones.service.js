@@ -14,6 +14,7 @@ import { eventBus } from "../../events/index.js";
 import { logger } from "../../shared/logger/logger.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
+import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
 
 async function auditMilestoneEvent({ actor, correlationId, ...event }) {
   return recordEvent({
@@ -40,6 +41,10 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
   const payout = majorUnitsFromMoney(payoutMoney);
   const commissionAmount = majorUnitsFromMoney(commissionMoney);
   const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
+  const escrowBalance = await getAccountBalance(`escrow_liability:${totalMoney.currency}`);
+  if (escrowBalance.hasEntries && escrowBalance.balanceMinor < totalMoney.amountMinor) {
+    throw new ValidationError("Release exceeds the funded escrow balance");
+  }
   let releasePayment;
 
   try {
@@ -50,6 +55,22 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       stripeAccountId: studentWallet?.stripe_account_id,
       transferToStripe: true,
       auditContext,
+    });
+
+    await postJournal({
+      eventType: "milestone.released",
+      idempotencyKey: `milestone-released:${milestone._id}`,
+      sourceType: "milestone",
+      sourceId: milestone._id,
+      requestId: auditContext.requestId || auditContext.correlationId || "system",
+      actorId: auditContext.actor?._id || auditContext.actor?.id,
+      actorRole: auditContext.actor?.role || "system",
+      entries: [
+        { accountBase: "escrow_liability", debitMinor: totalMoney.amountMinor, creditMinor: 0, currency: totalMoney.currency },
+        { accountBase: "student_payable", ownerId: contract.student_id, debitMinor: 0, creditMinor: payoutMoney.amountMinor, currency: totalMoney.currency },
+        { accountBase: "platform_revenue", debitMinor: 0, creditMinor: commissionMoney.amountMinor, currency: totalMoney.currency },
+      ],
+      metadata: { paymentId: releasePayment?._id, milestoneId: milestone._id },
     });
 
     await Payment.findOneAndUpdate(
@@ -271,7 +292,7 @@ export async function initiateFunding(milestoneId, requestingUserId, auditContex
 }
 
 export async function confirmFunding(paymentIntentId, requestingUserId = null, auditContext = {}) {
-  const payment = await markDepositSucceeded(paymentIntentId);
+  const payment = await markDepositSucceeded(paymentIntentId, auditContext);
   if (!payment) return null;
 
   const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
