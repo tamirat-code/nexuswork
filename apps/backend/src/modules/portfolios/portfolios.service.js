@@ -109,3 +109,14 @@ export async function respondToMilestoneConsent(portfolioItemId, requestingUserI
   await item.save();
   return item;
 }
+
+export async function getMilestoneConsent(milestoneId, requestingUserId) {
+  const milestone = await Milestone.findById(milestoneId).populate("contract_id");
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  const contract = milestone.contract_id;
+  if (String(contract.client_id) !== String(requestingUserId)) {
+    const allowed = await isOrgMember(contract.client_id, requestingUserId);
+    if (!allowed) throw new ForbiddenError("Only the client on this contract can view portfolio consent");
+  }
+  return PortfolioItem.findOne({ milestone_id: milestone._id }).lean();
+}

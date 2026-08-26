@@ -75,8 +75,13 @@ export default function PortfoliosPage() {
               </div>
               <h3 className="mt-3 font-display text-base text-slate">{e.title}</h3>
               <p className="mt-1 line-clamp-3 text-sm text-slate-300">{e.description}</p>
-              {e.skills?.length > 0 && <div className="mt-3 flex flex-wrap gap-1"><Badge variant="secondary" className="text-xs">Milestone</Badge></div>}
-              {e.url && <a href={e.url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-brass hover:underline">View project →</a>}
+              <div className="mt-3 flex flex-wrap gap-1">
+                {e.milestone_id && <Badge variant="secondary" className="text-xs">Milestone</Badge>}
+                {e.consent_status === "pending" && <Badge variant="outline" className="text-xs">Awaiting client consent</Badge>}
+                {e.consent_status === "denied" && <Badge variant="outline" className="text-xs">Private</Badge>}
+                {e.consent_status === "approved" && <Badge variant="secondary" className="text-xs">Published</Badge>}
+              </div>
+              {e.project_url && <a href={e.project_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-brass hover:underline">View project →</a>}
             </CardContent>
           </Card>
         ))}

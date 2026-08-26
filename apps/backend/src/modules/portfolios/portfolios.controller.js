@@ -8,6 +8,7 @@ import {
   deletePortfolioItem,
   addFromMilestone,
   respondToMilestoneConsent,
+  getMilestoneConsent,
 } from "./portfolios.service.js";
 
 export const postPortfolioItem = asyncHandler(async (req, res) => {
@@ -24,6 +25,11 @@ export const postFromMilestone = asyncHandler(async (req, res) => {
 export const patchMilestoneConsent = asyncHandler(async (req, res) => {
   requireFields(req.body, ["decision"]);
   const item = await respondToMilestoneConsent(req.params.id, req.user._id, req.body.decision);
+  res.json({ success: true, data: item });
+});
+
+export const getMilestonePortfolioConsent = asyncHandler(async (req, res) => {
+  const item = await getMilestoneConsent(req.params.milestoneId, req.user._id);
   res.json({ success: true, data: item });
 });
 

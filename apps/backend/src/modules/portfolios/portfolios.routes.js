@@ -4,6 +4,7 @@ import {
   postPortfolioItem,
   postFromMilestone,
   patchMilestoneConsent,
+  getMilestonePortfolioConsent,
   getMyPortfolio,
   getUserPortfolio,
   getPortfolioItem,
@@ -18,6 +19,7 @@ const router = Router();
 router.post("/", requireAuth, validateBody(createPortfolioItemSchema), postPortfolioItem);
 
 router.post("/from-milestone/:milestoneId", requireAuth, postFromMilestone);
+router.get("/milestone/:milestoneId/consent", requireAuth, getMilestonePortfolioConsent);
 router.patch("/:id/consent", requireAuth, validateBody(milestoneConsentSchema), patchMilestoneConsent);
 router.get("/mine", requireAuth, getMyPortfolio);
 router.get("/user/:userId", getUserPortfolio);
