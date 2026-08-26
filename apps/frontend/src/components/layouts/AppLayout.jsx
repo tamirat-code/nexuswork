@@ -24,15 +24,18 @@ export default function AppLayout({ children }) {
   return (
     <div className="min-h-screen bg-ink">
       <div className="flex w-full">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-ink-300 bg-ink-900/40 lg:block">
+        {/* ── Desktop sidebar ── */}
+        <aside className="sticky top-0 hidden h-screen w-[220px] shrink-0 border-r border-ink-300 bg-ink-900/40 lg:flex lg:flex-col">
           <Sidebar role={user?.role} showBrand />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* ── Top header bar ── */}
           <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-ink-300 bg-ink/95 px-4 backdrop-blur-md sm:px-5 lg:px-6">
+            {/* Mobile menu button */}
             <Button
               variant="ghost"
-              size="md"
+              size="sm"
               iconOnly
               className="lg:hidden"
               aria-label="Open navigation"
@@ -42,29 +45,41 @@ export default function AppLayout({ children }) {
               <NavIcon name="menu" className="h-5 w-5" />
             </Button>
 
+            {/* Mobile page title */}
             {pageMeta ? (
               <div className="min-w-0 lg:hidden">
-                <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-slate-300">{pageMeta.section}</p>
-                <h1 className="truncate font-display text-sm font-semibold leading-tight text-slate">{pageMeta.label}</h1>
+                <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-slate-300">
+                  {pageMeta.section}
+                </p>
+                <h1 className="truncate font-display text-sm font-semibold leading-tight text-slate">
+                  {pageMeta.label}
+                </h1>
               </div>
             ) : (
               <span className="font-display text-sm font-bold text-slate lg:hidden">NexusWork</span>
             )}
 
+            {/* Desktop page context */}
             {pageMeta && (
               <div className="hidden min-w-0 lg:block">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-300">{pageMeta.section}</p>
-                <h1 className="truncate font-display text-sm font-semibold leading-tight text-slate">{pageMeta.label}</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-300">
+                  {pageMeta.section}
+                </p>
+                <h1 className="truncate font-display text-sm font-semibold leading-tight text-slate">
+                  {pageMeta.label}
+                </h1>
               </div>
             )}
 
-            <div className="ml-auto flex items-center gap-2">
+            {/* Header right actions */}
+            <div className="ml-auto flex items-center gap-1.5">
               <ThemeToggle />
               <NotificationBell />
               <UserMenu />
             </div>
           </header>
 
+          {/* ── Page content ── */}
           <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </main>
@@ -73,6 +88,7 @@ export default function AppLayout({ children }) {
         </div>
       </div>
 
+      {/* Mobile navigation drawer */}
       <Drawer open={navOpen} onClose={() => setNavOpen(false)} title="Navigate" side="left">
         <Sidebar role={user?.role} onNavigate={() => setNavOpen(false)} className="px-0 py-0" />
       </Drawer>

@@ -3,18 +3,18 @@ import Button from "../../components/ui/Button.jsx";
 
 export default function NotFoundPage() {
   return (
-    <div className="mx-auto flex max-w-xl flex-col items-center px-6 py-24 text-center">
-      <p className="text-xs font-semibold uppercase tracking-widest text-brass">Error 404</p>
-      <h1 className="mt-3 font-display text-3xl text-slate">This page isn't on the board</h1>
-      <p className="mt-3 text-sm leading-relaxed text-slate-300">
-        The link may be out of date, or the project you were looking for has been closed.
+    <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-6 py-20 text-center animate-fade-up">
+      <p className="font-mono text-5xl font-bold tracking-tight text-brass/40">404</p>
+      <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate sm:text-3xl">This page isn't on the board</h1>
+      <p className="mt-2.5 max-w-md text-sm leading-relaxed text-slate-300">
+        The link may be out of date, or the project you were looking for has been closed or moved.
       </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-2">
+      <div className="mt-7 flex flex-wrap justify-center gap-3">
         <Link to="/projects">
-          <Button>Browse projects</Button>
+          <Button size="md">Browse projects</Button>
         </Link>
         <Link to="/">
-          <Button variant="secondary">Back home</Button>
+          <Button variant="secondary" size="md">Back home</Button>
         </Link>
       </div>
     </div>

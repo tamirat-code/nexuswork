@@ -33,27 +33,27 @@ export default function Navbar() {
 
   const linkClass = (active) =>
     cn(
-      "whitespace-nowrap shrink-0 rounded-control px-2.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
-      active ? "font-bold text-brass" : "text-slate-300 hover:text-brass"
+      "whitespace-nowrap shrink-0 rounded-control px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
+      active ? "font-bold text-brass bg-brass/10" : "text-slate-300 hover:text-brass hover:bg-ink-50/50"
     );
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95 backdrop-blur-md">
-      <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:h-[68px] sm:px-8 lg:px-10">
+      <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:px-8 lg:px-10">
         <Link to="/" className="flex shrink-0 items-center gap-2.5">
-          <SealMark className="h-7 w-7 text-brass" />
-          <span className="font-display text-xl font-bold tracking-tight text-slate">
+          <SealMark className="h-6 w-6 text-brass" />
+          <span className="font-display text-lg font-bold tracking-tight text-slate">
             NexusWork
           </span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-2.5 lg:gap-5 md:flex">
+        <nav aria-label="Main" className="hidden items-center gap-1.5 md:flex">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
             return (
               <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
                 <span className="flex items-center gap-1.5 whitespace-nowrap">
-                  <NavIcon name={l.icon} className="h-4 w-4 shrink-0" />
+                  <NavIcon name={l.icon} className="h-3.5 w-3.5 shrink-0 opacity-80" />
                   {l.label}
                 </span>
               </Link>
@@ -71,12 +71,12 @@ export default function Navbar() {
           ) : (
             <>
               <Link to="/login">
-                <Button variant="ghost" size="sm" className="font-semibold">
+                <Button variant="ghost" size="sm">
                   Log in
                 </Button>
               </Link>
               <Link to="/register">
-                <Button size="sm" className="font-bold shadow-card">
+                <Button size="sm">
                   Sign up
                 </Button>
               </Link>

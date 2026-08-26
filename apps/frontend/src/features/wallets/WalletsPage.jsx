@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Wallet, ArrowDownLeft, ArrowUpRight, CheckCircle2, ShieldAlert } from "lucide-react";
 import {
   getMyWallet,
-  getPayoutStatus,
   connectOnboarding,
   listWalletTransactions,
   requestWithdrawal,
@@ -12,12 +11,14 @@ import {
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
-import { Button } from "../../components/ui/shadcn/button.jsx";
-import { Input } from "../../components/ui/shadcn/input.jsx";
-import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
-import { Badge } from "../../components/ui/shadcn/badge.jsx";
+import {
+  Card,
+  Button,
+  Input,
+  Badge,
+  PageHeader,
+  Skeleton,
+} from "../../components/ui/index.js";
 
 const TONE = {
   deposit: "text-escrow",
@@ -26,9 +27,9 @@ const TONE = {
 };
 
 const WITHDRAWAL_STATUS = {
-  pending: { label: "Pending", variant: "warning" },
-  paid: { label: "Paid", variant: "success" },
-  failed: { label: "Failed", variant: "danger" },
+  pending: { label: "Pending", tone: "warning" },
+  paid: { label: "Paid", tone: "success" },
+  failed: { label: "Failed", tone: "danger" },
 };
 
 export default function WalletsPage() {
@@ -61,12 +62,6 @@ export default function WalletsPage() {
         return;
       }
       if (res.data.already_complete) {
-        // This is a Stripe Login Link, not an onboarding form — it has no return_url at
-        // all, so there's no way for Stripe to send the user back to this app from there.
-        // Open it in a new tab instead of navigating away, so the app stays put, and
-        // refresh the wallet now since we already know from `already_complete` that it's
-        // current (no need to wait on the account.updated webhook, which local dev can't
-        // even receive without the Stripe CLI running).
         qc.invalidateQueries({ queryKey: ["wallet"] });
         qc.invalidateQueries({ queryKey: ["wallet-tx"] });
         toast.success("Your payout account is already set up — opening your Stripe dashboard in a new tab.");
@@ -106,32 +101,33 @@ export default function WalletsPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Money</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Wallet</h1>
-      </header>
+      <PageHeader
+        eyebrow="Money"
+        title="Wallet"
+        description="Track available balance, pending escrow, and milestone payouts."
+      />
 
       {isStudent && (
-        <Card className="mt-6">
-          <CardContent className="flex flex-wrap items-center justify-between gap-5 p-6">
+        <Card className="mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-5 p-1">
             <div className="flex items-start gap-3">
               {wallet?.payouts_enabled ? (
-                <CheckCircle2 className="mt-0.5 h-5 w-5 text-escrow" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-escrow" />
               ) : (
-                <ShieldAlert className="mt-0.5 h-5 w-5 text-brass" />
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-brass" />
               )}
 
               <div>
-                <p className="font-semibold text-slate">
+                <p className="text-sm font-semibold text-slate">
                   {wallet?.payouts_enabled ? "Payout account ready" : "Payout setup required"}
                 </p>
-                <p className="mt-1 max-w-2xl text-sm text-slate-300">
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300">
                   {wallet?.payouts_enabled
                     ? "Your Stripe Connect account can receive milestone payouts."
                     : "Complete Stripe Connect verification so NexusWork can release your approved milestone earnings to you."}
                 </p>
                 {!wallet?.payouts_enabled && wallet?.requirements_due?.length > 0 && (
-                  <p className="mt-2 text-xs text-slate-300">
+                  <p className="mt-1.5 text-xs text-slate-300">
                     Stripe still needs {wallet.requirements_due.length} item(s) from you.
                   </p>
                 )}
@@ -139,41 +135,43 @@ export default function WalletsPage() {
             </div>
 
             <Button
+              size="sm"
               onClick={() => connect.mutate()}
               loading={connect.isPending}
             >
               {wallet?.payouts_enabled ? "Manage payout account" : "Set up payouts"}
             </Button>
-          </CardContent>
+          </div>
         </Card>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
           <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 p-1">
               <div>
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
                   <Wallet className="h-4 w-4 text-brass" /> Available balance
                 </p>
                 {wLoading ? (
-                  <Skeleton className="mt-2 h-10 w-40" />
+                  <Skeleton className="mt-2 h-9 w-36" />
                 ) : (
-                  <p className="mt-1 font-mono text-4xl font-semibold text-brass">
+                  <p className="mt-1 font-mono text-3xl font-bold tracking-tight text-brass">
                     {formatCurrency(wallet?.available ?? 0)}
                   </p>
                 )}
               </div>
 
               <div className="text-right">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">Pending</p>
-                <p className="mt-1 font-mono text-lg text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Pending</p>
+                <p className="mt-1 font-mono text-base font-medium text-slate-300">
                   {formatCurrency(wallet?.pending ?? 0)}
                 </p>
               </div>
 
               {isStudent && wallet?.payouts_enabled && (
                 <Button
+                  size="sm"
                   onClick={() => {
                     const value = Number(amount);
                     if (!value || value <= 0) {
@@ -187,101 +185,98 @@ export default function WalletsPage() {
                   Withdraw
                 </Button>
               )}
-            </CardContent>
+            </div>
 
             {isStudent && wallet?.payouts_enabled && (
-              <CardContent className="border-t border-ink-300 p-6">
-                <label htmlFor="wd-amount" className="text-sm font-semibold text-slate">
-                  Withdrawal amount
-                </label>
+              <div className="mt-5 border-t border-ink-300 pt-5">
                 <Input
+                  label="Withdrawal amount ($)"
                   id="wd-amount"
                   type="number"
                   min={1}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-2 max-w-sm font-mono"
+                  className="max-w-xs font-mono"
                   placeholder="250"
                 />
-              </CardContent>
+              </div>
             )}
           </Card>
 
           {isStudent && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Transaction history</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <h2 className="font-display text-base font-semibold text-slate mb-4">Transaction history</h2>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-ink-300 text-slate-300">
+                      <th className="pb-2.5 font-semibold">Type</th>
+                      <th className="pb-2.5 font-semibold">Description</th>
+                      <th className="pb-2.5 font-semibold">Status</th>
+                      <th className="pb-2.5 text-right font-semibold">Amount</th>
+                      <th className="pb-2.5 text-right font-semibold">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink-300">
                     {tLoading &&
                       [...Array(3)].map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell colSpan={5}>
-                            <Skeleton className="h-8 w-full" />
-                          </TableCell>
-                        </TableRow>
+                        <tr key={i}>
+                          <td colSpan={5} className="py-3">
+                            <Skeleton className="h-6 w-full" />
+                          </td>
+                        </tr>
                       ))}
 
                     {!tLoading && txs.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-10 text-center text-slate-300">
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-300">
                           No transactions yet.
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     )}
 
                     {txs.map((tx) => (
-                      <TableRow key={tx._id}>
-                        <TableCell className="text-sm capitalize text-slate-300">{tx.type}</TableCell>
-                        <TableCell className="text-sm text-slate-300">{tx.description || "—"}</TableCell>
-                        <TableCell>
+                      <tr key={tx._id} className="hover:bg-ink-50/50">
+                        <td className="py-3 capitalize text-slate">{tx.type}</td>
+                        <td className="py-3 text-slate-300">{tx.description || "—"}</td>
+                        <td className="py-3">
                           {tx.type === "withdrawal" && tx.status ? (
-                            <Badge variant={WITHDRAWAL_STATUS[tx.status]?.variant || "neutral"}>
+                            <Badge tone={WITHDRAWAL_STATUS[tx.status]?.tone || "neutral"} size="sm">
                               {WITHDRAWAL_STATUS[tx.status]?.label || tx.status}
                             </Badge>
                           ) : (
                             <span className="text-slate-300">—</span>
                           )}
-                        </TableCell>
-                        <TableCell className={`text-right font-mono ${TONE[tx.type] || "text-slate-300"}`}>
+                        </td>
+                        <td className={`py-3 text-right font-mono font-medium ${TONE[tx.type] || "text-slate-300"}`}>
                           {tx.type === "deposit" ? "+" : tx.type === "withdrawal" ? "−" : ""}
                           {formatCurrency(Math.abs(tx.amount ?? 0))}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-slate-300">
+                        </td>
+                        <td className="py-3 text-right font-mono text-[11px] text-slate-300">
                           {formatDate(tx.createdAt)}
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                  </tbody>
+                </table>
+              </div>
             </Card>
           )}
         </div>
 
         <aside className="space-y-4">
           <Card>
-            <CardContent className="space-y-2 p-5 text-sm text-slate-300">
-              <p className="flex gap-2">
-                <ArrowDownLeft className="mt-0.5 h-4 w-4 text-escrow" />
-                Milestone payments are released here after client approval.
+            <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+              <p className="flex items-start gap-2">
+                <ArrowDownLeft className="mt-0.5 h-4 w-4 shrink-0 text-escrow" />
+                <span>Milestone payments are released here after client approval.</span>
               </p>
-              <p className="flex gap-2">
-                <ArrowUpRight className="mt-0.5 h-4 w-4 text-brick" />
-                Withdrawals require a verified Stripe payout account.
+              <p className="flex items-start gap-2">
+                <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-brick" />
+                <span>Withdrawals require a verified Stripe payout account.</span>
               </p>
-            </CardContent>
+            </div>
           </Card>
         </aside>
       </div>

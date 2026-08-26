@@ -6,6 +6,10 @@ import NavIcon from "./NavIcon.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { cn } from "../../lib/cn.js";
 
+/**
+ * Sidebar — Quiet navigation canvas supporting page hierarchy.
+ * Clean section grouping, subtle hover states, brand-soft active indicator.
+ */
 export default function Sidebar({ role, onNavigate, showBrand = false, className = "" }) {
   const { user } = useAuth();
   const groups = navForRole(role || user?.role);
@@ -18,18 +22,20 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
     .toUpperCase();
 
   return (
-    <div className={cn("flex h-full flex-col justify-between overflow-y-auto px-3 py-5", className)}>
-      <nav aria-label="Workspace" className="flex flex-col gap-5">
+    <div className={cn("flex h-full flex-col justify-between overflow-y-auto bg-sidebar-bg px-3 py-4", className)}>
+      <nav aria-label="Workspace" className="flex flex-col gap-4">
         {showBrand && (
-          <Link to="/" onClick={onNavigate} className="mb-1 flex items-center gap-2.5 px-2 py-1">
-            <SealMark className="h-7 w-7 text-brass" />
-            <span className="font-display text-base font-bold tracking-tight text-slate">NexusWork</span>
+          <Link to="/" onClick={onNavigate} className="mb-2 flex items-center gap-2.5 px-2 py-1">
+            <SealMark className="h-6 w-6 text-brand" />
+            <span className="font-display text-base font-bold tracking-tight text-content-primary">
+              NexusWork
+            </span>
           </Link>
         )}
 
         {groups.map((group) => (
           <div key={group.section}>
-            <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+            <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-content-muted">
               {group.section}
             </p>
             <ul className="space-y-0.5">
@@ -41,15 +47,15 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-1 focus-visible:ring-offset-ink",
+                        "relative flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
                         isActive
-                          ? "bg-brass/15 text-brass"
-                          : "text-slate-300 hover:bg-ink-50 hover:text-slate"
+                          ? "bg-brand-soft font-semibold text-brand before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-1 before:rounded-r-full before:bg-brand"
+                          : "text-content-secondary hover:bg-surface-soft hover:text-content-primary"
                       )
                     }
                   >
-                    <NavIcon name={item.icon} className="h-4 w-4 shrink-0 opacity-80" />
+                    <NavIcon name={item.icon} className="h-4 w-4 shrink-0 opacity-75" />
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   </NavLink>
                 </li>
@@ -59,24 +65,24 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
         ))}
       </nav>
 
-      {/* ── Static profile display — no click, no dropdown ── */}
+      {/* ── User profile section ── */}
       {user && (
-        <div className="border-t border-ink-300 pt-3">
-          <div className="flex items-center gap-2.5 px-2 py-2">
+        <div className="border-t border-border-subtle pt-3">
+          <div className="flex items-center gap-2.5 rounded-control px-2 py-1.5 transition-colors hover:bg-surface-soft">
             {user.avatarUrl ? (
               <img
                 src={user.avatarUrl}
                 alt=""
-                className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-ink-300"
+                className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-border-subtle"
               />
             ) : (
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brass/20 text-[11px] font-bold text-brass">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[11px] font-bold text-brand">
                 {initials}
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-slate">{user.name || user.email}</p>
-              <p className="truncate text-[10px] text-slate-300">{ROLE_LABELS[user.role] || "Member"}</p>
+              <p className="truncate text-xs font-semibold text-content-primary">{user.name || user.email}</p>
+              <p className="truncate text-[10px] text-content-muted">{ROLE_LABELS[user.role] || "Member"}</p>
             </div>
           </div>
         </div>
