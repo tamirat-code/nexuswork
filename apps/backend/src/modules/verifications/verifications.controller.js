@@ -7,6 +7,7 @@ import {
   getVerificationStats,
   reviewVerification,
   certifyStudentSkill,
+  exportVerifiedCredential,
 } from "./verifications.service.js";
 
 export const requestVerification = asyncHandler(async (req, res) => {
@@ -27,6 +28,13 @@ export const requestVerification = asyncHandler(async (req, res) => {
 export const getMine = asyncHandler(async (req, res) => {
   const verifications = await getMyVerifications(req.user._id);
   res.json({ success: true, data: verifications });
+});
+
+export const exportCredential = asyncHandler(async (req, res) => {
+  const credential = await exportVerifiedCredential(req.params.id, req.user._id);
+  res.setHeader("Content-Type", "application/ld+json; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="nexuswork-credential-${req.params.id}.json"`);
+  res.json(credential);
 });
 
 export const getAll = asyncHandler(async (req, res) => {

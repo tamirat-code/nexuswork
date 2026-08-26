@@ -5,6 +5,75 @@ import User from "../users/users.model.js";
 import File from "../files/files.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { env } from "../../config/env.js";
+
+export function buildStudentCredential({ verification, university, user, profile }) {
+  const credentialId = `${env.credentialIssuerUrl}/v1/verifications/${verification._id}/credential`;
+  const issuerId = env.credentialIssuerUrl;
+  const certifiedSkills = (profile?.skills || [])
+    .filter((skill) => skill.verification_method === "university_certified")
+    .map((skill) => ({
+      id: `${issuerId}/v1/skills/${encodeURIComponent(String(skill.name).toLowerCase().replace(/\s+/g, "-"))}`,
+      type: ["Achievement", "Skill"],
+      name: skill.name,
+      category: skill.category,
+      level: skill.level,
+      verificationMethod: skill.verification_method,
+      certifiedAt: skill.certified_at,
+    }));
+
+  return {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://purl.imsglobal.org/spec/ob/v3p0/context.json",
+    ],
+    id: credentialId,
+    type: ["VerifiableCredential", "OpenBadgeCredential"],
+    name: `NexusWork university verification — ${university.name}`,
+    description: "An unsigned Open Badges 3.0 / W3C VC-compatible credential document. Cryptographic proof is not yet attached.",
+    issuer: { id: issuerId, name: "NexusWork" },
+    validFrom: verification.reviewed_at || verification.updatedAt || verification.createdAt,
+    credentialSubject: {
+      id: `${issuerId}/v1/students/${user._id}`,
+      type: ["AchievementSubject"],
+      name: verification.full_name || user.name,
+      achievement: {
+        id: `${credentialId}#achievement`,
+        type: "Achievement",
+        name: `Verified student at ${university.name}`,
+        description: `University verification for the ${verification.program} program.`,
+        criteria: { narrative: "Identity and enrollment evidence reviewed by the issuing university or platform administrator." },
+        achievementType: "Certificate",
+        alignment: certifiedSkills,
+      },
+    },
+    evidence: [{
+      id: `${credentialId}#evidence`,
+      type: ["Evidence"],
+      verifier: university.name,
+      program: verification.program,
+      status: "approved",
+    }],
+    credentialStatus: {
+      id: `${credentialId}/status`,
+      type: "BitstringStatusListEntry",
+      statusPurpose: "revocation",
+      status: "active",
+    },
+  };
+}
+
+export async function exportVerifiedCredential(verificationId, userId) {
+  const verification = await Verification.findOne({ _id: verificationId, user_id: userId, status: "approved" }).lean();
+  if (!verification) throw new NotFoundError("Approved verification credential not found");
+  const [university, user, profile] = await Promise.all([
+    University.findById(verification.university_id).select("name domain").lean(),
+    User.findById(userId).select("name").lean(),
+    StudentProfile.findOne({ user_id: userId }).select("skills").lean(),
+  ]);
+  if (!university || !user) throw new NotFoundError("Credential subject or issuer not found");
+  return buildStudentCredential({ verification, university, user, profile });
+}
 
 export async function submitVerification({
   userId,

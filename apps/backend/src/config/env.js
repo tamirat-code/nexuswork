@@ -30,6 +30,7 @@ export function buildEnv(source = process.env) {
 
     mongoUri: optional(source.MONGO_URI),
     clientUrl: optional(source.CLIENT_URL),
+    credentialIssuerUrl: optional(source.CREDENTIAL_ISSUER_URL) || "http://localhost:5000",
     jwtSecret: optional(source.JWT_SECRET),
     jwtExpiresIn: source.JWT_EXPIRES_IN || "7d",
 
@@ -70,6 +71,7 @@ export function buildEnv(source = process.env) {
     s3ForcePathStyle: boolean(source.S3_FORCE_PATH_STYLE),
 
     logLevel: source.LOG_LEVEL || "info",
+    analyticsMinCohortSize: Math.max(1, Math.floor(number(source.ANALYTICS_MIN_COHORT_SIZE, 5))),
   });
 }
 
