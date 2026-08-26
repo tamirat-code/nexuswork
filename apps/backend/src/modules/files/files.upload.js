@@ -6,8 +6,13 @@ import { storageConfig } from "../../config/storage.config.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 
 
-const BLOCKED_EXTENSIONS = new Set([
-  ".exe", ".bat", ".cmd", ".sh", ".ps1", ".msi", ".dll", ".com", ".vbs", ".js", ".jar",
+const ALLOWED_TYPES = new Map([
+  ["application/pdf", new Set([".pdf"])],
+  ["image/jpeg", new Set([".jpg", ".jpeg"])],
+  ["image/png", new Set([".png"])],
+  ["image/webp", new Set([".webp"])],
+  ["text/plain", new Set([".txt"])],
+  ["application/zip", new Set([".zip"])],
 ]);
 
 const diskStorage = multer.diskStorage({
@@ -16,15 +21,16 @@ const diskStorage = multer.diskStorage({
     cb(null, storageConfig.absoluteUploadDir);
   },
   filename(req, file, cb) {
-    const ext = path.extname(file.originalname);
+    const ext = path.extname(file.originalname).toLowerCase();
     cb(null, `${crypto.randomUUID()}${ext}`);
   },
 });
 
 function fileFilter(req, file, cb) {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (BLOCKED_EXTENSIONS.has(ext)) {
-    return cb(new ValidationError(`File type "${ext}" is not allowed`));
+  const allowedExtensions = ALLOWED_TYPES.get(file.mimetype);
+  if (!allowedExtensions || !allowedExtensions.has(ext)) {
+    return cb(new ValidationError("File MIME type and extension are not allowed"));
   }
   cb(null, true);
 }

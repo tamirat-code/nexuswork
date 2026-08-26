@@ -47,6 +47,8 @@ const userSchema = new mongoose.Schema(
     mfa_recovery_code_hashes: { type: [String], default: [], select: false },
     failed_login_attempts: { type: Number, default: 0 },
     locked_until: { type: Date, default: null },
+    // Incremented when credentials are reset so all previously issued sessions expire.
+    auth_session_version: { type: Number, default: 0, min: 0 },
     terms_accepted_at: { type: Date },
     terms_version: { type: String },
   },

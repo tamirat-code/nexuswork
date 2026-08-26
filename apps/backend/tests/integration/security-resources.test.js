@@ -43,7 +43,7 @@ describe("resource authorization security boundaries", () => {
     await request(app).get("/v1/auth/me").set("Authorization", `Bearer ${missingJti}`).expect(401);
 
     await User.updateOne({ _id: user._id }, { $set: { status: "suspended" } });
-    const activeToken = jwt.sign({ sub: user._id, role: user.role, jti: "inactive-test" }, authConfig.jwtSecret, { expiresIn: "1h" });
+    const activeToken = jwt.sign({ sub: user._id, role: user.role, jti: "inactive-test", sessionVersion: user.auth_session_version || 0 }, authConfig.jwtSecret, { expiresIn: "1h" });
     await request(app).get("/v1/auth/me").set("Authorization", `Bearer ${activeToken}`).expect(401);
   });
 

@@ -21,6 +21,7 @@ export function signToken(user) {
     {
       sub: user._id.toString(),
       role: user.role,
+      sessionVersion: user.auth_session_version || 0,
     },
     authConfig.jwtSecret,
     {

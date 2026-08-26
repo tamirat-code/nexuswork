@@ -14,7 +14,7 @@ import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
 export async function createFileRecord({ ownerId, multerFile, related_type, related_id, auditContext = {} }) {
   const filename = storageConfig.driver === "s3"
-    ? `${crypto.randomUUID()}${path.extname(multerFile.originalname)}`
+    ? `${crypto.randomUUID()}${path.extname(multerFile.originalname).toLowerCase()}`
     : multerFile.filename;
 
   if (storageConfig.driver === "s3") {
@@ -28,7 +28,7 @@ export async function createFileRecord({ ownerId, multerFile, related_type, rela
   const file = new File({
     owner_id: ownerId,
     filename,
-    original_name: multerFile.originalname,
+    original_name: path.basename(multerFile.originalname).replace(/[\u0000-\u001f\u007f]/g, "_").slice(0, 255),
     mimetype: multerFile.mimetype,
     size: multerFile.size,
     // Private content is served only through the authenticated file endpoint.
@@ -194,6 +194,9 @@ export async function getPrivateContent(file) {
     return getPrivateObject(file.filename);
   }
   const diskPath = path.join(storageConfig.absoluteUploadDir, file.filename);
+  if (path.dirname(path.resolve(diskPath)) !== path.resolve(storageConfig.absoluteUploadDir)) {
+    throw new ForbiddenError("Invalid file storage path");
+  }
   if (!fs.existsSync(diskPath)) throw new NotFoundError("File content not found");
   return { Body: fs.createReadStream(diskPath) };
 }

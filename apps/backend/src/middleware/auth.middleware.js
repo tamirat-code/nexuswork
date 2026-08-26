@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { authConfig } from "../config/auth.config.js";
 import User from "../modules/users/users.model.js";
 import { isTokenRevoked } from "../modules/auth/auth.service.js";
+import { isCurrentSession } from "../modules/auth/session-version.js";
 
 export async function requireAuth(req, res, next) {
   try {
@@ -18,7 +19,7 @@ export async function requireAuth(req, res, next) {
       return res.status(401).json({ success: false, message: "Session has been revoked" });
     }
     const user = await User.findById(payload.sub);
-    if (!user || user.status !== "active") {
+    if (!user || user.status !== "active" || !isCurrentSession(payload, user)) {
       return res.status(401).json({ success: false, message: "User not found or inactive" });
     }
     req.user = user;

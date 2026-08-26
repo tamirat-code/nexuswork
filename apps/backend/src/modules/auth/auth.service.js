@@ -14,6 +14,7 @@ import { verifyGoogleIdToken } from "./google.client.js";
 import { verifyRecaptcha } from "../../shared/recaptcha/recaptcha.service.js";
 import { requireStrongPassword } from "../../shared/validators/password.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
+import { getSessionVersion } from "./session-version.js";
 import {
   buildOtpAuthUri,
   decryptMfaSecret,
@@ -32,7 +33,7 @@ const SELF_REGISTERABLE_ROLES = ["student", "client", "university_staff"];
 
 function signToken(user, amr = ["pwd"]) {
   const jti = crypto.randomUUID();
-  return jwt.sign({ sub: user._id, role: user.role, jti, amr }, authConfig.jwtSecret, {
+  return jwt.sign({ sub: user._id, role: user.role, jti, amr, sessionVersion: getSessionVersion(user) }, authConfig.jwtSecret, {
     expiresIn: authConfig.jwtExpiresIn,
   });
 }
@@ -410,6 +411,7 @@ export async function resetPassword(rawToken, newPassword) {
 
   requireStrongPassword(newPassword);
   user.password_hash = await bcrypt.hash(newPassword, authConfig.bcryptSaltRounds);
+  user.auth_session_version = getSessionVersion(user) + 1;
   user.failed_login_attempts = 0;
   user.locked_until = null;
   await user.save();
