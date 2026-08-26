@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "seed": "node src/seed/index.js",
     "ledger:migration:dry-run": "node src/modules/financial-ledger/migration-dry-run.js",
+    "ledger:migration:apply": "MIGRATION_APPROVED=true node src/modules/financial-ledger/migration-dry-run.js --apply",
     "syntax": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },
