@@ -19,7 +19,7 @@ function accountKey(base, currency, ownerId) {
   return ownerId ? `${base}:${currency}:${ownerId}` : `${base}:${currency}`;
 }
 
-async function ensureAccount(base, currency, ownerId) {
+async function ensureAccount(base, currency, ownerId, session) {
   const definition = ACCOUNT_DEFINITIONS[base];
   if (!definition) throw new ValidationError(`Unknown financial account: ${base}`);
   const key = accountKey(base, currency, ownerId);
@@ -34,7 +34,7 @@ async function ensureAccount(base, currency, ownerId) {
         name: ownerId ? `${definition[1]} (${ownerId})` : definition[1],
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, new: true, setDefaultsOnInsert: true, ...(session ? { session } : {}) }
   );
 }
 
@@ -69,17 +69,18 @@ export async function postJournal({
   entries,
   metadata = {},
   reversedTransactionId,
+  session,
 } = {}) {
   if (!idempotencyKey) throw new ValidationError("Ledger idempotency key is required");
   if (!eventType || !sourceType || !sourceId) throw new ValidationError("Ledger source and event type are required");
   const currency = validateEntries(entries);
 
-  const existing = await FinancialJournal.findOne({ idempotency_key: idempotencyKey });
+  const existing = await FinancialJournal.findOne({ idempotency_key: idempotencyKey }, null, session ? { session } : undefined);
   if (existing) return { journal: existing, duplicate: true };
 
   const resolvedEntries = [];
   for (const entry of entries) {
-    const account = await ensureAccount(entry.accountBase, currency, entry.ownerId);
+    const account = await ensureAccount(entry.accountBase, currency, entry.ownerId, session);
     resolvedEntries.push({
       account_key: account.key,
       account_type: account.type,
@@ -91,7 +92,7 @@ export async function postJournal({
   }
 
   try {
-    const journal = await FinancialJournal.create({
+    const journal = await FinancialJournal.create([{
       transaction_id: crypto.randomUUID(),
       idempotency_key: idempotencyKey,
       event_type: eventType,
@@ -104,11 +105,11 @@ export async function postJournal({
       entries: resolvedEntries,
       reversed_transaction_id: reversedTransactionId,
       metadata,
-    });
-    return { journal, duplicate: false };
+    }], session ? { session } : undefined);
+    return { journal: Array.isArray(journal) ? journal[0] : journal, duplicate: false };
   } catch (error) {
     if (error.code === 11000) {
-      const journal = await FinancialJournal.findOne({ idempotency_key: idempotencyKey });
+      const journal = await FinancialJournal.findOne({ idempotency_key: idempotencyKey }, null, session ? { session } : undefined);
       if (journal) return { journal, duplicate: true };
     }
     throw error;

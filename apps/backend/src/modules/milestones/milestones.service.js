@@ -10,6 +10,7 @@ import { addSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
+import { withMongoTransaction } from "../../config/database.config.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";
 import { logger } from "../../shared/logger/logger.js";
@@ -29,6 +30,65 @@ async function assertClient(contract, requestingUserId) {
   if (String(contract.client_id) === String(requestingUserId)) return;
   const allowed = await isOrgMember(contract.client_id, requestingUserId);
   if (!allowed) throw new ForbiddenError("Only the client can manage milestones");
+}
+
+export async function finalizeReleasedMilestoneAccounting(milestone, contract, releasePayment, auditContext = {}) {
+  const totalMoney = Number.isSafeInteger(milestone.amount_minor)
+    ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
+    : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
+  const payoutMinor = Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000);
+  const commissionMinor = totalMoney.amountMinor - payoutMinor;
+  const payoutMoney = money(payoutMinor, totalMoney.currency);
+  const commissionMoney = money(commissionMinor, totalMoney.currency);
+  const commissionAmount = majorUnitsFromMoney(commissionMoney);
+
+  await withMongoTransaction(async (session) => {
+    const postedJournal = await postJournal({
+      eventType: "milestone.released",
+      idempotencyKey: `milestone-released:${milestone._id}`,
+      sourceType: "milestone",
+      sourceId: milestone._id,
+      requestId: auditContext.requestId || auditContext.correlationId || "system",
+      actorId: auditContext.actor?._id || auditContext.actor?.id,
+      actorRole: auditContext.actor?.role || "system",
+      entries: [
+        { accountBase: "escrow_liability", debitMinor: totalMoney.amountMinor, creditMinor: 0, currency: totalMoney.currency },
+        { accountBase: "student_payable", ownerId: contract.student_id, debitMinor: 0, creditMinor: payoutMoney.amountMinor, currency: totalMoney.currency },
+        { accountBase: "platform_revenue", debitMinor: 0, creditMinor: commissionMoney.amountMinor, currency: totalMoney.currency },
+      ],
+      metadata: { paymentId: releasePayment?._id, milestoneId: milestone._id },
+      session,
+    });
+
+    releasePayment.status = "succeeded";
+    releasePayment.processing_at = undefined;
+    if (postedJournal?.journal?.transaction_id) {
+      releasePayment.ledger_journal_id = postedJournal.journal.transaction_id;
+      releasePayment.ledger_idempotency_key = `milestone-released:${milestone._id}`;
+    }
+    await releasePayment.save(session ? { session } : undefined);
+
+    await Payment.findOneAndUpdate(
+      { milestone_id: milestone._id, direction: "commission" },
+      {
+        $setOnInsert: {
+          milestone_id: milestone._id,
+          amount: commissionAmount,
+          amount_minor: commissionMoney.amountMinor,
+          currency: commissionMoney.currency,
+          direction: "commission",
+          status: "succeeded",
+        },
+      },
+      { upsert: true, new: true, ...(session ? { session } : {}) }
+    );
+
+    milestone.status = "released";
+    milestone.payout_status = "paid";
+    milestone.payout_failure_reason = "";
+    milestone.released_at = milestone.released_at || new Date();
+    await milestone.save(session ? { session } : undefined);
+  });
 }
 
 async function completeRelease(milestone, contract, requestingUserId, auditContext = {}) {
@@ -70,42 +130,7 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       };
     }
 
-    await postJournal({
-      eventType: "milestone.released",
-      idempotencyKey: `milestone-released:${milestone._id}`,
-      sourceType: "milestone",
-      sourceId: milestone._id,
-      requestId: auditContext.requestId || auditContext.correlationId || "system",
-      actorId: auditContext.actor?._id || auditContext.actor?.id,
-      actorRole: auditContext.actor?.role || "system",
-      entries: [
-        { accountBase: "escrow_liability", debitMinor: totalMoney.amountMinor, creditMinor: 0, currency: totalMoney.currency },
-        { accountBase: "student_payable", ownerId: contract.student_id, debitMinor: 0, creditMinor: payoutMoney.amountMinor, currency: totalMoney.currency },
-        { accountBase: "platform_revenue", debitMinor: 0, creditMinor: commissionMoney.amountMinor, currency: totalMoney.currency },
-      ],
-      metadata: { paymentId: releasePayment?._id, milestoneId: milestone._id },
-    });
-
-    await Payment.findOneAndUpdate(
-      { milestone_id: milestone._id, direction: "commission" },
-      {
-        $setOnInsert: {
-          milestone_id: milestone._id,
-          amount: commissionAmount,
-          amount_minor: commissionMoney.amountMinor,
-          currency: commissionMoney.currency,
-          direction: "commission",
-          status: "succeeded",
-        },
-      },
-      { upsert: true, new: true }
-    );
-
-    milestone.status = "released";
-    milestone.payout_status = "paid";
-    milestone.payout_failure_reason = "";
-    milestone.released_at = new Date();
-    await milestone.save();
+    await finalizeReleasedMilestoneAccounting(milestone, contract, releasePayment, auditContext);
 
     // A contract is "finished" once every one of its milestones has been
     // released — nothing else ever moves it out of "active", so without

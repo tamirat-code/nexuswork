@@ -2,10 +2,28 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --host localhost:27017 --eval \"db.adminCommand('ping').ok\" | grep 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+    command: >-
+      mongosh --quiet --host mongo:27017 --eval
+      "try { rs.status() } catch (error) {
+      rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] });
+      }"
 
   backend:
     build: ./apps/backend
@@ -15,9 +33,10 @@ services:
     env_file:
       - ./apps/backend/.env
     environment:
-      - MONGO_URI=mongodb://mongo:27017/nexuswork
+      - MONGO_URI=mongodb://mongo:27017/nexuswork?replicaSet=rs0&directConnection=true
     depends_on:
-      - mongo
+      mongo-init:
+        condition: service_completed_successfully
 
   frontend:
     build: ./apps/frontend

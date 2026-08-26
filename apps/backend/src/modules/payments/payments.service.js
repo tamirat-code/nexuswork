@@ -9,6 +9,7 @@ import { logAction } from "../audit-logs/audit-logs.service.js";
 import { money, moneyFromLegacyMajorUnits, moneyFromRecord } from "../../shared/money/money.js";
 import { getPaymentProvider, paymentProvider } from "./providers/index.js";
 import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
+import { withMongoTransaction } from "../../config/database.config.js";
 import { PAYMENT_STATUSES, transitionPaymentStatus } from "./payment-state.js";
 
 async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
@@ -191,36 +192,41 @@ export async function markDepositSucceeded(paymentIntentId, auditContext = {}) {
     throw new ValidationError("Provider payment currency does not match the milestone currency");
   }
 
-  if (payment.status !== PAYMENT_STATUSES.ledgerPending) {
-    transitionPaymentStatus(payment, PAYMENT_STATUSES.ledgerPending);
-  }
-  const ledgerIdempotencyKey = payment.ledger_idempotency_key || `payment-funded:${payment._id}`;
-  payment.ledger_idempotency_key = ledgerIdempotencyKey;
-  payment.provider_event_id = auditContext.providerEventId || payment.provider_event_id || payment.provider_reference || providerPaymentId;
-  payment.failure_message = undefined;
-  await payment.save();
-
-  const milestone = await Milestone.findById(payment.milestone_id).select("contract_id currency");
   try {
-    const posted = await postJournal({
-      eventType: "payment.funded",
-      idempotencyKey: ledgerIdempotencyKey,
-      sourceType: "payment",
-      sourceId: payment._id,
-      providerEventId: payment.provider_event_id,
-      requestId: auditContext.requestId || auditContext.correlationId || "system",
-      actorId: auditContext.actor?._id || auditContext.actor?.id,
-      actorRole: auditContext.actor?.role || "system",
-      entries: [
-        { accountBase: "provider_clearing", debitMinor: expectedMoney.amountMinor, creditMinor: 0, currency: expectedMoney.currency },
-        { accountBase: "escrow_liability", debitMinor: 0, creditMinor: expectedMoney.amountMinor, currency: expectedMoney.currency },
-      ],
-      metadata: { milestoneId: milestone?._id, provider: payment.provider, paymentIntentId: providerPaymentId },
+    await withMongoTransaction(async (session) => {
+      if (payment.status !== PAYMENT_STATUSES.ledgerPending) {
+        transitionPaymentStatus(payment, PAYMENT_STATUSES.ledgerPending);
+      }
+      const ledgerIdempotencyKey = payment.ledger_idempotency_key || `payment-funded:${payment._id}`;
+      payment.ledger_idempotency_key = ledgerIdempotencyKey;
+      payment.provider_event_id = auditContext.providerEventId || payment.provider_event_id || payment.provider_reference || providerPaymentId;
+      payment.failure_message = undefined;
+      await payment.save(session ? { session } : undefined);
+
+      const milestoneQuery = Milestone.findById(payment.milestone_id).select("contract_id currency");
+      if (session) milestoneQuery.session(session);
+      const milestone = await milestoneQuery;
+      const posted = await postJournal({
+        eventType: "payment.funded",
+        idempotencyKey: ledgerIdempotencyKey,
+        sourceType: "payment",
+        sourceId: payment._id,
+        providerEventId: payment.provider_event_id,
+        requestId: auditContext.requestId || auditContext.correlationId || "system",
+        actorId: auditContext.actor?._id || auditContext.actor?.id,
+        actorRole: auditContext.actor?.role || "system",
+        entries: [
+          { accountBase: "provider_clearing", debitMinor: expectedMoney.amountMinor, creditMinor: 0, currency: expectedMoney.currency },
+          { accountBase: "escrow_liability", debitMinor: 0, creditMinor: expectedMoney.amountMinor, currency: expectedMoney.currency },
+        ],
+        metadata: { milestoneId: milestone?._id, provider: payment.provider, paymentIntentId: providerPaymentId },
+        session,
+      });
+      payment.ledger_journal_id = String(posted.journal._id);
+      transitionPaymentStatus(payment, PAYMENT_STATUSES.succeeded);
+      payment.failure_message = undefined;
+      await payment.save(session ? { session } : undefined);
     });
-    payment.ledger_journal_id = String(posted.journal._id);
-    transitionPaymentStatus(payment, PAYMENT_STATUSES.succeeded);
-    payment.failure_message = undefined;
-    await payment.save();
   } catch (error) {
     payment.failure_message = error.message;
     await payment.save();
@@ -368,18 +374,52 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
   }
 
   let transfer;
-  try {
-    transfer = await provider.createTransfer({
-      amountMinor: releaseMoney.amountMinor,
-      currency: releaseMoney.currency,
-      destination: providerName === "stripe" ? stripeAccountId : chapaPayoutDestination,
-      metadata: { milestone_id: String(milestoneId) },
-      idempotencyKey: operationKey,
-    });
-  } catch (err) {
-    await failReleasePayment(payment, milestoneId, err, auditContext);
+  if (payment.provider_payment_id) {
+    // A previous attempt may have reached the provider before the process
+    // crashed. Verify that transfer first; never initialize a second payout.
+    try {
+      transfer = await provider.getTransfer(payment.provider_payment_id);
+    } catch (err) {
+      payment.processing_at = new Date();
+      payment.status = "pending";
+      payment.failure_message = `Payout status verification pending: ${err.message}`;
+      await payment.save();
+      return payment;
+    }
+  } else {
+    try {
+      transfer = await provider.createTransfer({
+        amountMinor: releaseMoney.amountMinor,
+        currency: releaseMoney.currency,
+        destination: providerName === "stripe" ? stripeAccountId : chapaPayoutDestination,
+        metadata: { milestone_id: String(milestoneId) },
+        idempotencyKey: operationKey,
+      });
+    } catch (err) {
+      await failReleasePayment(payment, milestoneId, err, auditContext);
 
-    throw err;
+      throw err;
+    }
+  }
+
+  // Chapa may accept a transfer request before the bank payout reaches a
+  // final state. Never treat the initialize response as proof of settlement.
+  // Verify the provider reference immediately; if verification is temporarily
+  // unavailable, retain the payment as pending for reconciliation.
+  if (providerName === "chapa") {
+    try {
+      const verifiedTransfer = await provider.getTransfer(transfer.id);
+      transfer = { ...transfer, ...verifiedTransfer };
+    } catch (err) {
+      payment.provider = providerName;
+      payment.provider_payment_id = transfer.id;
+      payment.provider_reference = transfer.providerReference;
+      payment.processing_at = new Date();
+      payment.status = "pending";
+      payment.failure_message = `Payout status verification pending: ${err.message}`;
+      await payment.save();
+      return payment;
+    }
   }
 
   payment.provider = providerName;
@@ -389,6 +429,13 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
   payment.processing_at = undefined;
   payment.failure_message = undefined;
   if (transfer.status !== "succeeded") {
+    if (transfer.status === "failed") {
+      const error = new ValidationError(
+        `Payout provider rejected the transfer (status: ${transfer.providerStatus || transfer.status})`
+      );
+      await failReleasePayment(payment, milestoneId, error, auditContext);
+      throw error;
+    }
     payment.status = "pending";
     payment.failure_message = `Payout provider status: ${transfer.providerStatus || transfer.status}`;
     await payment.save();
@@ -555,31 +602,42 @@ export async function reconcilePendingReleases({ limit = 100, auditContext = {} 
   const results = { checked: pending.length, succeeded: 0, failed: 0 };
   for (const payment of pending) {
     try {
-      if (payment.stripe_transfer_id) {
-        await paymentProvider.getTransfer(payment.stripe_transfer_id);
-        payment.status = "succeeded";
-        payment.processing_at = undefined;
-        await payment.save();
+      const provider = getPaymentProvider(payment.provider || (payment.currency === "etb" ? "chapa" : "stripe"));
+      const providerTransferId = payment.provider_payment_id || payment.stripe_transfer_id;
+      if (providerTransferId) {
+        const transfer = await provider.getTransfer(providerTransferId);
+        if (transfer.status !== "succeeded") {
+          if (transfer.status === "failed") {
+            throw new ValidationError(
+              `Payout provider rejected the transfer (status: ${transfer.providerStatus || transfer.status})`
+            );
+          }
+          continue;
+        }
+        // Provider success is not the complete domain transition. Reuse the
+        // milestone release finalization so the ledger, commission, and
+        // milestone projection are completed idempotently together.
+        const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
+        if (!milestone?.contract_id) throw new ValidationError("Milestone contract not found for payout reconciliation");
+        const { finalizeReleasedMilestoneAccounting } = await import("../milestones/milestones.service.js");
+        await finalizeReleasedMilestoneAccounting(milestone, milestone.contract_id, payment, auditContext);
       } else {
-        await releaseToStudent({
+        const releasedPayment = await releaseToStudent({
           milestoneId: payment.milestone_id,
           amount: payment.amount,
+          amountMinor: payment.amount_minor,
+          currency: payment.currency,
           stripeAccountId: payment.stripe_account_id,
           auditContext,
         });
+        if (releasedPayment?.status === "succeeded") {
+          const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
+          if (!milestone?.contract_id) throw new ValidationError("Milestone contract not found for payout reconciliation");
+          const { finalizeReleasedMilestoneAccounting } = await import("../milestones/milestones.service.js");
+          await finalizeReleasedMilestoneAccounting(milestone, milestone.contract_id, releasedPayment, auditContext);
+        }
       }
 
-      await Milestone.updateOne(
-        { _id: payment.milestone_id, status: { $in: ["release_pending", "release_failed"] } },
-        {
-          $set: {
-            status: "released",
-            payout_status: "paid",
-            payout_failure_reason: "",
-            released_at: new Date(),
-          },
-        }
-      );
       await logAction({
         action_type: "RELEASE_SUCCEEDED",
         eventType: "RELEASE_SUCCEEDED",
