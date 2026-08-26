@@ -89,9 +89,13 @@ function providerAmountMinor(amount, currency) {
   }
 }
 
+function transferStatus(status) {
+  return normalizeStatus(status);
+}
+
 export const chapaProvider = {
   name: "chapa",
-  capabilities: ["hosted_checkout", "status_lookup", "webhooks"],
+  capabilities: ["hosted_checkout", "status_lookup", "payouts", "webhooks"],
   async createPaymentIntent({ amountMinor, currency, metadata = {}, idempotencyKey }) {
     const value = assertEtb({ amountMinor, currency });
     const txRef = idempotencyKey || "nexuswork-" + crypto.randomUUID();
@@ -155,8 +159,41 @@ export const chapaProvider = {
     if (!valid) throw new PaymentProviderError("Chapa webhook signature verification failed", { code: "invalid_signature" });
     return payload;
   },
-  createTransfer() { return unsupportedCapability("Chapa", "transfers"); },
-  getTransfer() { return unsupportedCapability("Chapa", "transfers"); },
+  async createTransfer({ amountMinor, currency, destination, metadata = {}, idempotencyKey }) {
+    const value = assertEtb({ amountMinor, currency });
+    if (!destination?.accountNumber || !destination?.bankCode || !destination?.accountName) {
+      throw new PaymentProviderError("Chapa payout bank details are incomplete", { code: "invalid_destination" });
+    }
+    const body = await request("/transfers", {
+      method: "POST",
+      body: JSON.stringify({
+        account_name: destination.accountName,
+        account_number: destination.accountNumber,
+        amount: String(majorUnitsFromMoney(value)),
+        currency: "ETB",
+        bank_code: destination.bankCode,
+        reference: idempotencyKey,
+        meta: metadata,
+      }),
+    });
+    const data = responseObject(body, "transfer");
+    const id = data.reference || data.tx_ref || data.transfer_id || idempotencyKey;
+    return {
+      id,
+      status: transferStatus(data.status || body.status),
+      providerStatus: data.status || body.status,
+      providerReference: data.reference || data.tx_ref,
+    };
+  },
+  async getTransfer(id) {
+    const body = await request("/transfers/verify/" + encodeURIComponent(id));
+    const data = responseObject(body, "transfer verification");
+    return {
+      id: data.reference || data.tx_ref || id,
+      status: transferStatus(data.status || body.status),
+      providerStatus: data.status || body.status,
+    };
+  },
   createRefund() { return unsupportedCapability("Chapa", "refunds"); },
   createConnectedAccount() { return unsupportedCapability("Chapa", "connected accounts"); },
   getConnectedAccount() { return unsupportedCapability("Chapa", "connected accounts"); },

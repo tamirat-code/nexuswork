@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { paymentProvider } from "../payments/providers/index.js";
+import { getPaymentProvider } from "../payments/providers/index.js";
 import { logger } from "../../shared/logger/logger.js";
 import Wallet from "./wallets.model.js";
 import Withdrawal from "./withdrawal.model.js";
@@ -8,10 +8,81 @@ import Contract from "../contracts/contracts.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Payment from "../payments/payments.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
+import { env } from "../../config/env.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
 import { getStudentPayableBalance, postJournal, reverseJournal } from "../financial-ledger/financial-ledger.service.js";
+
+const PAYOUT_KEY = crypto.createHash("sha256").update(String(env.jwtSecret || "nexuswork-development-key")).digest();
+
+function encryptAccountNumber(value) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", PAYOUT_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  return `${iv.toString("base64url")}.${cipher.getAuthTag().toString("base64url")}.${encrypted.toString("base64url")}`;
+}
+
+function decryptAccountNumber(value) {
+  const [ivText, tagText, encryptedText] = String(value || "").split(".");
+  if (!ivText || !tagText || !encryptedText) throw new ValidationError("Stored payout account details are invalid");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", PAYOUT_KEY, Buffer.from(ivText, "base64url"));
+  decipher.setAuthTag(Buffer.from(tagText, "base64url"));
+  return Buffer.concat([decipher.update(Buffer.from(encryptedText, "base64url")), decipher.final()]).toString("utf8");
+}
+
+function chapaPayoutStatus(wallet) {
+  return {
+    chapa_payout_ready: Boolean(
+      wallet?.chapa_bank_code && wallet?.chapa_account_name && wallet?.chapa_account_number_encrypted
+    ),
+    chapa_bank_code: wallet?.chapa_bank_code || null,
+    chapa_account_name: wallet?.chapa_account_name || null,
+    chapa_account_number_last4: wallet?.chapa_account_number_last4 || null,
+  };
+}
+
+export async function saveChapaPayoutDetails(userId, { bank_code, account_name, account_number }, auditContext = {}) {
+  const wallet = await Wallet.findOneAndUpdate(
+    { user_id: userId },
+    {
+      $set: {
+        chapa_bank_code: String(bank_code).trim(),
+        chapa_account_name: String(account_name).trim(),
+        chapa_account_number_encrypted: encryptAccountNumber(String(account_number).trim()),
+        chapa_account_number_last4: String(account_number).trim().slice(-4),
+      },
+      $setOnInsert: { user_id: userId },
+    },
+    { upsert: true, new: true }
+  );
+  await logAction({
+    actor_id: userId,
+    actor_role: auditContext.actor?.role || "student",
+    action_type: "settings_changed",
+    eventType: "settings_changed",
+    action: "wallet.chapa_payout_details_updated",
+    entity_type: "user",
+    entity_id: userId,
+    metadata: { bank_code: wallet.chapa_bank_code, account_last4: wallet.chapa_account_number_last4 },
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+  });
+  return {
+    chapa_payout_ready: true,
+    chapa_bank_code: wallet.chapa_bank_code,
+    chapa_account_name: wallet.chapa_account_name,
+    chapa_account_number_last4: wallet.chapa_account_number_last4,
+  };
+}
+
+export function getChapaPayoutDestination(wallet) {
+  if (!wallet?.chapa_bank_code || !wallet?.chapa_account_name || !wallet?.chapa_account_number_encrypted) return null;
+  return {
+    bankCode: wallet.chapa_bank_code,
+    accountName: wallet.chapa_account_name,
+    accountNumber: decryptAccountNumber(wallet.chapa_account_number_encrypted),
+  };
+}
 
 async function syncStripeAccountStatus(wallet) {
   if (!wallet?.stripe_account_id) {
@@ -25,7 +96,8 @@ async function syncStripeAccountStatus(wallet) {
     };
   }
 
-  const account = await paymentProvider.getConnectedAccount(wallet.stripe_account_id);
+  const stripeProvider = getPaymentProvider("stripe");
+  const account = await stripeProvider.getConnectedAccount(wallet.stripe_account_id);
   const complete = Boolean(account.chargesEnabled && account.payoutsEnabled);
 
   if (wallet.stripe_onboarding_complete !== complete) {
@@ -50,20 +122,33 @@ export async function getWallet(userId) {
 export async function getBalance(userId) {
   const wallet = await Wallet.findOne({ user_id: userId });
   if (!wallet) throw new NotFoundError("Wallet not found");
+  const walletCurrency = String(wallet.currency || paymentConfig.currency).toLowerCase();
 
   const payoutStatus = await syncStripeAccountStatus(wallet);
 
-  const ledgerBalance = await getStudentPayableBalance(userId, paymentConfig.currency);
+  const ledgerBalance = await getStudentPayableBalance(userId, walletCurrency);
+  const etbLedgerBalance = walletCurrency === "etb"
+    ? ledgerBalance
+    : await getStudentPayableBalance(userId, "etb");
+  const usdLedgerBalance = walletCurrency === "usd"
+    ? ledgerBalance
+    : await getStudentPayableBalance(userId, "usd");
+  const balances = {
+    usd: { available: usdLedgerBalance.hasEntries ? usdLedgerBalance.balanceMinor / 100 : 0, currency: "usd" },
+    etb: { available: etbLedgerBalance.hasEntries ? etbLedgerBalance.balanceMinor / 100 : 0, currency: "etb" },
+  };
   if (ledgerBalance.hasEntries) {
     const pending = await Withdrawal.aggregate([
-      { $match: { user_id: userId, status: "pending", currency: paymentConfig.currency } },
+      { $match: { user_id: userId, status: "pending", currency: walletCurrency } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     return {
       available: ledgerBalance.balanceMinor / 100,
       pending: Number(pending[0]?.total || 0),
-      currency: paymentConfig.currency,
+      currency: walletCurrency,
+      balances,
       ...payoutStatus,
+      ...chapaPayoutStatus(wallet),
     };
   }
 
@@ -83,7 +168,7 @@ export async function getBalance(userId) {
               milestone_id: { $in: milestoneIds },
               direction: "release",
               status: "succeeded",
-              currency: paymentConfig.currency,
+              currency: walletCurrency,
               $or: [
                 { stripe_transfer_id: { $exists: false } },
                 { stripe_transfer_id: null },
@@ -98,7 +183,7 @@ export async function getBalance(userId) {
         $match: {
           user_id: userId,
           status: { $in: ["pending", "paid"] },
-          currency: paymentConfig.currency,
+          currency: walletCurrency,
         },
       },
       { $group: { _id: "$status", total: { $sum: "$amount" } } },
@@ -116,15 +201,20 @@ export async function getBalance(userId) {
   return {
     available: Math.max(0, released - paidWithdrawals - pendingWithdrawals),
     pending: pendingWithdrawals,
-    currency: paymentConfig.currency,
+    currency: walletCurrency,
+    balances,
     ...payoutStatus,
+    ...chapaPayoutStatus(wallet),
   };
 }
 
 export async function getPayoutStatus(userId) {
   const wallet = await Wallet.findOne({ user_id: userId });
   if (!wallet) throw new NotFoundError("Wallet not found");
-  return syncStripeAccountStatus(wallet);
+  return {
+    ...(await syncStripeAccountStatus(wallet)),
+    ...chapaPayoutStatus(wallet),
+  };
 }
 
 export async function startOnboarding(userId) {
@@ -135,7 +225,8 @@ export async function startOnboarding(userId) {
   if (!wallet) wallet = await Wallet.create({ user_id: userId });
 
   if (!wallet.stripe_account_id) {
-    const account = await paymentProvider.createConnectedAccount({ email: user.email });
+    const stripeProvider = getPaymentProvider("stripe");
+    const account = await stripeProvider.createConnectedAccount({ email: user.email });
 
     wallet.stripe_account_id = account.id;
     await wallet.save();
@@ -144,7 +235,8 @@ export async function startOnboarding(userId) {
   const status = await syncStripeAccountStatus(wallet);
 
   if (status.onboarding_complete) {
-    const loginLink = await paymentProvider.createLoginLink(wallet.stripe_account_id);
+    const stripeProvider = getPaymentProvider("stripe");
+    const loginLink = await stripeProvider.createLoginLink(wallet.stripe_account_id);
     return {
       onboarding_url: loginLink.url,
       already_complete: true,
@@ -152,7 +244,8 @@ export async function startOnboarding(userId) {
     };
   }
 
-  const accountLink = await paymentProvider.createAccountLink({
+  const stripeProvider = getPaymentProvider("stripe");
+  const accountLink = await stripeProvider.createAccountLink({
     account: wallet.stripe_account_id,
     refreshUrl: paymentConfig.connectRefreshUrl,
     returnUrl: paymentConfig.connectReturnUrl,
@@ -228,7 +321,6 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
   }
 
   const operationKey = String(idempotencyKey || crypto.randomUUID()).trim();
-  const withdrawalMoney = moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "withdrawal.amount");
   if (operationKey.length < 8 || operationKey.length > 255) {
     throw new ValidationError("Idempotency-Key must be between 8 and 255 characters");
   }
@@ -266,6 +358,8 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
     );
   }
 
+  const walletCurrency = String(wallet.currency || paymentConfig.currency).toLowerCase();
+  const withdrawalMoney = moneyFromLegacyMajorUnits(amount, walletCurrency, "withdrawal.amount");
   let withdrawal;
   let ledgerJournal;
 
@@ -296,7 +390,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
                 milestone_id: { $in: milestoneIds },
                 direction: "release",
                 status: "succeeded",
-                currency: paymentConfig.currency,
+                currency: walletCurrency,
                 $or: [
                   { stripe_transfer_id: { $exists: false } },
                   { stripe_transfer_id: null },
@@ -317,7 +411,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
           $match: {
             user_id: userId,
             status: { $in: ["pending", "paid"] },
-            currency: paymentConfig.currency,
+            currency: walletCurrency,
           },
         },
         {
@@ -348,7 +442,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       throw new ValidationError(
         `Insufficient wallet balance. Available balance: ${available.toFixed(
           2
-        )} ${paymentConfig.currency.toUpperCase()}`
+        )} ${walletCurrency.toUpperCase()}`
       );
     }
 
@@ -359,14 +453,14 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       user_id: userId,
       amount,
       amount_minor: withdrawalMoney.amountMinor,
-      currency: paymentConfig.currency,
+      currency: walletCurrency,
       status: "pending",
       idempotency_key: operationKey,
       processing_at: new Date(),
     });
 
     try {
-      const payableBalance = await getStudentPayableBalance(userId, paymentConfig.currency);
+      const payableBalance = await getStudentPayableBalance(userId, walletCurrency);
       if (payableBalance.hasEntries && payableBalance.balanceMinor < withdrawalMoney.amountMinor) {
         throw new ValidationError("Insufficient ledger payable balance");
       }
@@ -379,10 +473,10 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
         actorId: actor?._id || actor?.id,
         actorRole: actor?.role || "system",
         entries: [
-          { accountBase: "student_payable", ownerId: userId, debitMinor: withdrawalMoney.amountMinor, creditMinor: 0, currency: paymentConfig.currency },
-          { accountBase: "payout_clearing", debitMinor: 0, creditMinor: withdrawalMoney.amountMinor, currency: paymentConfig.currency },
+          { accountBase: "student_payable", ownerId: userId, debitMinor: withdrawalMoney.amountMinor, creditMinor: 0, currency: walletCurrency },
+          { accountBase: "payout_clearing", debitMinor: 0, creditMinor: withdrawalMoney.amountMinor, currency: walletCurrency },
         ],
-        metadata: { withdrawalId: withdrawal._id, operationKey },
+      metadata: { withdrawalId: withdrawal._id, operationKey, currency: walletCurrency },
       });
       ledgerJournal = posted.journal;
       withdrawal.ledger_transaction_id = ledgerJournal.transaction_id;
@@ -402,7 +496,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       action: "withdrawal.requested",
       entity_type: "payment",
       entity_id: withdrawal._id,
-      metadata: { amount, currency: paymentConfig.currency, operationKey },
+      metadata: { amount, currency: walletCurrency, operationKey },
       correlationId: correlationId || crypto.randomUUID(),
     });
   } finally {
@@ -424,9 +518,10 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
 
     // Released milestone funds are already in the student's connected
     // account. Withdrawals must use that account's balance and payout rail.
-    const connectedBalance = await paymentProvider.getConnectedBalance(currentWallet.stripe_account_id);
+    const stripeProvider = getPaymentProvider("stripe");
+    const connectedBalance = await stripeProvider.getConnectedBalance(currentWallet.stripe_account_id);
     const connectedAvailableMinor = Number(
-      connectedBalance.find((b) => b.currency === paymentConfig.currency)?.amountMinor || 0
+      connectedBalance.find((b) => b.currency === walletCurrency)?.amountMinor || 0
     );
 
     if (connectedAvailableMinor < withdrawalMoney.amountMinor) {
@@ -435,9 +530,9 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       );
     }
 
-    const payout = await paymentProvider.createPayout({
+    const payout = await stripeProvider.createPayout({
       amountMinor: withdrawalMoney.amountMinor,
-      currency: paymentConfig.currency,
+      currency: walletCurrency,
       metadata: {
         withdrawal_id: String(withdrawal._id),
         user_id: String(userId),
@@ -464,7 +559,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       action: withdrawal.status === "paid" ? "withdrawal.succeeded" : withdrawal.status === "failed" ? "withdrawal.failed" : "withdrawal.pending",
       entity_type: "payment",
       entity_id: withdrawal._id,
-      metadata: { amount, currency: paymentConfig.currency, payoutId: payout.id, payoutStatus: withdrawal.status },
+      metadata: { amount, currency: walletCurrency, payoutId: payout.id, payoutStatus: withdrawal.status },
       correlationId: correlationId || crypto.randomUUID(),
     });
   } catch (err) {
@@ -502,7 +597,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
       action: "withdrawal.failed",
       entity_type: "payment",
       entity_id: withdrawal._id,
-      metadata: { amount, currency: paymentConfig.currency, error: reason },
+      metadata: { amount, currency: walletCurrency, error: reason },
       correlationId: correlationId || crypto.randomUUID(),
     });
 

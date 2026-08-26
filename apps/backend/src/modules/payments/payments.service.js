@@ -67,7 +67,9 @@ export async function createDepositIntent(milestone, requestedProvider) {
     // reference so a new payment can actually be completed.
   }
 
-  const providerName = String(requestedProvider || paymentConfig.provider).toLowerCase();
+  const providerName = String(
+    requestedProvider || (milestoneMoney.currency === "etb" ? "chapa" : "stripe")
+  ).toLowerCase();
   if (!["stripe", "chapa"].includes(providerName)) {
     throw new ValidationError("Unsupported payment provider. Choose Stripe or Chapa.");
   }
@@ -275,10 +277,13 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
   return payment;
 }
 
-export async function releaseToStudent({ milestoneId, amount, amountMinor, stripeAccountId, transferToStripe = true, auditContext = {} }) {
-  if (!transferToStripe) {
-    throw new ValidationError("Milestone release must use Stripe Connect; wallet credits are not supported");
-  }
+export async function releaseToStudent({ milestoneId, amount, amountMinor, currency, stripeAccountId, chapaPayoutDestination, transferToStripe = true, auditContext = {} }) {
+  if (!transferToStripe) throw new ValidationError("Milestone release must use a configured payout provider");
+  const releaseMoney = Number.isSafeInteger(amountMinor)
+    ? money(amountMinor, currency || paymentConfig.currency)
+    : moneyFromLegacyMajorUnits(amount, currency || paymentConfig.currency, "release.amount");
+  const providerName = releaseMoney.currency === "etb" ? "chapa" : "stripe";
+  const provider = getPaymentProvider(providerName);
 
   let payment = await Payment.findOne({
     milestone_id: milestoneId,
@@ -289,9 +294,6 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, strip
   if (payment?.status === "succeeded") return payment;
 
   if (!payment) {
-    const releaseMoney = Number.isSafeInteger(amountMinor)
-      ? money(amountMinor, paymentConfig.currency)
-      : moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "release.amount");
     payment = await Payment.findOneAndUpdate(
       { milestone_id: milestoneId, direction: "release", status: "failed" },
       {
@@ -299,13 +301,12 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, strip
           status: "pending",
           amount,
           amount_minor: releaseMoney.amountMinor,
-          currency: paymentConfig.currency,
+          currency: releaseMoney.currency,
+          provider: providerName,
+          provider_operation_key: `milestone-release-${milestoneId}`,
           stripe_account_id: stripeAccountId,
           processing_at: new Date(),
           failure_message: undefined,
-        },
-        $setOnInsert: {
-          provider_operation_key: `milestone-release-${milestoneId}`,
         },
       },
       { new: true }
@@ -314,18 +315,16 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, strip
 
   if (!payment) {
     try {
-      const releaseMoney = Number.isSafeInteger(amountMinor)
-        ? money(amountMinor, paymentConfig.currency)
-        : moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "release.amount");
       payment = await Payment.create({
         milestone_id: milestoneId,
         amount,
         amount_minor: releaseMoney.amountMinor,
-        currency: paymentConfig.currency,
+        currency: releaseMoney.currency,
         direction: "release",
         status: "pending",
         stripe_account_id: stripeAccountId,
         provider_operation_key: `milestone-release-${milestoneId}`,
+        provider: providerName,
         processing_at: new Date(),
       });
     } catch (err) {
@@ -344,40 +343,36 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, strip
     action: "release.requested",
     entity_type: "payment",
     entity_id: payment._id,
-    metadata: { milestoneId, amount, currency: paymentConfig.currency, operationKey },
+    metadata: { milestoneId, amount, currency: releaseMoney.currency, provider: providerName, operationKey },
     correlationId: auditContext.correlationId || crypto.randomUUID(),
   });
 
-  if (!stripeAccountId) {
-    const error = new ValidationError("The student's payout account has not been connected yet.");
-    await failReleasePayment(payment, milestoneId, error, auditContext);
-    throw error;
-  }
-
-  let account;
-  try {
-    account = await paymentProvider.getConnectedAccount(stripeAccountId);
-  } catch (err) {
-    const error = new ValidationError("The student's Stripe payout account could not be verified.");
-    await failReleasePayment(payment, milestoneId, error, auditContext);
-    throw error;
-  }
-
-  if (!account.payoutsEnabled) {
-    const error = new ValidationError("The student's Stripe payout account is not ready yet. They must complete payout setup before funds can be released.");
+  if (providerName === "stripe") {
+    if (!stripeAccountId) {
+      const error = new ValidationError("The student's Stripe payout account has not been connected yet.");
+      await failReleasePayment(payment, milestoneId, error, auditContext);
+      throw error;
+    }
+    try {
+      const account = await provider.getConnectedAccount(stripeAccountId);
+      if (!account.payoutsEnabled) throw new Error("Stripe payout account is not ready");
+    } catch (err) {
+      const error = new ValidationError("The student's Stripe payout account could not be verified. Complete payout setup from Wallet.");
+      await failReleasePayment(payment, milestoneId, error, auditContext);
+      throw error;
+    }
+  } else if (!chapaPayoutDestination) {
+    const error = new ValidationError("The student must add a verified Chapa bank payout account before ETB funds can be released.");
     await failReleasePayment(payment, milestoneId, error, auditContext);
     throw error;
   }
 
   let transfer;
   try {
-    const releaseMoney = Number.isSafeInteger(payment.amount_minor)
-      ? money(payment.amount_minor, payment.currency)
-      : moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "release.amount");
-    transfer = await paymentProvider.createTransfer({
+    transfer = await provider.createTransfer({
       amountMinor: releaseMoney.amountMinor,
       currency: releaseMoney.currency,
-      destination: stripeAccountId,
+      destination: providerName === "stripe" ? stripeAccountId : chapaPayoutDestination,
       metadata: { milestone_id: String(milestoneId) },
       idempotencyKey: operationKey,
     });
@@ -387,10 +382,19 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, strip
     throw err;
   }
 
-  payment.status = "succeeded";
-  payment.stripe_transfer_id = transfer.id;
+  payment.provider = providerName;
+  payment.provider_payment_id = transfer.id;
+  if (providerName === "stripe") payment.stripe_transfer_id = transfer.id;
+  payment.provider_reference = transfer.providerReference;
   payment.processing_at = undefined;
   payment.failure_message = undefined;
+  if (transfer.status !== "succeeded") {
+    payment.status = "pending";
+    payment.failure_message = `Payout provider status: ${transfer.providerStatus || transfer.status}`;
+    await payment.save();
+    return payment;
+  }
+  payment.status = "succeeded";
   await payment.save();
 
   await logAction({
@@ -403,7 +407,8 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, strip
     entity_id: milestoneId,
     metadata: {
       amount,
-      currency: paymentConfig.currency,
+      currency: releaseMoney.currency,
+      provider: providerName,
       transfer_id: transfer.id,
     },
     correlationId: auditContext.correlationId || crypto.randomUUID(),
@@ -470,8 +475,14 @@ export async function refundClient(milestoneId, auditContext = {}) {
 
   let refund;
   try {
-    refund = await paymentProvider.createRefund({
-      paymentIntentId: depositPayment.stripe_payment_intent_id,
+    const refundProvider = getPaymentProvider(
+      depositPayment.provider || (String(depositPayment.currency).toLowerCase() === "etb" ? "chapa" : "stripe")
+    );
+    if (refundProvider.name === "chapa") {
+      throw new ValidationError("Chapa refunds are not supported by the current payout integration");
+    }
+    refund = await refundProvider.createRefund({
+      paymentIntentId: depositPayment.provider_payment_id || depositPayment.stripe_payment_intent_id,
       idempotencyKey: operationKey,
     });
     payment.status = "succeeded";

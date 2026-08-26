@@ -12,6 +12,13 @@ export const connectOnboarding = (token) =>
     token,
   });
 
+export const updateChapaPayout = (payload, token) =>
+  apiRequest("/wallets/me/chapa-payout", {
+    method: "PUT",
+    body: payload,
+    token,
+  });
+
 export const listWalletTransactions = (token) =>
   apiRequest("/wallets/me/transactions", { token });
 

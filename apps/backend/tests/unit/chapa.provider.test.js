@@ -52,4 +52,33 @@ describe("Chapa provider contract", () => {
     await expect(chapaProvider.getPaymentIntent("funding-123"))
       .rejects.toMatchObject({ code: "currency_mismatch" });
   });
+
+  test("creates and verifies an ETB transfer", async () => {
+    jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "success", data: { reference: "tr_test_123", status: "pending" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "success", data: { reference: "tr_test_123", status: "success" } }),
+      });
+
+    await expect(chapaProvider.createTransfer({
+      amountMinor: 2500,
+      currency: "etb",
+      destination: { bankCode: "656", accountName: "Test Student", accountNumber: "123456789" },
+      idempotencyKey: "milestone-release-test-123",
+    })).resolves.toMatchObject({ id: "tr_test_123", status: "pending" });
+
+    await expect(chapaProvider.getTransfer("tr_test_123"))
+      .resolves.toMatchObject({ id: "tr_test_123", status: "succeeded" });
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+      amount: "25",
+      currency: "ETB",
+      bank_code: "656",
+      account_number: "123456789",
+      reference: "milestone-release-test-123",
+    });
+  });
 });

@@ -5,6 +5,7 @@ import { Wallet, ArrowDownLeft, ArrowUpRight, CheckCircle2, ShieldAlert } from "
 import {
   getMyWallet,
   connectOnboarding,
+  updateChapaPayout,
   listWalletTransactions,
   requestWithdrawal,
 } from "../../services/api/wallets.api.js";
@@ -36,6 +37,7 @@ export default function WalletsPage() {
   const { token, user } = useAuth();
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
+  const [chapaDetails, setChapaDetails] = useState({ bank_code: "", account_name: "", account_number: "" });
 
   const { data: wData, isLoading: wLoading } = useQuery({
     queryKey: ["wallet"],
@@ -82,6 +84,16 @@ export default function WalletsPage() {
       setAmount("");
     },
     onError: (e) => toast.error(e.message || "Could not request withdrawal"),
+  });
+
+  const chapaPayout = useMutation({
+    mutationFn: () => updateChapaPayout(chapaDetails, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["wallet"] });
+      toast.success("Chapa ETB payout account saved securely.");
+      setChapaDetails({ bank_code: "", account_name: "", account_number: "" });
+    },
+    onError: (e) => toast.error(e.message || "Could not save Chapa payout account"),
   });
 
   useEffect(() => {
@@ -140,6 +152,42 @@ export default function WalletsPage() {
               loading={connect.isPending}
             >
               {wallet?.payouts_enabled ? "Manage payout account" : "Set up payouts"}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {isStudent && (
+        <Card className="mb-6">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-slate">ETB payout account</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                Add the student bank account that Chapa should use for ETB milestone payouts. The account number is encrypted and only its last four digits are displayed.
+              </p>
+            </div>
+            <div className="rounded-lg border border-ink-300 bg-ink-50 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">ETB earnings</p>
+              <p className="mt-1 font-mono text-2xl font-bold text-brass">
+                {formatCurrency(wallet?.balances?.etb?.available ?? 0, "ETB")}
+              </p>
+              <p className="mt-1 text-xs text-slate-300">Approved ETB milestones appear here after the Chapa payout is successfully released.</p>
+            </div>
+            {wallet?.chapa_payout_ready && (
+              <p className="text-xs text-escrow">Ready: {wallet.chapa_account_name} · bank {wallet.chapa_bank_code} · ending {wallet.chapa_account_number_last4}</p>
+            )}
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input label="Bank code" value={chapaDetails.bank_code} onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value }))} placeholder="656" />
+              <Input label="Account name" value={chapaDetails.account_name} onChange={(e) => setChapaDetails((v) => ({ ...v, account_name: e.target.value }))} placeholder="Full account name" />
+              <Input label="Account number" inputMode="numeric" value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank account number" />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => chapaPayout.mutate()}
+              loading={chapaPayout.isPending}
+              disabled={!chapaDetails.bank_code || !chapaDetails.account_name || chapaDetails.account_number.length < 5}
+            >
+              Save ETB payout details
             </Button>
           </div>
         </Card>

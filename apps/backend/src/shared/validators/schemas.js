@@ -171,6 +171,12 @@ export const requestWithdrawalSchema = z.object({
   amount: positiveNumber,
 });
 
+export const chapaPayoutDetailsSchema = z.object({
+  bank_code: z.string().trim().min(1).max(30),
+  account_name: z.string().trim().min(2).max(150),
+  account_number: z.string().trim().regex(/^\d{5,30}$/, "Account number must contain 5 to 30 digits"),
+});
+
 // --- Universities ---
 export const createUniversitySchema = z.object({
   name: z.string().trim().min(1, "University name is required").max(200),

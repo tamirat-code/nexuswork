@@ -6,6 +6,7 @@ import {
   startOnboarding,
   listTransactions,
   requestWithdrawal,
+  saveChapaPayoutDetails,
 } from "./wallets.service.js";
 
 export const getMyWallet = asyncHandler(async (req, res) => {
@@ -21,6 +22,14 @@ export const getMyPayoutStatus = asyncHandler(async (req, res) => {
 export const connectOnboarding = asyncHandler(async (req, res) => {
   const result = await startOnboarding(req.user._id);
   res.json({ success: true, data: result });
+});
+
+export const updateChapaPayout = asyncHandler(async (req, res) => {
+  const wallet = await saveChapaPayoutDetails(req.user._id, req.body, {
+    actor: req.user,
+    correlationId: req.correlationId,
+  });
+  res.json({ success: true, data: wallet });
 });
 
 export const getMyTransactions = asyncHandler(async (req, res) => {

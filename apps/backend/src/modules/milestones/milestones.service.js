@@ -5,6 +5,7 @@ import Wallet from "../wallets/wallets.model.js";
 import Payment from "../payments/payments.model.js";
 import Submission from "../submissions/submissions.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
+import { getChapaPayoutDestination } from "../wallets/wallets.service.js";
 import { addSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
@@ -53,9 +54,21 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       amount: payout,
       amountMinor: payoutMoney.amountMinor,
       stripeAccountId: studentWallet?.stripe_account_id,
+      chapaPayoutDestination: getChapaPayoutDestination(studentWallet),
+      currency: totalMoney.currency,
       transferToStripe: true,
       auditContext,
     });
+
+    if (releasePayment?.status !== "succeeded") {
+      return {
+        milestone,
+        payout,
+        releasePayment,
+        payout_pending: true,
+        payout_message: "The payout provider is still processing this transfer.",
+      };
+    }
 
     await postJournal({
       eventType: "milestone.released",
