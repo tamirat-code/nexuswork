@@ -13,6 +13,7 @@ import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";
 import { logger } from "../../shared/logger/logger.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
 
 async function auditMilestoneEvent({ actor, correlationId, ...event }) {
   return recordEvent({
@@ -29,8 +30,15 @@ async function assertClient(contract, requestingUserId) {
 }
 
 async function completeRelease(milestone, contract, requestingUserId, auditContext = {}) {
-  const payout = milestone.amount * (1 - paymentConfig.commissionRate);
-  const commissionAmount = milestone.amount - payout;
+  const totalMoney = Number.isSafeInteger(milestone.amount_minor)
+    ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
+    : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
+  const payoutMinor = Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000);
+  const commissionMinor = totalMoney.amountMinor - payoutMinor;
+  const payoutMoney = money(payoutMinor, totalMoney.currency);
+  const commissionMoney = money(commissionMinor, totalMoney.currency);
+  const payout = majorUnitsFromMoney(payoutMoney);
+  const commissionAmount = majorUnitsFromMoney(commissionMoney);
   const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
   let releasePayment;
 
@@ -38,6 +46,7 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
     releasePayment = await releaseToStudent({
       milestoneId: milestone._id,
       amount: payout,
+      amountMinor: payoutMoney.amountMinor,
       stripeAccountId: studentWallet?.stripe_account_id,
       transferToStripe: true,
       auditContext,
@@ -49,7 +58,8 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
         $setOnInsert: {
           milestone_id: milestone._id,
           amount: commissionAmount,
-          currency: paymentConfig.currency,
+          amount_minor: commissionMoney.amountMinor,
+          currency: commissionMoney.currency,
           direction: "commission",
           status: "succeeded",
         },
@@ -90,6 +100,7 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
         requestingUserId,
         milestoneId: milestone._id,
         amount: milestone.amount,
+        currency: milestone.currency || paymentConfig.currency,
         lineItems: [
           {
             description: `Milestone: ${milestone.title}`,
@@ -156,6 +167,7 @@ export async function createMilestone(contractId, requestingUserId, data, auditC
 
   const currentTotal = existing[0]?.total || 0;
   const requestedAmount = Number(data.amount);
+  const requestedMoney = moneyFromLegacyMajorUnits(requestedAmount, contract.terms.currency || paymentConfig.currency, "milestone.amount");
 
   if (currentTotal + requestedAmount > Number(contract.terms.total_amount)) {
     throw new ValidationError(
@@ -170,6 +182,8 @@ export async function createMilestone(contractId, requestingUserId, data, auditC
     title: data.title,
     description: data.description || "",
     amount: requestedAmount,
+    amount_minor: requestedMoney.amountMinor,
+    currency: requestedMoney.currency,
     due_date: data.due_date,
     sequence: count + 1,
     status: "not_funded",

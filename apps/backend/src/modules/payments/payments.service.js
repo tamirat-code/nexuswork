@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { stripe } from "./stripe.client.js";
 import Payment from "./payments.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
@@ -7,10 +6,8 @@ import Wallet from "../wallets/wallets.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
-
-function toStripeAmount(dollars) {
-  return Math.round(dollars * 100);
-}
+import { money, moneyFromLegacyMajorUnits, moneyFromRecord } from "../../shared/money/money.js";
+import { paymentProvider } from "./providers/index.js";
 
 async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
   payment.status = "failed";
@@ -31,6 +28,9 @@ async function failReleasePayment(payment, milestoneId, error, auditContext = {}
 }
 
 export async function createDepositIntent(milestone) {
+  const milestoneMoney = Number.isSafeInteger(milestone.amount_minor)
+    ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
+    : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
   const existing = await Payment.findOne({
     milestone_id: milestone._id,
     direction: "deposit",
@@ -42,9 +42,9 @@ export async function createDepositIntent(milestone) {
   }
 
   if (existing?.stripe_payment_intent_id) {
-    const existingIntent = await stripe.paymentIntents.retrieve(existing.stripe_payment_intent_id);
-    if (["requires_payment_method", "requires_confirmation", "requires_action", "processing"].includes(existingIntent.status)) {
-      return { client_secret: existingIntent.client_secret, payment_intent_id: existingIntent.id, already_pending: true };
+    const existingIntent = await paymentProvider.getPaymentIntent(existing.stripe_payment_intent_id);
+    if (existingIntent.status === "pending") {
+      return { client_secret: existingIntent.clientSecret, payment_intent_id: existingIntent.id, already_pending: true };
     }
     if (existingIntent.status === "succeeded") {
       await markDepositSucceeded(existingIntent.id);
@@ -52,19 +52,19 @@ export async function createDepositIntent(milestone) {
     }
   }
 
-  const intent = await stripe.paymentIntents.create({
-    amount: toStripeAmount(milestone.amount),
-    currency: paymentConfig.currency,
+  const intent = await paymentProvider.createPaymentIntent({
+    amountMinor: milestoneMoney.amountMinor,
+    currency: milestoneMoney.currency,
     metadata: { milestone_id: String(milestone._id) },
-    capture_method: "automatic",
-    automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-  }, { idempotencyKey: `milestone-funding-${milestone._id}` });
+    idempotencyKey: `milestone-funding-${milestone._id}`,
+  });
 
   try {
     await Payment.create({
       milestone_id: milestone._id,
       amount: milestone.amount,
-      currency: paymentConfig.currency,
+      amount_minor: milestoneMoney.amountMinor,
+      currency: milestoneMoney.currency,
       direction: "deposit",
       status: "pending",
       stripe_payment_intent_id: intent.id,
@@ -79,12 +79,12 @@ export async function createDepositIntent(milestone) {
     entity_id: milestone._id,
     details: {
       amount: milestone.amount,
-      currency: paymentConfig.currency,
+      currency: milestoneMoney.currency,
       payment_intent_id: intent.id,
     },
   });
 
-  return { client_secret: intent.client_secret, payment_intent_id: intent.id };
+  return { client_secret: intent.clientSecret, payment_intent_id: intent.id };
 }
 
 export async function markDepositSucceeded(paymentIntentId) {
@@ -100,21 +100,21 @@ export async function markDepositSucceeded(paymentIntentId) {
 
   // Never trust the browser or webhook payload alone. Re-read the PaymentIntent
   // from Stripe and verify the exact payment our database expects.
-  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  const intent = await paymentProvider.getPaymentIntent(paymentIntentId);
   if (intent.status !== "succeeded") {
-    throw new ValidationError(`Stripe payment is not succeeded (status: ${intent.status})`);
+    throw new ValidationError(`Stripe payment is not succeeded (status: ${intent.providerStatus || intent.status})`);
   }
 
   if (String(intent.metadata?.milestone_id || "") !== String(payment.milestone_id)) {
     throw new ValidationError("Stripe payment does not belong to this milestone");
   }
 
-  const expectedAmount = toStripeAmount(payment.amount);
-  if (Number(intent.amount_received || intent.amount) !== expectedAmount) {
+  const expectedMoney = moneyFromRecord(payment);
+  if (intent.amountMinor !== expectedMoney.amountMinor) {
     throw new ValidationError("Stripe payment amount does not match the milestone amount");
   }
 
-  if (String(intent.currency).toLowerCase() !== String(payment.currency).toLowerCase()) {
+  if (String(intent.currency).toLowerCase() !== String(expectedMoney.currency).toLowerCase()) {
     throw new ValidationError("Stripe payment currency does not match the milestone currency");
   }
 
@@ -131,6 +131,7 @@ export async function markDepositSucceeded(paymentIntentId) {
       entity_id: payment.milestone_id,
       details: {
         amount: payment.amount,
+        amount_minor: payment.amount_minor,
         currency: payment.currency,
         payment_intent_id: paymentIntentId,
       },
@@ -175,7 +176,7 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
   return payment;
 }
 
-export async function releaseToStudent({ milestoneId, amount, stripeAccountId, transferToStripe = true, auditContext = {} }) {
+export async function releaseToStudent({ milestoneId, amount, amountMinor, stripeAccountId, transferToStripe = true, auditContext = {} }) {
   if (!transferToStripe) {
     throw new ValidationError("Milestone release must use Stripe Connect; wallet credits are not supported");
   }
@@ -189,12 +190,16 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
   if (payment?.status === "succeeded") return payment;
 
   if (!payment) {
+    const releaseMoney = Number.isSafeInteger(amountMinor)
+      ? money(amountMinor, paymentConfig.currency)
+      : moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "release.amount");
     payment = await Payment.findOneAndUpdate(
       { milestone_id: milestoneId, direction: "release", status: "failed" },
       {
         $set: {
           status: "pending",
           amount,
+          amount_minor: releaseMoney.amountMinor,
           currency: paymentConfig.currency,
           stripe_account_id: stripeAccountId,
           processing_at: new Date(),
@@ -210,9 +215,13 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
 
   if (!payment) {
     try {
+      const releaseMoney = Number.isSafeInteger(amountMinor)
+        ? money(amountMinor, paymentConfig.currency)
+        : moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "release.amount");
       payment = await Payment.create({
         milestone_id: milestoneId,
         amount,
+        amount_minor: releaseMoney.amountMinor,
         currency: paymentConfig.currency,
         direction: "release",
         status: "pending",
@@ -248,14 +257,14 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
 
   let account;
   try {
-    account = await stripe.accounts.retrieve(stripeAccountId);
+    account = await paymentProvider.getConnectedAccount(stripeAccountId);
   } catch (err) {
     const error = new ValidationError("The student's Stripe payout account could not be verified.");
     await failReleasePayment(payment, milestoneId, error, auditContext);
     throw error;
   }
 
-  if (!account.payouts_enabled) {
+  if (!account.payoutsEnabled) {
     const error = new ValidationError("The student's Stripe payout account is not ready yet. They must complete payout setup before funds can be released.");
     await failReleasePayment(payment, milestoneId, error, auditContext);
     throw error;
@@ -263,15 +272,16 @@ export async function releaseToStudent({ milestoneId, amount, stripeAccountId, t
 
   let transfer;
   try {
-    transfer = await stripe.transfers.create(
-      {
-        amount: toStripeAmount(amount),
-        currency: paymentConfig.currency,
-        destination: stripeAccountId,
-        metadata: { milestone_id: String(milestoneId) },
-      },
-      { idempotencyKey: operationKey }
-    );
+    const releaseMoney = Number.isSafeInteger(payment.amount_minor)
+      ? money(payment.amount_minor, payment.currency)
+      : moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "release.amount");
+    transfer = await paymentProvider.createTransfer({
+      amountMinor: releaseMoney.amountMinor,
+      currency: releaseMoney.currency,
+      destination: stripeAccountId,
+      metadata: { milestone_id: String(milestoneId) },
+      idempotencyKey: operationKey,
+    });
   } catch (err) {
     await failReleasePayment(payment, milestoneId, err, auditContext);
 
@@ -327,6 +337,7 @@ export async function refundClient(milestoneId, auditContext = {}) {
       payment = await Payment.create({
         milestone_id: milestoneId,
         amount: depositPayment.amount,
+        amount_minor: moneyFromRecord(depositPayment).amountMinor,
         currency: depositPayment.currency,
         direction: "refund",
         status: "pending",
@@ -355,9 +366,10 @@ export async function refundClient(milestoneId, auditContext = {}) {
 
   let refund;
   try {
-    refund = await stripe.refunds.create({
-      payment_intent: depositPayment.stripe_payment_intent_id,
-    }, { idempotencyKey: operationKey });
+    refund = await paymentProvider.createRefund({
+      paymentIntentId: depositPayment.stripe_payment_intent_id,
+      idempotencyKey: operationKey,
+    });
     payment.status = "succeeded";
     payment.stripe_refund_id = refund.id;
     payment.processing_at = undefined;
@@ -414,8 +426,8 @@ export async function reconcilePendingReleases({ limit = 100, auditContext = {} 
   const results = { checked: pending.length, succeeded: 0, failed: 0 };
   for (const payment of pending) {
     try {
-      if (payment.stripe_transfer_id && typeof stripe.transfers.retrieve === "function") {
-        await stripe.transfers.retrieve(payment.stripe_transfer_id);
+      if (payment.stripe_transfer_id) {
+        await paymentProvider.getTransfer(payment.stripe_transfer_id);
         payment.status = "succeeded";
         payment.processing_at = undefined;
         await payment.save();

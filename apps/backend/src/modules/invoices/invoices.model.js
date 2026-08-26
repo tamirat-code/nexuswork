@@ -11,6 +11,7 @@ const invoiceSchema = new mongoose.Schema(
     student_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     invoice_number: { type: String, required: true, unique: true },
     amount: { type: Number, required: true },
+    amount_minor: { type: Number, min: 0 },
     currency: { type: String, default: "usd" },
     status: {
       type: String,
@@ -24,6 +25,7 @@ const invoiceSchema = new mongoose.Schema(
         description: { type: String, required: true },
         quantity: { type: Number, default: 1 },
         unit_price: { type: Number, required: true },
+        unit_price_minor: { type: Number, min: 0 },
       },
     ],
   },

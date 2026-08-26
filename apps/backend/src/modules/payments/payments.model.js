@@ -4,6 +4,8 @@ const paymentSchema = new mongoose.Schema(
   {
     milestone_id: { type: mongoose.Schema.Types.ObjectId, ref: "Milestone", required: true },
     amount: { type: Number, required: true },
+    // Canonical payment-boundary value. Legacy amount remains for API/backward compatibility.
+    amount_minor: { type: Number, min: 0 },
     currency: { type: String, default: "usd" },
     direction: { type: String, enum: ["deposit", "release", "refund", "commission"], required: true },
     status: {

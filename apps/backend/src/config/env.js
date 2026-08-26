@@ -12,6 +12,13 @@ function boolean(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
   return String(value).toLowerCase() === "true";
 }
+
+function basisPoints(value, fallback) {
+  const text = String(value ?? fallback);
+  const match = text.match(/^(?:0|[1-9]\d*)(?:\.(\d{1,4}))?$/);
+  if (!match) return fallback * 10000;
+  return Number(text.split(".")[0]) * 10000 + Number((match[1] || "").padEnd(4, "0") || 0);
+}
 export function buildEnv(source = process.env) {
   return Object.freeze({
     nodeEnv: source.NODE_ENV || "development",
@@ -32,6 +39,7 @@ export function buildEnv(source = process.env) {
     stripeWebhookSecret: optional(source.STRIPE_WEBHOOK_SECRET),
     paymentCurrency: (source.PAYMENT_CURRENCY || "usd").toLowerCase(),
     commissionRate: number(source.COMMISSION_RATE, 0.1),
+    commissionRateBps: basisPoints(source.COMMISSION_RATE, 0.1),
     stripeConnectRefreshUrl: source.STRIPE_CONNECT_REFRESH_URL || "http://localhost:5173/wallet?connect=refresh",
     stripeConnectReturnUrl: source.STRIPE_CONNECT_RETURN_URL || "http://localhost:5173/wallet?connect=done",
 

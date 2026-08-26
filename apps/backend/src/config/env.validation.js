@@ -71,6 +71,9 @@ export function validateEnv(config = env) {
   if (config.commissionRate < 0 || config.commissionRate >= 1) {
     throw new Error("COMMISSION_RATE must be between 0 and 1");
   }
+  if (!Number.isInteger(config.commissionRateBps) || config.commissionRateBps < 0 || config.commissionRateBps >= 10000) {
+    throw new Error("COMMISSION_RATE must resolve to basis points between 0 and 9999");
+  }
   if (config.recaptchaMinScore < 0 || config.recaptchaMinScore > 1) {
     throw new Error("RECAPTCHA_MIN_SCORE must be between 0 and 1");
   }

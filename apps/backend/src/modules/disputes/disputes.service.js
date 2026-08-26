@@ -9,6 +9,7 @@ import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import crypto from "node:crypto";
+import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
 
 const VALID_OUTCOMES = ["refund_client", "release_student", "resume_work"];
 
@@ -99,10 +100,17 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
     milestone.status = "not_funded";
   } else if (outcome === "release_student") {
     const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
-    const payout = milestone.amount * (1 - paymentConfig.commissionRate);
+    const totalMoney = Number.isSafeInteger(milestone.amount_minor)
+      ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
+      : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
+    const payout = majorUnitsFromMoney(money(
+      Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000),
+      totalMoney.currency
+    ));
     await releaseToStudent({
       milestoneId: milestone._id,
       amount: payout,
+      amountMinor: Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000),
       stripeAccountId: studentWallet?.stripe_account_id,
       auditContext,
     });

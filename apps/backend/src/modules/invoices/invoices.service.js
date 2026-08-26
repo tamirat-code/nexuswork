@@ -3,6 +3,7 @@ import Contract from "../contracts/contracts.model.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import crypto from "node:crypto";
+import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
 
 function generateInvoiceNumber() {
   const date = new Date();
@@ -24,6 +25,12 @@ export async function createInvoice({ contractId, requestingUserId, amount, curr
     throw new ForbiddenError("Only the contract's client can create an invoice");
   }
 
+  const invoiceMoney = moneyFromLegacyMajorUnits(amount, currency || "usd", "invoice.amount");
+  const canonicalLineItems = lineItems.map((item) => ({
+    ...item,
+    unit_price_minor: moneyFromLegacyMajorUnits(item.unit_price, invoiceMoney.currency, "invoice.line_items.unit_price").amountMinor,
+  }));
+
   const invoice = await Invoice.create({
     contract_id: contractId,
     milestone_id: milestoneId,
@@ -31,9 +38,10 @@ export async function createInvoice({ contractId, requestingUserId, amount, curr
     student_id: contract.student_id,
     invoice_number: generateInvoiceNumber(),
     amount,
-    currency: currency || "usd",
+    amount_minor: invoiceMoney.amountMinor,
+    currency: invoiceMoney.currency,
     due_date: dueDate,
-    line_items: lineItems,
+    line_items: canonicalLineItems,
   });
 
   await recordEvent({

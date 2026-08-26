@@ -1,5 +1,4 @@
-import { stripe } from "../payments/stripe.client.js";
-import { paymentConfig } from "../../config/payment.config.js";
+import { paymentProvider } from "../payments/providers/index.js";
 import { confirmFunding } from "../milestones/milestones.service.js";
 import { markDepositFailed } from "../payments/payments.service.js";
 import { markOnboardingStatus, updateWithdrawalFromPayoutEvent } from "../wallets/wallets.service.js";
@@ -13,11 +12,7 @@ export async function handleStripeWebhook(req, res) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      signature,
-      paymentConfig.stripeWebhookSecret
-    );
+    event = paymentProvider.verifyWebhook(req.body, signature);
   } catch (err) {
     logger.error("[webhook] signature verification failed:", err.message);
     return res.status(400).send("Webhook signature verification failed");

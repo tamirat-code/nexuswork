@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { stripe } from "../payments/stripe.client.js";
+import { paymentProvider } from "../payments/providers/index.js";
 import { logger } from "../../shared/logger/logger.js";
 import Wallet from "./wallets.model.js";
 import Withdrawal from "./withdrawal.model.js";
@@ -10,6 +10,7 @@ import Payment from "../payments/payments.model.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
+import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
 
 async function syncStripeAccountStatus(wallet) {
   if (!wallet?.stripe_account_id) {
@@ -23,8 +24,8 @@ async function syncStripeAccountStatus(wallet) {
     };
   }
 
-  const account = await stripe.accounts.retrieve(wallet.stripe_account_id);
-  const complete = Boolean(account.charges_enabled && account.payouts_enabled);
+  const account = await paymentProvider.getConnectedAccount(wallet.stripe_account_id);
+  const complete = Boolean(account.chargesEnabled && account.payoutsEnabled);
 
   if (wallet.stripe_onboarding_complete !== complete) {
     wallet.stripe_onboarding_complete = complete;
@@ -33,11 +34,11 @@ async function syncStripeAccountStatus(wallet) {
 
   return {
     onboarding_complete: complete,
-    payouts_enabled: Boolean(account.payouts_enabled),
-    charges_enabled: Boolean(account.charges_enabled),
-    details_submitted: Boolean(account.details_submitted),
-    requirements_due: account.requirements?.currently_due || [],
-    disabled_reason: account.requirements?.disabled_reason || null,
+    payouts_enabled: account.payoutsEnabled,
+    charges_enabled: account.chargesEnabled,
+    details_submitted: account.detailsSubmitted,
+    requirements_due: account.requirementsDue,
+    disabled_reason: account.disabledReason,
   };
 }
 
@@ -119,11 +120,7 @@ export async function startOnboarding(userId) {
   if (!wallet) wallet = await Wallet.create({ user_id: userId });
 
   if (!wallet.stripe_account_id) {
-    const account = await stripe.accounts.create({
-      type: "express",
-      email: user.email,
-      capabilities: { transfers: { requested: true } },
-    });
+    const account = await paymentProvider.createConnectedAccount({ email: user.email });
 
     wallet.stripe_account_id = account.id;
     await wallet.save();
@@ -132,7 +129,7 @@ export async function startOnboarding(userId) {
   const status = await syncStripeAccountStatus(wallet);
 
   if (status.onboarding_complete) {
-    const loginLink = await stripe.accounts.createLoginLink(wallet.stripe_account_id);
+    const loginLink = await paymentProvider.createLoginLink(wallet.stripe_account_id);
     return {
       onboarding_url: loginLink.url,
       already_complete: true,
@@ -140,11 +137,10 @@ export async function startOnboarding(userId) {
     };
   }
 
-  const accountLink = await stripe.accountLinks.create({
+  const accountLink = await paymentProvider.createAccountLink({
     account: wallet.stripe_account_id,
-    refresh_url: paymentConfig.connectRefreshUrl,
-    return_url: paymentConfig.connectReturnUrl,
-    type: "account_onboarding",
+    refreshUrl: paymentConfig.connectRefreshUrl,
+    returnUrl: paymentConfig.connectReturnUrl,
   });
 
   return {
@@ -217,6 +213,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
   }
 
   const operationKey = String(idempotencyKey || crypto.randomUUID()).trim();
+  const withdrawalMoney = moneyFromLegacyMajorUnits(amount, paymentConfig.currency, "withdrawal.amount");
   if (operationKey.length < 8 || operationKey.length > 255) {
     throw new ValidationError("Idempotency-Key must be between 8 and 255 characters");
   }
@@ -345,6 +342,7 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
     withdrawal = await Withdrawal.create({
       user_id: userId,
       amount,
+      amount_minor: withdrawalMoney.amountMinor,
       currency: paymentConfig.currency,
       status: "pending",
       idempotency_key: operationKey,
@@ -381,41 +379,34 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
 
     // Released milestone funds are already in the student's connected
     // account. Withdrawals must use that account's balance and payout rail.
-    const connectedBalance = await stripe.balance.retrieve(
-      {},
-      { stripeAccount: currentWallet.stripe_account_id }
+    const connectedBalance = await paymentProvider.getConnectedBalance(currentWallet.stripe_account_id);
+    const connectedAvailableMinor = Number(
+      connectedBalance.find((b) => b.currency === paymentConfig.currency)?.amountMinor || 0
     );
-    const connectedAvailable = Number(
-      connectedBalance.available?.find((b) => b.currency === paymentConfig.currency)?.amount || 0
-    ) / 100;
 
-    if (connectedAvailable + 1e-9 < amount) {
+    if (connectedAvailableMinor < withdrawalMoney.amountMinor) {
       throw new Error(
         "The connected Stripe account does not have enough available funds to complete this withdrawal"
       );
     }
 
-    const payout = await stripe.payouts.create(
-      {
-        amount: Math.round(amount * 100),
-        currency: paymentConfig.currency,
-        metadata: {
-          withdrawal_id: String(withdrawal._id),
-          user_id: String(userId),
-        },
+    const payout = await paymentProvider.createPayout({
+      amountMinor: withdrawalMoney.amountMinor,
+      currency: paymentConfig.currency,
+      metadata: {
+        withdrawal_id: String(withdrawal._id),
+        user_id: String(userId),
       },
-      {
-        stripeAccount: currentWallet.stripe_account_id,
-        idempotencyKey: `nexuswork-withdrawal-${withdrawal._id}`,
-      }
-    );
+      account: currentWallet.stripe_account_id,
+      idempotencyKey: `nexuswork-withdrawal-${withdrawal._id}`,
+    });
 
-    withdrawal.status = payout.status === "paid" ? "paid" : payout.status === "failed" ? "failed" : "pending";
+    withdrawal.status = payout.status === "succeeded" ? "paid" : payout.status === "failed" ? "failed" : "pending";
     withdrawal.stripe_payout_id = payout.id;
     withdrawal.failure_reason = undefined;
     withdrawal.processing_at = undefined;
     if (withdrawal.status === "failed") {
-      withdrawal.failure_reason = payout.failure_message || payout.failure_code || "Stripe payout failed";
+      withdrawal.failure_reason = payout.failureMessage || payout.failureCode || "Payout provider failed";
     }
 
     await withdrawal.save();

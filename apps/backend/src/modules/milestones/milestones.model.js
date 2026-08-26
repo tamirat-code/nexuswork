@@ -6,6 +6,8 @@ const milestoneSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "", trim: true },
     amount: { type: Number, required: true, min: 0 },
+    amount_minor: { type: Number, min: 0 },
+    currency: { type: String, default: "usd", lowercase: true, trim: true },
     due_date: { type: Date, required: true },
     sequence: { type: Number, required: true, min: 1 },
     status: {

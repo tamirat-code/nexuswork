@@ -5,6 +5,7 @@ export const paymentConfig = {
   stripeSecretKey: env.stripeSecretKey,
   stripeWebhookSecret: env.stripeWebhookSecret,
   commissionRate: env.commissionRate,
+  commissionRateBps: env.commissionRateBps,
   currency: env.paymentCurrency,
   connectRefreshUrl: env.stripeConnectRefreshUrl,
   connectReturnUrl: env.stripeConnectReturnUrl,
