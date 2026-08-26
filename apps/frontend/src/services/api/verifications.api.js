@@ -7,3 +7,5 @@ export const reviewVerification = (id, payload, token) =>
   apiRequest(`/verifications/${id}/review`, { method: "PATCH", body: payload, token });
 export const requestVerification = (payload, token) =>
   apiRequest("/verifications", { method: "POST", body: payload, token });
+export const exportMyCredential = (verificationId, token) =>
+  apiRequest(`/verifications/mine/${verificationId}/credential`, { token });

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, TrendingUp, Users, Briefcase } from "lucide-react";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { getPlatformAnalytics, getUniversityAnalytics } from "../../services/api/analytics.api.js";
+import { listAdminStats } from "../../services/api/admin.api.js";
 import { getMyUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -24,9 +26,33 @@ export default function AnalyticsPage() {
     queryFn: () => (isAdmin ? getPlatformAnalytics(token) : getUniversityAnalytics(universityId, token)),
     enabled: !!token && (isAdmin || !!universityId),
   });
-  const isLoading = isAdmin ? analyticsLoading : universityLoading || analyticsLoading;
+  const { data: adminDashboardRes, isLoading: adminDashboardLoading } = useQuery({
+    queryKey: ["analytics-admin-dashboard"],
+    queryFn: () => listAdminStats(token),
+    enabled: !!token && isAdmin,
+  });
+  const isLoading = isAdmin ? analyticsLoading || adminDashboardLoading : universityLoading || analyticsLoading;
   const a = data?.data ?? {};
+  const adminDashboard = adminDashboardRes?.data ?? {};
   const universitySuppressed = !isAdmin && a.privacy_suppressed;
+  const chartColors = ["#00b3a4", "#d9a441", "#547bff", "#e56b6f", "#8b9aa8"];
+  const adminRoleData = (adminDashboard.users?.by_role || [])
+    .map((item) => ({ name: String(item._id || "unknown").replaceAll("_", " "), value: item.count }))
+    .filter((item) => item.value > 0);
+  const universityOutcomeData = universitySuppressed
+    ? []
+    : [
+        { name: "Employed", value: a.employed_student_count ?? 0 },
+        { name: "Not yet employed", value: Math.max((a.verified_students ?? 0) - (a.employed_student_count ?? 0), 0) },
+      ].filter((item) => item.value > 0);
+  const secondaryChartData = universitySuppressed
+    ? []
+    : (isAdmin ? (a.demand_by_category || []) : (a.top_skills || []))
+        .map((item) => ({
+          name: isAdmin ? item.category : item.name,
+          value: isAdmin ? item.projects : item.count,
+        }))
+        .filter((item) => item.name && item.value > 0);
 
   const cards = isAdmin
     ? [
@@ -129,6 +155,76 @@ export default function AnalyticsPage() {
           </Card>
         )}
       </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle className="text-lg">{isAdmin ? "User mix" : "Employment mix"}</CardTitle></CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-56 w-full" /> : (isAdmin ? adminRoleData : universityOutcomeData).length ? (
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={isAdmin ? adminRoleData : universityOutcomeData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
+                      {(isAdmin ? adminRoleData : universityOutcomeData).map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <p className="py-16 text-center text-sm text-slate-300">No chart data yet.</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-lg">{isAdmin ? "Dispute status" : "Delivery outcomes"}</CardTitle></CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-56 w-full" /> : (() => {
+              const dataSet = isAdmin
+                ? [
+                    { name: "Open", value: adminDashboard.disputes?.open ?? 0 },
+                    { name: "Resolved (30d)", value: adminDashboard.disputes?.resolved_30d ?? 0 },
+                  ].filter((item) => item.value > 0)
+                : [
+                    { name: "On time", value: a.on_time_rate != null ? a.on_time_rate : 0 },
+                    { name: "Late / unavailable", value: a.on_time_rate != null ? Math.max(100 - a.on_time_rate, 0) : 0 },
+                  ].filter((item) => item.value > 0);
+              return dataSet.length ? (
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={dataSet} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
+                        {dataSet.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="py-16 text-center text-sm text-slate-300">No chart data yet.</p>;
+            })()}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-6">
+        <CardHeader><CardTitle className="text-lg">{isAdmin ? "Demand by category" : "Skills represented"}</CardTitle></CardHeader>
+        <CardContent>
+          {isLoading ? <Skeleton className="h-56 w-full" /> : secondaryChartData.length ? (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={secondaryChartData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
+                    {secondaryChartData.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : <p className="py-16 text-center text-sm text-slate-300">No chart data yet.</p>}
+        </CardContent>
+      </Card>
     </div>
   );
 }

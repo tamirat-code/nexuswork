@@ -21,7 +21,7 @@ import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
 import { listUniversities } from "../../services/api/universities.api.js";
-import { getMyVerifications, requestVerification } from "../../services/api/verifications.api.js";
+import { exportMyCredential, getMyVerifications, requestVerification } from "../../services/api/verifications.api.js";
 import { getMyStaffVerifications, requestStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
@@ -432,6 +432,21 @@ function UniversityVerificationCard({ user, token }) {
 
   const isApproved = latest?.status === "approved" || Boolean(user?.universityVerified);
 
+  const exportCredential = useMutation({
+    mutationFn: () => exportMyCredential(latest?._id, token),
+    onSuccess: (res) => {
+      const blob = new Blob([JSON.stringify(res?.data ?? res, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `nexuswork-credential-${latest._id}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.show("Credential exported as JSON.");
+    },
+    onError: (err) => toast.show(err?.message || "Could not export your credential.", { variant: "error" }),
+  });
+
   useEffect(() => {
     if (latest?.status === "approved" && !user?.universityVerified) {
       refreshMe().catch(() => {});
@@ -517,11 +532,24 @@ function UniversityVerificationCard({ user, token }) {
       {loading ? (
         <p className="text-sm text-slate-300">Loading verification status…</p>
       ) : isApproved ? (
-        <Alert variant="success" title="You're verified">
-          {latest?.status === "approved" && latest?.university_id?.name
-            ? `Confirmed by ${latest.university_id.name}. Your proposals now show a verified badge.`
-            : "Your university has confirmed your enrollment. Your proposals now show a verified badge."}
-        </Alert>
+        <>
+          <Alert variant="success" title="You're verified">
+            {latest?.status === "approved" && latest?.university_id?.name
+              ? `Confirmed by ${latest.university_id.name}. Your proposals now show a verified badge.`
+              : "Your university has confirmed your enrollment. Your proposals now show a verified badge."}
+          </Alert>
+          {latest?._id && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-ink-300 bg-ink-50 p-4">
+              <div>
+                <p className="text-sm font-semibold text-slate">Verified credential</p>
+                <p className="mt-1 text-xs text-slate-300">Download your standards-shaped credential document for your records.</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => exportCredential.mutate()} loading={exportCredential.isPending}>
+                Export credential
+              </Button>
+            </div>
+          )}
+        </>
       ) : latest?.status === "pending" ? (
         <Alert variant="warning" title="Verification pending">
           Your request to {latest.university_id?.name || "your university"} was submitted on{" "}

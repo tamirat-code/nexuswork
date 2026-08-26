@@ -135,8 +135,8 @@ export default function WalletsPage() {
                 </p>
                 <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300">
                   {wallet?.payouts_enabled
-                    ? "Your Stripe Connect account can receive milestone payouts."
-                    : "Complete Stripe Connect verification so NexusWork can release your approved milestone earnings to you."}
+                    ? "Your Stripe Connect account can receive supported-currency milestone payouts."
+                    : "Set up Stripe Connect for supported-currency payouts, or add a Chapa ETB account for ETB milestone payouts."}
                 </p>
                 {!wallet?.payouts_enabled && wallet?.requirements_due?.length > 0 && (
                   <p className="mt-1.5 text-xs text-slate-300">
@@ -322,7 +322,7 @@ export default function WalletsPage() {
               </p>
               <p className="flex items-start gap-2">
                 <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-brick" />
-                <span>Withdrawals require a verified Stripe payout account.</span>
+                <span>Withdrawals require a verified payout destination for the currency being withdrawn.</span>
               </p>
             </div>
           </Card>

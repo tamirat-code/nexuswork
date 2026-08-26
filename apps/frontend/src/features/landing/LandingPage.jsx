@@ -328,45 +328,48 @@ function HeroTestimonial() {
 
 function HeroMarketplaceVisual() {
   return (
-    <div className="relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#1f5364] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.22)] sm:p-6">
+    <div className="relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#286174] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.28)] sm:p-6" aria-label="NexusWork product preview">
       <div className="pointer-events-none absolute inset-0 opacity-35" aria-hidden="true">
         <Strands colors={["#00c8b4", "#2788b0", "#7ce3d1"]} count={4} speed={0.3} opacity={0.7} scale={1.2} glow={1.4} intensity={0.45} />
       </div>
       <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#72dacc]">NexusWork marketplace</p>
-          <p className="mt-1 text-sm font-semibold text-white">A better brief, from start to release</p>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#65e6b4] shadow-[0_0_12px_#65e6b4]" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#72dacc]">NexusWork marketplace</p>
+          </div>
+          <p className="mt-1 text-sm font-semibold text-white">A clearer path from brief to delivery</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#3b8590] bg-[#0b4050] px-2.5 py-1 text-[10px] font-bold text-[#b8f2e8]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#65e6b4]" /> Live
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-[#b8f2e8]">
+          Product preview
         </span>
       </div>
 
       <div className="relative z-10 mt-5 grid gap-3 sm:grid-cols-[1fr_0.9fr]">
-        <div className="rounded-control border border-white/10 bg-[#0a3042]/90 p-4">
+        <Link to="/projects" className="group rounded-control border border-white/10 bg-[#0a3042]/90 p-4 transition-colors hover:border-[#62d9cc]/70 hover:bg-[#0d394b]">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Open brief</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Example brief</p>
               <p className="mt-1.5 text-sm font-bold text-white">Build a student community hub</p>
             </div>
-            <ArrowUpRight className="h-4 w-4 text-[#6ce1d0]" />
+            <ArrowUpRight className="h-4 w-4 text-[#6ce1d0] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </div>
           <div className="mt-5 flex flex-wrap gap-1.5">
             {['React', 'UX research', '2–3 weeks'].map((tag) => <span key={tag} className="rounded bg-white/8 px-2 py-1 text-[10px] font-medium text-[#b7d6d8]">{tag}</span>)}
           </div>
           <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-3">
-            <span className="text-[11px] text-[#8db6bf]">3 proposals received</span>
-            <span className="text-sm font-bold text-[#7ce3d1]">$1,200</span>
+            <span className="text-[11px] text-[#8db6bf]">Explore real open briefs</span>
+            <span className="text-sm font-bold text-[#7ce3d1]">Browse →</span>
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-control border border-[#2b7580] bg-[#0b3b4a]/95 p-4">
+        <Link to="#how-it-works" className="group rounded-control border border-[#2b7580] bg-[#0b3b4a]/95 p-4 transition-colors hover:border-[#72e1c8] hover:bg-[#0e4352]">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Protected milestone</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Illustrative milestone</p>
             <ShieldCheck className="h-4 w-4 text-[#72e1c8]" />
           </div>
           <p className="mt-2 text-2xl font-bold tracking-tight text-white">$600.00</p>
-          <p className="mt-1 text-[11px] text-[#9ac6c6]">Held safely in escrow</p>
+          <p className="mt-1 text-[11px] text-[#9ac6c6]">Funds stay protected until approval</p>
           <div className="mt-5 space-y-2.5">
             {[['Brief agreed', true], ['Student working', true], ['Release on approval', false]].map(([label, done]) => (
               <div key={label} className="flex items-center gap-2 text-[11px] text-[#c5e0df]">
@@ -375,7 +378,7 @@ function HeroMarketplaceVisual() {
               </div>
             ))}
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="relative z-10 mt-3 flex items-center gap-3 rounded-control border border-white/10 bg-[#082c3c]/90 px-4 py-3">
