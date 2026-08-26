@@ -72,16 +72,64 @@ function CardForm({ contractId, milestone, token, onDone }) {
       )}
       <DialogFooter>
         <Button type="submit" disabled={!stripe || busy} className="w-full sm:w-auto">
-          {busy ? "Processing…" : `Pay ${formatCurrency(milestone?.amount ?? 0)} into escrow`}
+          {busy ? "Processing…" : `Pay ${formatCurrency(milestone?.amount ?? 0, milestone?.currency || "USD")} into escrow`}
         </Button>
       </DialogFooter>
     </form>
   );
 }
 
+function ChapaCheckout({ contractId, milestone, paymentIntentId, checkoutUrl, token, onDone }) {
+  const queryClient = useQueryClient();
+  const [checking, setChecking] = useState(false);
+
+  async function checkPayment() {
+    setChecking(true);
+    try {
+      await confirmMilestoneFunding(paymentIntentId, token);
+      queryClient.invalidateQueries({ queryKey: ["milestones", contractId] });
+      toast.success("Milestone funded — funds are held in escrow.");
+      onDone();
+    } catch (error) {
+      toast.info(error.message || "Payment is still pending. Complete checkout, then check again.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-200">
+        <p className="font-semibold text-white">Continue securely with Chapa</p>
+        <p className="mt-1 text-slate-300">Your payment will be verified before the milestone is marked funded.</p>
+      </div>
+      <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+        <Button variant="secondary" onClick={checkPayment} disabled={checking || !paymentIntentId}>
+          {checking ? "Checking…" : "I’ve completed payment"}
+        </Button>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => {
+            if (paymentIntentId) {
+              window.localStorage.setItem("nexuswork:chapa-payment-reference", paymentIntentId);
+            }
+            // Keep checkout in the current tab so Chapa returns to the same
+            // NexusWork session and the payment-complete verifier can run
+            // without leaving a second app tab behind.
+            window.location.assign(checkoutUrl);
+          }}
+          disabled={!checkoutUrl}
+        >
+          Continue to Chapa
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
 
 export default function FundMilestoneDialog({ contractId, funding, token, onClose }) {
   const open = Boolean(funding?.clientSecret);
+  const provider = funding?.provider || "stripe";
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -90,12 +138,23 @@ export default function FundMilestoneDialog({ contractId, funding, token, onClos
           <DialogTitle>Fund milestone</DialogTitle>
           <DialogDescription>
             {funding?.milestone
-              ? `${formatCurrency(funding.milestone.amount)} will be held in escrow until you approve "${funding.milestone.title}".`
-              : "Enter your card details to fund this milestone."}
+              ? `${formatCurrency(funding.milestone.amount, funding.milestone.currency || "USD")} will be held in escrow until you approve "${funding.milestone.title}".`
+              : "Securely fund this milestone."}
           </DialogDescription>
         </DialogHeader>
 
-        {open && (
+        {open && provider === "chapa" && (
+          <ChapaCheckout
+            contractId={contractId}
+            milestone={funding.milestone}
+            paymentIntentId={funding.paymentIntentId}
+            checkoutUrl={funding.clientSecret}
+            token={token}
+            onDone={onClose}
+          />
+        )}
+
+        {open && provider === "stripe" && (
           <Elements
             key={funding.clientSecret}
             stripe={stripePromise}

@@ -42,6 +42,12 @@ export function buildEnv(source = process.env) {
     commissionRateBps: basisPoints(source.COMMISSION_RATE, 0.1),
     stripeConnectRefreshUrl: source.STRIPE_CONNECT_REFRESH_URL || "http://localhost:5173/wallet?connect=refresh",
     stripeConnectReturnUrl: source.STRIPE_CONNECT_RETURN_URL || "http://localhost:5173/wallet?connect=done",
+    chapaApiBaseUrl: source.CHAPA_API_BASE_URL || "https://api.chapa.co/v1",
+    chapaSecretKey: optional(source.CHAPA_SECRET_KEY),
+    chapaWebhookSecret: optional(source.CHAPA_WEBHOOK_SECRET),
+    chapaCallbackUrl: optional(source.CHAPA_CALLBACK_URL),
+    chapaReturnUrl: optional(source.CHAPA_RETURN_URL),
+    chapaRequestTimeoutMs: number(source.CHAPA_REQUEST_TIMEOUT_MS, 10000),
 
     aiProvider: (source.AI_PROVIDER || "anthropic").toLowerCase(),
     aiApiKey: optional(source.AI_API_KEY),

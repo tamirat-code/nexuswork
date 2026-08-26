@@ -59,8 +59,9 @@ describe("contract and milestone authorization integration", () => {
 
     await request(app).post(`/v1/contracts/${contract._id}/review`).set("Authorization", `Bearer ${clientToken}`).send().expect(200);
     await request(app).post(`/v1/contracts/${contract._id}/review`).set("Authorization", `Bearer ${studentToken}`).send().expect(200);
-    await request(app).post(`/v1/contracts/${contract._id}/sign`).set("Authorization", `Bearer ${clientToken}`).send().expect(200);
-    await request(app).post(`/v1/contracts/${contract._id}/sign`).set("Authorization", `Bearer ${studentToken}`).send().expect(200);
+    await request(app).post(`/v1/contracts/${contract._id}/sign`).set("Authorization", `Bearer ${clientToken}`).send().expect(400);
+    await request(app).post(`/v1/contracts/${contract._id}/sign`).set("Authorization", `Bearer ${clientToken}`).send({ confirm_terms: true }).expect(200);
+    await request(app).post(`/v1/contracts/${contract._id}/sign`).set("Authorization", `Bearer ${studentToken}`).send({ confirm_terms: true }).expect(200);
 
     const events = await AuditLog.find({ entity_id: contract._id }).sort({ createdAt: 1 }).lean();
     const activated = events.find((event) => event.eventType === "CONTRACT_ACTIVATED");

@@ -28,6 +28,7 @@ const projectSchema = z.object({
   category: z.string().min(1, "Choose a category"),
   experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]),
   budget: z.coerce.number().min(10, "Budget must be at least $10").max(1000000, "Budget looks too high"),
+  currency: z.enum(["USD", "ETB"]),
   deadline: z.string().min(1, "Pick a deadline"),
 });
 
@@ -113,7 +114,7 @@ export default function PostProjectPage() {
 
   const form = useForm({
     resolver: zodResolver(projectSchema),
-    defaultValues: { title: "", description: "", category: "", experience_level: "intermediate", budget: "", deadline: "" },
+    defaultValues: { title: "", description: "", category: "", experience_level: "intermediate", budget: "", currency: "USD", deadline: "" },
   });
 
   const mutation = useMutation({
@@ -195,8 +196,20 @@ export default function PostProjectPage() {
                       </Select>
                       <FormMessage /></FormItem>
                   )} />
+                  <FormField control={form.control} name="currency" render={({ field }) => (
+                    <FormItem><FormLabel>Payment currency</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="USD">USD — Stripe</SelectItem>
+                          <SelectItem value="ETB">ETB — Chapa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>This currency is locked into the contract and its milestones.</FormDescription>
+                      <FormMessage /></FormItem>
+                  )} />
                   <FormField control={form.control} name="budget" render={({ field }) => (
-                    <FormItem><FormLabel>Budget (USD)</FormLabel>
+                    <FormItem><FormLabel>Budget ({form.watch("currency")})</FormLabel>
                       <FormControl><Input type="number" min={10} placeholder="750" className="font-mono" {...field} /></FormControl>
                       <PriceSuggestion
                         skills={skills}
@@ -219,7 +232,7 @@ export default function PostProjectPage() {
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">Title</dt><dd className="font-semibold text-slate">{form.watch("title")}</dd></div>
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">Category</dt><dd className="font-semibold text-slate">{form.watch("category")}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className="text-slate-300">Budget</dt><dd className="font-mono text-brass">${form.watch("budget")}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-slate-300">Budget</dt><dd className="font-mono text-brass">{form.watch("currency")} {form.watch("budget")}</dd></div>
                     {skills.length > 0 && <div className="flex flex-wrap gap-1.5 pt-2">{skills.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}</div>}
                   </dl>
                 </div>
@@ -233,7 +246,7 @@ export default function PostProjectPage() {
             </Button>
             {step < 2 ? (
               <Button type="button" onClick={async () => {
-                const valid = await form.trigger(step === 0 ? ["title", "description", "category"] : ["experience_level", "budget", "deadline"]);
+                const valid = await form.trigger(step === 0 ? ["title", "description", "category"] : ["experience_level", "budget", "currency", "deadline"]);
                 if (valid) setStep((s) => Math.min(2, s + 1));
               }}>
                 Continue <ChevronRight className="h-4 w-4" />

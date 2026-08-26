@@ -18,6 +18,7 @@ import ContractsPage from "../../features/contracts/ContractsPage.jsx";
 import ContractDetailPage from "../../features/contracts/ContractDetailPage.jsx";
 import WalletsPage from "../../features/wallets/WalletsPage.jsx";
 import PaymentsPage from "../../features/payments/PaymentsPage.jsx";
+import PaymentCompletePage from "../../features/payments/PaymentCompletePage.jsx";
 import InvoicesPage from "../../features/invoices/InvoicesPage.jsx";
 import ProposalsPage from "../../features/proposals/ProposalsPage.jsx";
 import DisputesPage from "../../features/disputes/DisputesPage.jsx";
@@ -82,6 +83,7 @@ export default function AppRouter() {
       <Route path="/wallet/connect/done" element={<Navigate to="/wallet?connect=done" replace />} />
       <Route path="/wallet/connect/refresh" element={<Navigate to="/wallet?connect=refresh" replace />} />
       <Route path="/payments" element={protect(<PaymentsPage />)} />
+      <Route path="/payments/complete" element={protect(<PaymentCompletePage />)} />
       <Route path="/invoices" element={protect(<InvoicesPage />)} />
       <Route path="/portfolios" element={protect(<PortfoliosPage />)} />
       <Route path="/skills" element={protect(<SkillsPage />)} />

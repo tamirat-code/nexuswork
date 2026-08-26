@@ -1,7 +1,7 @@
 import { env } from "./env.js";
 
 const SUPPORTED_AI_PROVIDERS = new Set(["none", "groq", "anthropic"]);
-const SUPPORTED_PAYMENT_PROVIDERS = new Set(["none", "stripe"]);
+const SUPPORTED_PAYMENT_PROVIDERS = new Set(["none", "stripe", "chapa"]);
 const SUPPORTED_STORAGE_DRIVERS = new Set(["local", "s3"]);
 
 function requireValue(missing, value, name) {
@@ -38,11 +38,19 @@ export function validateEnv(config = env) {
   if (config.aiProvider !== "none") requireValue(missing, config.aiApiKey, "AI_API_KEY");
 
   if (!SUPPORTED_PAYMENT_PROVIDERS.has(config.paymentProvider)) {
-    throw new Error(`Unsupported PAYMENT_PROVIDER: ${config.paymentProvider}. Use none or stripe.`);
+    throw new Error(`Unsupported PAYMENT_PROVIDER: ${config.paymentProvider}. Use none, stripe, or chapa.`);
   }
   if (config.paymentProvider === "stripe") {
     requireValue(missing, config.stripeSecretKey, "STRIPE_SECRET_KEY");
     requireValue(missing, config.stripeWebhookSecret, "STRIPE_WEBHOOK_SECRET");
+  }
+  if (config.paymentProvider === "chapa") {
+    requireValue(missing, config.chapaSecretKey, "CHAPA_SECRET_KEY");
+    requireValue(missing, config.chapaWebhookSecret, "CHAPA_WEBHOOK_SECRET");
+    if (config.paymentCurrency !== "etb") missing.push("PAYMENT_CURRENCY (CHAPA requires ETB)");
+    requireUrl(missing, config.chapaApiBaseUrl, "CHAPA_API_BASE_URL");
+    requireUrl(missing, config.chapaCallbackUrl, "CHAPA_CALLBACK_URL");
+    requireUrl(missing, config.chapaReturnUrl, "CHAPA_RETURN_URL");
   }
 
   if (!SUPPORTED_STORAGE_DRIVERS.has(config.storageDriver)) {

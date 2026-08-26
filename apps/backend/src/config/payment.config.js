@@ -9,4 +9,10 @@ export const paymentConfig = {
   currency: env.paymentCurrency,
   connectRefreshUrl: env.stripeConnectRefreshUrl,
   connectReturnUrl: env.stripeConnectReturnUrl,
+  chapaApiBaseUrl: env.chapaApiBaseUrl,
+  chapaSecretKey: env.chapaSecretKey,
+  chapaWebhookSecret: env.chapaWebhookSecret,
+  chapaCallbackUrl: env.chapaCallbackUrl,
+  chapaReturnUrl: env.chapaReturnUrl,
+  chapaRequestTimeoutMs: env.chapaRequestTimeoutMs,
 };

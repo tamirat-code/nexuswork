@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState,useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -66,6 +66,74 @@ const DISPUTABLE_STATUSES = [
   MILESTONE_STATUS.DELIVERED,
   MILESTONE_STATUS.REVISION_REQUESTED,
 ];
+
+function ContractTermsSummary({ contract }) {
+  const terms = contract?.terms || {};
+  return (
+    <div className="max-h-[45vh] space-y-4 overflow-y-auto rounded-control border border-ink-300 bg-ink-50 p-4 text-sm">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Agreement terms · Version {contract?.version || 1}</p>
+        <h3 className="mt-1 font-display text-lg text-slate">{terms.title || "Contract"}</h3>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><p className="text-xs text-slate-300">Total amount</p><p className="font-mono font-semibold text-brass">{formatCurrency(terms.total_amount || 0, terms.currency || "USD")}</p></div>
+        <div><p className="text-xs text-slate-300">Delivery</p><p className="font-semibold text-slate">{terms.delivery_time_days || "—"} days</p></div>
+      </div>
+      <div><p className="text-xs text-slate-300">Scope</p><p className="mt-1 whitespace-pre-line leading-relaxed text-slate">{terms.description || "No description provided."}</p></div>
+      <div><p className="text-xs text-slate-300">Payment terms</p><p className="mt-1 leading-relaxed text-slate">{terms.payment_terms || "Milestones are funded before work and released after approval."}</p></div>
+      <div><p className="text-xs text-slate-300">Revisions</p><p className="mt-1 leading-relaxed text-slate">{terms.revision_policy || "As agreed in the project scope."}</p></div>
+      <div><p className="text-xs text-slate-300">Cancellation</p><p className="mt-1 leading-relaxed text-slate">{terms.cancellation_terms || "Subject to NexusWork dispute and termination policy."}</p></div>
+    </div>
+  );
+}
+
+function ContractReviewDialog({ contract, open, onOpenChange, onConfirm, loading }) {
+  const [confirmed, setConfirmed] = useState(false);
+  useEffect(() => { if (!open) setConfirmed(false); }, [open]);
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) setConfirmed(false); onOpenChange(next); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Review contract terms</DialogTitle>
+          <DialogDescription>Read the complete agreement before recording your review.</DialogDescription>
+        </DialogHeader>
+        <ContractTermsSummary contract={contract} />
+        <label className="flex items-start gap-3 rounded-control border border-ink-300 p-3 text-sm text-slate">
+          <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1 accent-brass" />
+          <span>I have reviewed the terms shown above and confirm they reflect the agreement I intend to sign.</span>
+        </label>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button disabled={!confirmed} loading={loading} onClick={onConfirm}>Confirm review</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ContractSignDialog({ contract, open, onOpenChange, onConfirm, loading }) {
+  const [confirmed, setConfirmed] = useState(false);
+  useEffect(() => { if (!open) setConfirmed(false); }, [open]);
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) setConfirmed(false); onOpenChange(next); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm your signature</DialogTitle>
+          <DialogDescription>This action records your electronic signature for the current contract version.</DialogDescription>
+        </DialogHeader>
+        <ContractTermsSummary contract={contract} />
+        <label className="flex items-start gap-3 rounded-control border border-brass/40 bg-brass/5 p-3 text-sm text-slate">
+          <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1 accent-brass" />
+          <span>I agree to these contract terms and authorize NexusWork to record my electronic signature.</span>
+        </label>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button disabled={!confirmed} loading={loading} onClick={onConfirm}>Sign contract</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function formatBytes(bytes = 0) {
   if (!bytes) return "0 B";
@@ -442,6 +510,7 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
   const submissions = submissionsQuery.data?.data ?? [];
   const latestSubmission = submissions.at(-1);
   const canFund = role === ROLES.CLIENT && milestone.status === MILESTONE_STATUS.NOT_FUNDED;
+  const canContinueFunding = role === ROLES.CLIENT && milestone.status === MILESTONE_STATUS.FUNDING_PENDING;
   const canStart = role === ROLES.STUDENT && [MILESTONE_STATUS.FUNDED, MILESTONE_STATUS.REVISION_REQUESTED].includes(milestone.status);
   const canSubmit = role === ROLES.STUDENT && [MILESTONE_STATUS.FUNDED, MILESTONE_STATUS.IN_PROGRESS, MILESTONE_STATUS.REVISION_REQUESTED].includes(milestone.status);
   const canApprove = role === ROLES.CLIENT && REVIEWABLE_STATUSES.includes(milestone.status) && latestSubmission?.review_status === "pending_review";
@@ -503,7 +572,7 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-base font-semibold text-brass">{formatCurrency(milestone.amount)}</span>
+            <span className="font-mono text-base font-semibold text-brass">{formatCurrency(milestone.amount, milestone.currency || "USD")}</span>
             <StatusBadge kind="milestone" status={milestone.status} showDot />
           </div>
         </div>
@@ -558,11 +627,16 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
           </div>
         )}
 
-        {(canFund || canStart || canSubmit || canApprove || canRevision || canDispute) && (
+        {(canFund || canContinueFunding || canStart || canSubmit || canApprove || canRevision || canDispute) && (
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-300 pt-3">
             {canFund && (
               <Button size="sm" onClick={() => onAction("fund", milestone)} disabled={isStartingFunding}>
                 {isStartingFunding ? "Preparing payment…" : "Fund milestone"}
+              </Button>
+            )}
+            {canContinueFunding && (
+              <Button size="sm" variant="outline" onClick={() => onAction("fund", milestone)} disabled={isStartingFunding}>
+                {isStartingFunding ? "Opening payment…" : "Continue payment"}
               </Button>
             )}
             {canStart && !isWorking && (
@@ -710,6 +784,9 @@ export default function ContractDetailPage() {
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
   const [fundingMilestone, setFundingMilestone] = useState(null);
+  const [paymentChoiceMilestone, setPaymentChoiceMilestone] = useState(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [createMilestoneOpen, setCreateMilestoneOpen] = useState(false);
   const fileExchangeInputRef = useRef(null);
 
@@ -762,6 +839,7 @@ export default function ContractDetailPage() {
     mutationFn: () => signContract(id, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contract", id] });
+      setSignDialogOpen(false);
       toast.success("Contract signed successfully.");
     },
     onError: (error) => toast.error(error.message || "Could not sign contract"),
@@ -771,14 +849,20 @@ export default function ContractDetailPage() {
     mutationFn: () => reviewContract(id, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contract", id] });
+      setReviewDialogOpen(false);
       toast.success("Contract reviewed successfully.");
     },
     onError: (error) => toast.error(error.message || "Could not review contract"),
   });
 
   const fundMutation = useMutation({
-    mutationFn: ({ milestoneId }) => fundMilestone(milestoneId, token),
-    onSuccess: (response, { milestone }) => setFundingMilestone({ milestone, clientSecret: response.data.client_secret }),
+    mutationFn: ({ milestoneId, provider }) => fundMilestone(milestoneId, token, provider),
+    onSuccess: (response, { milestone }) => setFundingMilestone({
+      milestone,
+      clientSecret: response.data.client_secret,
+      paymentIntentId: response.data.payment_intent_id,
+      provider: response.data.provider,
+    }),
     onError: (error) => toast.error(error.message || "Could not start funding"),
   });
 
@@ -824,7 +908,7 @@ export default function ContractDetailPage() {
 
   function handleAction(action, milestone, payload = {}) {
     if (action === "fund") {
-      fundMutation.mutate({ milestoneId: milestone._id, milestone });
+      setPaymentChoiceMilestone(milestone);
       return;
     }
     if (action === "approve") {
@@ -882,7 +966,7 @@ export default function ContractDetailPage() {
                 <p className="text-sm text-slate-300">Review the agreed terms before signing and starting work.</p>
               </div>
             </div>
-            <Button onClick={() => reviewMutation.mutate()} loading={reviewMutation.isPending}>Review &amp; agree</Button>
+            <Button onClick={() => setReviewDialogOpen(true)}>Review &amp; agree</Button>
           </CardContent>
         </Card>
       )}
@@ -897,7 +981,12 @@ export default function ContractDetailPage() {
                 <p className="text-sm text-slate-300">Both parties have reviewed the contract. Sign it to activate the workspace.</p>
               </div>
             </div>
-            <Button onClick={() => signMutation.mutate()} loading={signMutation.isPending}>Sign contract</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setReviewDialogOpen(true)}>
+                Review current terms
+              </Button>
+              <Button onClick={() => setSignDialogOpen(true)}>Sign contract</Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -1027,6 +1116,55 @@ export default function ContractDetailPage() {
         </aside>
       </div>
 
+      <ContractReviewDialog
+        contract={contract}
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        onConfirm={() => reviewMutation.mutate()}
+        loading={reviewMutation.isPending}
+      />
+      <ContractSignDialog
+        contract={contract}
+        open={signDialogOpen}
+        onOpenChange={setSignDialogOpen}
+        onConfirm={() => signMutation.mutate()}
+        loading={signMutation.isPending}
+      />
+      <Dialog open={Boolean(paymentChoiceMilestone)} onOpenChange={(next) => !next && setPaymentChoiceMilestone(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose payment method</DialogTitle>
+            <DialogDescription>
+              Select how you want to fund this {formatCurrency(paymentChoiceMilestone?.amount || 0, paymentChoiceMilestone?.currency || contractCurrency)} milestone. The selected provider will be used for verification and escrow.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button
+              variant="secondary"
+              disabled={String(paymentChoiceMilestone?.currency || contractCurrency).toLowerCase() !== "usd"}
+              onClick={() => {
+                const milestone = paymentChoiceMilestone;
+                setPaymentChoiceMilestone(null);
+                fundMutation.mutate({ milestoneId: milestone._id, milestone, provider: "stripe" });
+              }}
+            >
+              Pay with Stripe
+            </Button>
+            <Button
+              variant="outline"
+              disabled={String(paymentChoiceMilestone?.currency || contractCurrency).toLowerCase() !== "etb"}
+              onClick={() => {
+                const milestone = paymentChoiceMilestone;
+                setPaymentChoiceMilestone(null);
+                fundMutation.mutate({ milestoneId: milestone._id, milestone, provider: "chapa" });
+              }}
+            >
+              Pay with Chapa
+            </Button>
+          </div>
+          <p className="text-xs text-slate-300">Stripe supports USD milestones here; Chapa supports ETB milestones.</p>
+        </DialogContent>
+      </Dialog>
       <FundMilestoneDialog contractId={id} funding={fundingMilestone} token={token} onClose={() => { setFundingMilestone(null); refreshMilestones(); }} />
     </div>
   );

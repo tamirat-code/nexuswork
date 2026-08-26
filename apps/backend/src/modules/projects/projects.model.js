@@ -11,6 +11,7 @@ const projectSchema = new mongoose.Schema(
     category: { type: String },
     experience_level: { type: String, enum: ["beginner", "intermediate", "advanced", "expert"] },
     budget: { type: Number, required: true },
+    currency: { type: String, enum: ["USD", "ETB"], default: "USD", uppercase: true, trim: true },
     deadline: { type: Date, required: true },
     attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
     status: {

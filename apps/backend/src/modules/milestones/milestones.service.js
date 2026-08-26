@@ -273,7 +273,7 @@ export async function initiateFunding(milestoneId, requestingUserId, auditContex
     throw new ValidationError(`Cannot fund a milestone in status ${milestone.status}`);
   }
 
-  const result = await createDepositIntent(milestone);
+  const result = await createDepositIntent(milestone, auditContext.provider);
   if (milestone.status === "not_funded") {
     milestone.status = "funding_pending";
     await milestone.save();

@@ -252,6 +252,7 @@ export const createProjectSchema = z.object({
   description: z.string().trim().min(10, "Description must be at least 10 characters").max(10000),
   required_skills: z.array(z.string().trim().min(1).max(100)).max(50).optional().default([]),
   budget: positiveNumber,
+  currency: z.enum(["USD", "ETB"]).optional().default("USD"),
   deadline: z.coerce.date("Invalid deadline"),
   category: z.string().trim().max(100).optional(),
   experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),

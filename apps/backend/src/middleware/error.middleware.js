@@ -6,10 +6,9 @@ export function notFound(req, res, next) {
 
 export function errorHandler(err, req, res, next) {
   logger.error(err.message, err.stack);
-  const status = err.status || (err.name === "MulterError" ? 400 : 500);
+  const isProviderError = err.name === "PaymentProviderError";
+  const status = err.status || (err.name === "MulterError" ? 400 : isProviderError ? 502 : 500);
   const isSafeApplicationError = status < 500 && Boolean(err.status);
-  const message = isSafeApplicationError
-    ? err.message
-    : "Internal server error";
+  const message = isSafeApplicationError || isProviderError ? err.message : "Internal server error";
   res.status(status).json({ success: false, message });
 }

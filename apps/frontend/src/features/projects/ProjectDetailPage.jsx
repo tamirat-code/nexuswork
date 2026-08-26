@@ -51,7 +51,7 @@ function VerificationRequiredNotice() {
   );
 }
 
-function ProposalSubmitDialog({ projectId, token, verified }) {
+function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) {
   const queryClient = useQueryClient();
   const form = useForm({
     resolver: zodResolver(proposalSchema),
@@ -82,7 +82,7 @@ function ProposalSubmitDialog({ projectId, token, verified }) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => mutation.mutate({ ...v, project_id: projectId }))} className="space-y-4">
             <FormField control={form.control} name="price" render={({ field }) => (
-              <FormItem><FormLabel>Your price (USD)</FormLabel>
+              <FormItem><FormLabel>Your price ({currency})</FormLabel>
                 <FormControl><Input type="number" min={1} className="font-mono" placeholder="500" {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
@@ -106,7 +106,7 @@ function ProposalSubmitDialog({ projectId, token, verified }) {
   );
 }
 
-function ClientProposalList({ projectId, token }) {
+function ClientProposalList({ projectId, token, currency = "USD" }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["project-proposals", projectId],
@@ -154,7 +154,7 @@ function ClientProposalList({ projectId, token }) {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-mono text-lg font-semibold text-brass">{formatCurrency(p.price)}</p>
+                <p className="font-mono text-lg font-semibold text-brass">{formatCurrency(p.price, currency)}</p>
                 <p className="text-xs text-slate-300">{p.delivery_time_days} days</p>
               </div>
             </div>
@@ -313,7 +313,7 @@ export default function ProjectDetailPage() {
             </CardContent>
           </Card>
 
-          {isClientOwner && <ClientProposalList projectId={id} token={token} />}
+          {isClientOwner && <ClientProposalList projectId={id} token={token} currency={project.currency || "USD"} />}
           {isClientOwner && <RecommendedStudents projectId={id} token={token} />}
         </div>
 
@@ -321,11 +321,11 @@ export default function ProjectDetailPage() {
           <Card>
             <CardContent className="p-6">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Budget</p>
-              <p className="mt-1 font-display text-3xl tracking-tight text-brass">{formatCurrency(project.budget)}</p>
+              <p className="mt-1 font-display text-3xl tracking-tight text-brass">{formatCurrency(project.budget, project.currency || "USD")}</p>
               <p className="text-xs text-slate-300">Fixed price</p>
 
               {isStudent ? (
-                <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} verified={Boolean(user?.universityVerified)} /></div>
+                <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} verified={Boolean(user?.universityVerified)} currency={project.currency || "USD"} /></div>
               ) : !isClientOwner && !user ? (
                 <>
                   <p className="mt-6 text-sm leading-relaxed text-slate-300">Sign in with your university email to submit a proposal.</p>

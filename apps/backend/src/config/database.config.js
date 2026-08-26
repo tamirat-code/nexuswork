@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { ensureWithdrawalIndexes } from "./database.indexes.js";
+import { ensurePaymentIndexes, ensureWithdrawalIndexes } from "./database.indexes.js";
 import { env } from "./env.js";
 
 export async function connectDB() {
@@ -8,6 +8,8 @@ export async function connectDB() {
   mongoose.set("strictQuery", true);
   await mongoose.connect(uri);
   const indexResult = await ensureWithdrawalIndexes();
+  const paymentIndexResult = await ensurePaymentIndexes();
   console.log(`[db] Withdrawal migration: backfilled=${indexResult.backfilled}, removed=${indexResult.removed.map((index) => index.name).join(",") || "none"}, compound=${indexResult.created}`);
+  console.log(`[db] Payment provider indexes: ${paymentIndexResult.indexes.join(",")}, changed=${paymentIndexResult.changed}`);
   console.log("[db] MongoDB connected");
 }

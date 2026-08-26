@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -72,7 +73,7 @@ export default function ContractsPage() {
                         {title}
                       </h2>
                       <p className="mt-1 text-sm text-slate-300">
-                        {formatCurrency(amount)} · started {formatTimeAgo(contract.createdAt)}
+                        {formatCurrency(amount, contract.terms?.currency || "USD")} · started {formatTimeAgo(contract.createdAt)}
                       </p>
                       {contract.status === "pending_review" && (
                         <p className="mt-2 text-xs font-medium text-brass">

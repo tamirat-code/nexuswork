@@ -1,5 +1,5 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
-import { NotFoundError } from "../../shared/exceptions/AppError.js";
+import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { assertContractParty } from "../../shared/authorization/resource-authorization.js";
 import {
   getContract,
@@ -48,6 +48,9 @@ export const review = asyncHandler(async (req, res) => {
 
 export const sign = asyncHandler(async (req, res) => {
   await assertContractParty({ contractId: req.params.id, req });
+  if (req.body?.confirm_terms !== true) {
+    throw new ValidationError("Explicit confirmation of the current contract terms is required before signing.");
+  }
   const contract = await signContract(
     req.params.id,
     req.user._id,

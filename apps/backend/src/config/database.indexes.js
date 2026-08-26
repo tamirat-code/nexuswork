@@ -1,7 +1,10 @@
 import Withdrawal from "../modules/wallets/withdrawal.model.js";
+import Payment from "../modules/payments/payments.model.js";
 
 export const LEGACY_WITHDRAWAL_IDEMPOTENCY_INDEX = "idempotency_key_1";
 export const WITHDRAWAL_IDEMPOTENCY_INDEX = "withdrawals_user_id_idempotency_key_unique";
+export const PAYMENT_PROVIDER_PAYMENT_INDEX = "provider_1_provider_payment_id_1";
+export const PAYMENT_PROVIDER_EVENT_INDEX = "provider_1_provider_event_id_1";
 
 function legacyIdempotencyKey(withdrawalId) {
   return `legacy-withdrawal-${withdrawalId}`;
@@ -23,6 +26,34 @@ function isWithdrawalIdempotencyIndex(index) {
     index.unique === true &&
     hasKey(index, { user_id: 1, idempotency_key: 1 })
   );
+}
+
+function hasPaymentKey(index, field) {
+  return index?.key?.provider === 1 && index?.key?.[field] === 1;
+}
+
+async function ensurePartialUniquePaymentIndex(field, name) {
+  const indexes = await Payment.collection.listIndexes().toArray().catch(async (error) => {
+    if (error.codeName !== "NamespaceNotFound") throw error;
+    await Payment.createIndexes();
+    return Payment.collection.listIndexes().toArray();
+  });
+  const matches = indexes.filter((index) => hasPaymentKey(index, field));
+  const desired = matches.find((index) => index.name === name && index.unique && index.partialFilterExpression?.[field]?.$type === "string");
+  if (desired) return { name, changed: false };
+
+  for (const index of matches) await Payment.collection.dropIndex(index.name);
+  await Payment.collection.createIndex(
+    { provider: 1, [field]: 1 },
+    { unique: true, name, partialFilterExpression: { [field]: { $type: "string" } } }
+  );
+  return { name, changed: true };
+}
+
+export async function ensurePaymentIndexes() {
+  const paymentId = await ensurePartialUniquePaymentIndex("provider_payment_id", PAYMENT_PROVIDER_PAYMENT_INDEX);
+  const eventId = await ensurePartialUniquePaymentIndex("provider_event_id", PAYMENT_PROVIDER_EVENT_INDEX);
+  return { changed: paymentId.changed || eventId.changed, indexes: [paymentId.name, eventId.name] };
 }
 
 /**

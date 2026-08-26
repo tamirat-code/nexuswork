@@ -20,9 +20,10 @@ export const getMilestone = (milestoneId, token) =>
     token,
   });
 
-export const fundMilestone = (milestoneId, token) =>
+export const fundMilestone = (milestoneId, token, provider) =>
   apiRequest(`/milestones/${milestoneId}/fund`, {
     method: "POST",
+    body: provider ? { provider } : undefined,
     token,
   });
 

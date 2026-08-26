@@ -15,7 +15,7 @@ export const create = asyncHandler(async (req, res) => {
     req.params.contractId,
     req.user._id,
     req.body,
-    { actor: req.user, correlationId: req.correlationId }
+    { actor: req.user, correlationId: req.correlationId, provider: req.body?.provider }
   );
 
   res.status(201).json({ success: true, data: milestone });
@@ -50,7 +50,11 @@ export const fund = asyncHandler(async (req, res) => {
   const result = await milestonesService.initiateFunding(
     req.params.id,
     req.user._id,
-    { actor: req.user, correlationId: req.correlationId }
+    {
+      actor: req.user,
+      correlationId: req.correlationId,
+      provider: req.body?.provider,
+    }
   );
 
   res.json({ success: true, data: result });

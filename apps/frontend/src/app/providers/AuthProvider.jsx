@@ -66,10 +66,18 @@ export function AuthProvider({ children }) {
 
   const refreshMe = useCallback(async () => {
     if (!token) return;
-    const { data } = await authApi.getMe(token);
-    setUser(data);
-    storage.set("nw_user", JSON.stringify(data));
-  }, [token]);
+    try {
+      const { data } = await authApi.getMe(token);
+      setUser(data);
+      storage.set("nw_user", JSON.stringify(data));
+    } catch (err) {
+      // A cached token can outlive a password reset, session-version change,
+      // user deactivation, or database refresh. Do not leave the UI looking
+      // authenticated after the server has rejected that session.
+      if (err.status === 401) clear();
+      throw err;
+    }
+  }, [token, clear]);
 
   const setLocalUser = useCallback((nextUser) => {
     setUser(nextUser);

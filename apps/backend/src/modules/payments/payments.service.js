@@ -7,8 +7,9 @@ import { paymentConfig } from "../../config/payment.config.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { money, moneyFromLegacyMajorUnits, moneyFromRecord } from "../../shared/money/money.js";
-import { paymentProvider } from "./providers/index.js";
+import { getPaymentProvider, paymentProvider } from "./providers/index.js";
 import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
+import { PAYMENT_STATUSES, transitionPaymentStatus } from "./payment-state.js";
 
 async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
   payment.status = "failed";
@@ -28,50 +29,103 @@ async function failReleasePayment(payment, milestoneId, error, auditContext = {}
   });
 }
 
-export async function createDepositIntent(milestone) {
+export async function createDepositIntent(milestone, requestedProvider) {
   const milestoneMoney = Number.isSafeInteger(milestone.amount_minor)
     ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
     : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
+
   const existing = await Payment.findOne({
     milestone_id: milestone._id,
     direction: "deposit",
-    status: { $in: ["pending", "succeeded"] },
+    status: { $in: ["pending", "ledger_pending", "succeeded"] },
   });
 
   if (existing?.status === "succeeded") {
-    return { payment_intent_id: existing.stripe_payment_intent_id, already_succeeded: true };
+    return { payment_intent_id: existing.provider_payment_id || existing.stripe_payment_intent_id, already_succeeded: true, provider: existing.provider };
   }
 
-  if (existing?.stripe_payment_intent_id) {
-    const existingIntent = await paymentProvider.getPaymentIntent(existing.stripe_payment_intent_id);
+  const existingProviderId = existing?.provider_payment_id || existing?.stripe_payment_intent_id;
+  if (existingProviderId) {
+    const existingIntent = await getPaymentProvider(existing.provider).getPaymentIntent(existingProviderId);
     if (existingIntent.status === "pending") {
-      return { client_secret: existingIntent.clientSecret, payment_intent_id: existingIntent.id, already_pending: true };
+      const checkoutUrl = existing.provider_checkout_url || existingIntent.clientSecret;
+      if (checkoutUrl && !existing.provider_checkout_url) {
+        existing.provider_checkout_url = checkoutUrl;
+        await existing.save();
+      }
+      if (!checkoutUrl) {
+        throw new ValidationError("This payment is already pending, but its checkout link is unavailable. Start a new milestone funding attempt.");
+      }
+      return { client_secret: checkoutUrl, payment_intent_id: existingIntent.id, already_pending: true, provider: existing.provider };
     }
     if (existingIntent.status === "succeeded") {
       await markDepositSucceeded(existingIntent.id);
       return { payment_intent_id: existingIntent.id, already_succeeded: true };
     }
+    // A local pending record can outlive a failed/cancelled provider attempt.
+    // Do not reopen that checkout: the caller must receive a fresh provider
+    // reference so a new payment can actually be completed.
   }
 
-  const intent = await paymentProvider.createPaymentIntent({
+  const providerName = String(requestedProvider || paymentConfig.provider).toLowerCase();
+  if (!["stripe", "chapa"].includes(providerName)) {
+    throw new ValidationError("Unsupported payment provider. Choose Stripe or Chapa.");
+  }
+  const provider = getPaymentProvider(providerName);
+  if (providerName === "chapa" && milestoneMoney.currency !== "etb") {
+    throw new ValidationError(
+      `Chapa funding requires ETB, but this milestone is denominated in ${milestoneMoney.currency.toUpperCase()}. Choose Stripe or use an ETB milestone.`
+    );
+  }
+
+  const intent = await provider.createPaymentIntent({
     amountMinor: milestoneMoney.amountMinor,
     currency: milestoneMoney.currency,
     metadata: { milestone_id: String(milestone._id) },
-    idempotencyKey: `milestone-funding-${milestone._id}`,
+    // Stripe supports deterministic idempotency keys. Chapa treats tx_ref as
+    // globally single-use, so a new initialization attempt needs a fresh
+    // reference when no local pending payment was recorded. Chapa also limits
+    // tx_ref to 50 characters, so keep the generated reference compact.
+    idempotencyKey: providerName === "chapa"
+      ? `m-${String(milestone._id).slice(-16)}-${crypto.randomBytes(6).toString("hex")}`
+      : `milestone-funding-${milestone._id}`,
   });
 
   try {
-    await Payment.create({
-      milestone_id: milestone._id,
-      amount: milestone.amount,
-      amount_minor: milestoneMoney.amountMinor,
-      currency: milestoneMoney.currency,
-      direction: "deposit",
-      status: "pending",
-      stripe_payment_intent_id: intent.id,
-    });
+    if (existing) {
+      // A provider may fail/cancel an earlier attempt while the local payment
+      // remains pending. Rebind that same financial attempt to the new
+      // provider reference instead of creating an unmapped duplicate.
+      existing.amount = milestone.amount;
+      existing.amount_minor = milestoneMoney.amountMinor;
+      existing.currency = milestoneMoney.currency;
+      existing.status = "pending";
+      existing.provider = providerName;
+      existing.provider_payment_id = intent.id;
+      existing.provider_reference = intent.providerReference;
+      existing.provider_checkout_url = intent.clientSecret;
+      existing.stripe_payment_intent_id = providerName === "stripe" ? intent.id : undefined;
+      existing.failure_code = undefined;
+      existing.failure_message = undefined;
+      existing.provider_event_id = undefined;
+      await existing.save();
+    } else {
+      await Payment.create({
+        milestone_id: milestone._id,
+        amount: milestone.amount,
+        amount_minor: milestoneMoney.amountMinor,
+        currency: milestoneMoney.currency,
+        direction: "deposit",
+        status: "pending",
+        provider: providerName,
+        provider_payment_id: intent.id,
+        provider_reference: intent.providerReference,
+        provider_checkout_url: intent.clientSecret,
+        ...(providerName === "stripe" ? { stripe_payment_intent_id: intent.id } : {}),
+      });
+    }
   } catch (err) {
-    if (err.code !== 11000) throw err;
+    throw err;
   }
 
   await logAction({
@@ -85,54 +139,73 @@ export async function createDepositIntent(milestone) {
     },
   });
 
-  return { client_secret: intent.clientSecret, payment_intent_id: intent.id };
+  return { client_secret: intent.clientSecret, payment_intent_id: intent.id, provider: providerName };
 }
 
 export async function markDepositSucceeded(paymentIntentId, auditContext = {}) {
-  if (!paymentIntentId || !/^pi_[A-Za-z0-9_]+$/.test(String(paymentIntentId))) {
-    throw new ValidationError("Invalid Stripe PaymentIntent ID");
+  if (!paymentIntentId || !/^[A-Za-z0-9_.:-]{4,200}$/.test(String(paymentIntentId))) {
+    throw new ValidationError("Invalid provider payment reference");
   }
 
   const payment = await Payment.findOne({
-    stripe_payment_intent_id: paymentIntentId,
+    $or: [
+      { provider_payment_id: paymentIntentId },
+      { provider_reference: paymentIntentId },
+      { stripe_payment_intent_id: paymentIntentId },
+    ],
     direction: "deposit",
   });
   if (!payment) return null;
 
-  // Never trust the browser or webhook payload alone. Re-read the PaymentIntent
-  // from Stripe and verify the exact payment our database expects.
-  const intent = await paymentProvider.getPaymentIntent(paymentIntentId);
+  if (payment.status === PAYMENT_STATUSES.failed) {
+    throw new ValidationError("A failed payment cannot become succeeded");
+  }
+  if (payment.status === PAYMENT_STATUSES.succeeded && payment.ledger_journal_id) return payment;
+
+  // Never trust the browser or callback payload alone. Re-read the payment
+  // from the provider and verify the exact amount, currency, and ownership.
+  const providerPaymentId = payment.provider_payment_id || paymentIntentId;
+  const intent = await getPaymentProvider(payment.provider).getPaymentIntent(providerPaymentId);
   if (intent.status !== "succeeded") {
-    throw new ValidationError(`Stripe payment is not succeeded (status: ${intent.providerStatus || intent.status})`);
+    if (intent.status === "failed" && payment.status !== PAYMENT_STATUSES.failed) {
+      transitionPaymentStatus(payment, PAYMENT_STATUSES.failed);
+      payment.failure_message = `Provider payment is not succeeded (status: ${intent.providerStatus || intent.status})`;
+      payment.provider_checkout_url = undefined;
+      await payment.save();
+    }
+    throw new ValidationError(`Provider payment is not succeeded (status: ${intent.providerStatus || intent.status})`);
   }
 
   if (String(intent.metadata?.milestone_id || "") !== String(payment.milestone_id)) {
-    throw new ValidationError("Stripe payment does not belong to this milestone");
+    throw new ValidationError("Provider payment does not belong to this milestone");
   }
 
   const expectedMoney = moneyFromRecord(payment);
   if (intent.amountMinor !== expectedMoney.amountMinor) {
-    throw new ValidationError("Stripe payment amount does not match the milestone amount");
+    throw new ValidationError("Provider payment amount does not match the milestone amount");
   }
 
   if (String(intent.currency).toLowerCase() !== String(expectedMoney.currency).toLowerCase()) {
-    throw new ValidationError("Stripe payment currency does not match the milestone currency");
+    throw new ValidationError("Provider payment currency does not match the milestone currency");
   }
 
-  const wasAlreadySucceeded = payment.status === "succeeded";
-  if (!wasAlreadySucceeded) {
-    payment.status = "succeeded";
-    await payment.save();
+  if (payment.status !== PAYMENT_STATUSES.ledgerPending) {
+    transitionPaymentStatus(payment, PAYMENT_STATUSES.ledgerPending);
   }
+  const ledgerIdempotencyKey = payment.ledger_idempotency_key || `payment-funded:${payment._id}`;
+  payment.ledger_idempotency_key = ledgerIdempotencyKey;
+  payment.provider_event_id = auditContext.providerEventId || payment.provider_event_id || payment.provider_reference || providerPaymentId;
+  payment.failure_message = undefined;
+  await payment.save();
 
-  if (!wasAlreadySucceeded) {
-    const milestone = await Milestone.findById(payment.milestone_id).select("contract_id currency");
-    await postJournal({
+  const milestone = await Milestone.findById(payment.milestone_id).select("contract_id currency");
+  try {
+    const posted = await postJournal({
       eventType: "payment.funded",
-      idempotencyKey: `payment-funded:${payment._id}`,
+      idempotencyKey: ledgerIdempotencyKey,
       sourceType: "payment",
       sourceId: payment._id,
-      providerEventId: paymentIntentId,
+      providerEventId: payment.provider_event_id,
       requestId: auditContext.requestId || auditContext.correlationId || "system",
       actorId: auditContext.actor?._id || auditContext.actor?.id,
       actorRole: auditContext.actor?.role || "system",
@@ -140,20 +213,29 @@ export async function markDepositSucceeded(paymentIntentId, auditContext = {}) {
         { accountBase: "provider_clearing", debitMinor: expectedMoney.amountMinor, creditMinor: 0, currency: expectedMoney.currency },
         { accountBase: "escrow_liability", debitMinor: 0, creditMinor: expectedMoney.amountMinor, currency: expectedMoney.currency },
       ],
-      metadata: { milestoneId: milestone?._id, paymentIntentId },
+      metadata: { milestoneId: milestone?._id, provider: payment.provider, paymentIntentId: providerPaymentId },
     });
-    await logAction({
-      action_type: "payment_deposit_succeeded",
-      entity_type: "milestone",
-      entity_id: payment.milestone_id,
-      details: {
-        amount: payment.amount,
-        amount_minor: payment.amount_minor,
-        currency: payment.currency,
-        payment_intent_id: paymentIntentId,
-      },
-    });
+    payment.ledger_journal_id = String(posted.journal._id);
+    transitionPaymentStatus(payment, PAYMENT_STATUSES.succeeded);
+    payment.failure_message = undefined;
+    await payment.save();
+  } catch (error) {
+    payment.failure_message = error.message;
+    await payment.save();
+    throw error;
   }
+  await logAction({
+    action_type: "payment_deposit_succeeded",
+    entity_type: "milestone",
+    entity_id: payment.milestone_id,
+    details: {
+      amount: payment.amount,
+      amount_minor: payment.amount_minor,
+      currency: payment.currency,
+      payment_intent_id: paymentIntentId,
+      ledger_journal_id: payment.ledger_journal_id,
+    },
+  });
 
   return payment;
 }
@@ -163,7 +245,7 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
   const failure_message = lastPaymentError?.message || undefined;
 
   const payment = await Payment.findOneAndUpdate(
-    { stripe_payment_intent_id: paymentIntentId, direction: "deposit" },
+    { stripe_payment_intent_id: paymentIntentId, direction: "deposit", status: { $in: ["created", "pending"] } },
     { status: "failed", failure_code, failure_message },
     { new: true }
   );

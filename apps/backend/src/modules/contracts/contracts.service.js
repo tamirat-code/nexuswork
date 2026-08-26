@@ -444,7 +444,7 @@ export function buildContractTerms({
     total_amount: Number(
       proposal.price
     ),
-    currency: "USD",
+    currency: String(project.currency || "USD").toUpperCase(),
     delivery_time_days: Number(
       proposal.delivery_time_days
     ),

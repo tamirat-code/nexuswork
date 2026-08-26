@@ -30,4 +30,16 @@ describe("centralized environment configuration", () => {
     expect(() => validateEnv(config)).toThrow(/STRIPE_SECRET_KEY/);
     expect(() => validateEnv(config)).toThrow(/S3_BUCKET/);
   });
+
+  test("requires ETB and server-side Chapa configuration", () => {
+    const config = buildEnv({
+      NODE_ENV: "production",
+      PAYMENT_PROVIDER: "chapa",
+      PAYMENT_CURRENCY: "usd",
+      AI_PROVIDER: "none",
+      STORAGE_DRIVER: "s3",
+    });
+    expect(() => validateEnv(config)).toThrow(/CHAPA_SECRET_KEY/);
+    expect(() => validateEnv(config)).toThrow(/PAYMENT_CURRENCY/);
+  });
 });

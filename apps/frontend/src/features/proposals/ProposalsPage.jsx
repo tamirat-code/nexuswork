@@ -241,7 +241,7 @@ function ProposalReviewDialog({
               </p>
 
               <p className="mt-1 font-display text-2xl text-brass">
-                {formatCurrency(proposal.price)}
+                {formatCurrency(proposal.price, proposal.project_id?.currency || "USD")}
               </p>
 
             </div>
