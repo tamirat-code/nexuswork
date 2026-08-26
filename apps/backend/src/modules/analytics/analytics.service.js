@@ -8,7 +8,11 @@ import StudentProfile from "../students/students.model.js";
 import University from "../universities/universities.model.js";
 import * as paymentsService from "../payments/payments.service.js";
 import { ForbiddenError, NotFoundError } from "../../shared/exceptions/AppError.js";
+import { env } from "../../config/env.js";
 
+export function isUniversityCohortSuppressed(verifiedStudentCount, minimumCohortSize = env.analyticsMinCohortSize) {
+  return Number(verifiedStudentCount) < Number(minimumCohortSize);
+}
 
 export async function trackEvent({ userId, eventType, entityType, entityId, metadata }) {
   return AnalyticsEvent.create({
@@ -152,6 +156,17 @@ export async function getUniversityMetrics(universityId, requestingUser) {
   const studentUserIds = students.map((s) => s.user_id);
   const verifiedStudents = students.filter((s) => s.verification_status === "verified");
   const verifiedUserIds = verifiedStudents.map((s) => s.user_id);
+  const minimumCohortSize = env.analyticsMinCohortSize;
+  const cohortSuppressed = isUniversityCohortSuppressed(verifiedStudents.length, minimumCohortSize);
+
+  if (cohortSuppressed) {
+    return {
+      university: { id: university._id, name: university.name },
+      privacy_suppressed: true,
+      minimum_cohort_size: minimumCohortSize,
+      message: `University outcomes are hidden until at least ${minimumCohortSize} verified students are available.`,
+    };
+  }
 
   
   const studentsWithContracts = verifiedUserIds.length
@@ -164,7 +179,7 @@ export async function getUniversityMetrics(universityId, requestingUser) {
 
   
   const skillCounts = new Map();
-  for (const student of students) {
+  for (const student of verifiedStudents) {
     for (const skill of student.skills || []) {
       const key = skill.name?.trim();
       if (!key) continue;
@@ -172,6 +187,7 @@ export async function getUniversityMetrics(universityId, requestingUser) {
     }
   }
   const topSkills = [...skillCounts.entries()]
+    .filter(([, count]) => count >= minimumCohortSize)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15)
     .map(([name, count]) => ({ name, count }));
@@ -211,6 +227,8 @@ export async function getUniversityMetrics(universityId, requestingUser) {
 
   return {
     university: { id: university._id, name: university.name },
+    privacy_suppressed: false,
+    minimum_cohort_size: minimumCohortSize,
     total_students: students.length,
     verified_students: verifiedStudents.length,
     employment_rate: employmentRate !== null ? Math.round(employmentRate * 1000) / 1000 : null,

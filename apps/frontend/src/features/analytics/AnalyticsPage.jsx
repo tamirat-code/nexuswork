@@ -26,6 +26,7 @@ export default function AnalyticsPage() {
   });
   const isLoading = isAdmin ? analyticsLoading : universityLoading || analyticsLoading;
   const a = data?.data ?? {};
+  const universitySuppressed = !isAdmin && a.privacy_suppressed;
 
   const cards = isAdmin
     ? [
@@ -35,9 +36,9 @@ export default function AnalyticsPage() {
         { label: "Popular skills", value: a.popular_skills?.length ?? 0, icon: BarChart3 },
       ]
     : [
-        { label: "Verified students", value: a.verified_students ?? 0, icon: Users },
-        { label: "On-time delivery", value: a.on_time_rate != null ? `${a.on_time_rate}%` : "—", icon: TrendingUp },
-        { label: "Active projects", value: a.active_projects ?? 0, icon: Briefcase },
+        { label: "Verified students", value: universitySuppressed ? "—" : a.verified_students ?? 0, icon: Users },
+        { label: "On-time delivery", value: universitySuppressed ? "—" : a.on_time_rate != null ? `${a.on_time_rate}%` : "—", icon: TrendingUp },
+        { label: "Active projects", value: universitySuppressed ? "—" : a.active_projects ?? 0, icon: Briefcase },
       ];
 
   return (
@@ -61,6 +62,15 @@ export default function AnalyticsPage() {
           </Card>
         ))}
       </div>
+
+      {!isAdmin && a.privacy_suppressed && (
+        <Card className="mt-6 border-brass/40">
+          <CardContent className="p-5 text-sm text-slate-300">
+            <p className="font-semibold text-slate">Privacy threshold applied</p>
+            <p className="mt-1">{a.message || `University outcomes require at least ${a.minimum_cohort_size || 5} verified students.`}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
@@ -104,16 +114,16 @@ export default function AnalyticsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-slate-300">Employment rate</span>
                 <span className="font-mono text-brass">
-                  {a.employment_rate != null ? `${Math.round(a.employment_rate * 100)}%` : "—"}
+                  {universitySuppressed ? "—" : a.employment_rate != null ? `${Math.round(a.employment_rate * 100)}%` : "—"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-300">Aggregate earnings</span>
-                <span className="font-mono text-brass">{formatCurrency(a.aggregate_earnings ?? 0)}</span>
+                <span className="font-mono text-brass">{universitySuppressed ? "—" : formatCurrency(a.aggregate_earnings ?? 0)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-300">Released milestones</span>
-                <span className="font-mono text-brass">{a.released_milestone_count ?? 0}</span>
+                <span className="font-mono text-brass">{universitySuppressed ? "—" : a.released_milestone_count ?? 0}</span>
               </div>
             </CardContent>
           </Card>
