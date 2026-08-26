@@ -1,5 +1,7 @@
+import { env } from "./env.js";
+
 export const appConfig = {
-  port: process.env.PORT || 5000,
-  env: process.env.NODE_ENV || "development",
-  apiPrefix: "/v1",
+  port: env.port,
+  env: env.nodeEnv,
+  apiPrefix: env.apiPrefix,
 };

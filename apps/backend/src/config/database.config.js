@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 import { ensureWithdrawalIndexes } from "./database.indexes.js";
+import { env } from "./env.js";
 
 export async function connectDB() {
-  const uri = process.env.MONGO_URI;
+  const uri = env.mongoUri;
   if (!uri) throw new Error("MONGO_URI is not set in the environment");
   mongoose.set("strictQuery", true);
   await mongoose.connect(uri);

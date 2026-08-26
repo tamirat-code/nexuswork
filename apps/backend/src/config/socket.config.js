@@ -1,4 +1,6 @@
+import { env } from "./env.js";
+
 export const socketConfig = {
   path: "/socket.io",
-  cors: { origin: process.env.CLIENT_URL || "*" },
+  cors: { origin: env.clientUrl || "*" },
 };

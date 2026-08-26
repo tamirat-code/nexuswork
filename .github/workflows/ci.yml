@@ -36,6 +36,13 @@ jobs:
         run: npm ci
         working-directory: .
 
+      - name: Syntax check
+        run: npm run syntax
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+        working-directory: .
+
       - name: Run backend tests
         run: npm test
         env:
@@ -67,6 +74,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        working-directory: .
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
         working-directory: .
 
       - name: Build frontend

@@ -4,10 +4,12 @@ const DEFAULT_MODEL_BY_PROVIDER = {
   groq: "llama-3.3-70b-versatile",
 };
 
-const provider = process.env.AI_PROVIDER || "anthropic";
+import { env } from "./env.js";
+
+const provider = env.aiProvider;
 
 export const aiConfig = {
   provider,
-  apiKey: process.env.AI_API_KEY,
-  model: process.env.AI_MODEL || DEFAULT_MODEL_BY_PROVIDER[provider] || "claude-sonnet-4-6",
+  apiKey: env.aiApiKey,
+  model: env.aiModel || DEFAULT_MODEL_BY_PROVIDER[provider] || "claude-sonnet-4-6",
 };

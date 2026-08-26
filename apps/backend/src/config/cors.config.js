@@ -1,4 +1,6 @@
+import { env } from "./env.js";
+
 export const corsConfig = {
-  origin: process.env.CLIENT_URL || "*",
+  origin: env.clientUrl || "*",
   credentials: true,
 };

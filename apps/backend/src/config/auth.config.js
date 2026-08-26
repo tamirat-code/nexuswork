@@ -1,5 +1,7 @@
+import { env } from "./env.js";
+
 export const authConfig = {
-  jwtSecret: process.env.JWT_SECRET,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  jwtSecret: env.jwtSecret,
+  jwtExpiresIn: env.jwtExpiresIn,
   bcryptSaltRounds: 10,
 };

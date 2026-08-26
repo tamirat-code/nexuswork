@@ -30,6 +30,7 @@ export async function recordEvent({
   previousState = null,
   newState = null,
   correlationId,
+  requestId,
   metadata = {},
   reason,
   status = "logged",
@@ -53,6 +54,7 @@ export async function recordEvent({
     previousState,
     newState,
     metadata,
+    requestId: requestId || correlationId,
     correlationId,
     ...normalizedActor,
     action_type: eventType,
@@ -87,6 +89,7 @@ export async function logAction({
   newState,
   metadata,
   correlationId,
+  requestId,
   status,
 }) {
   return recordEvent({
@@ -98,6 +101,7 @@ export async function logAction({
     previousState,
     newState,
     correlationId: correlationId || crypto.randomUUID(),
+    requestId,
     metadata: metadata || details || {},
     reason,
     status,

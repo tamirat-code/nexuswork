@@ -1,3 +1,5 @@
+import { env } from "./env.js";
+
 export const legalConfig = {
-  currentTermsVersion: process.env.TERMS_VERSION || "1.0",
+  currentTermsVersion: env.termsVersion,
 };

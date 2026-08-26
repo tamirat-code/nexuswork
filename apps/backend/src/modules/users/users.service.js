@@ -75,7 +75,7 @@ export async function updateAvatar(userId, avatarData) {
     const buffer = Buffer.from(base64, "base64");
     const ext = (mime.extension(contentType) || "bin").replace(/\s+/g, "");
     const key = `avatars/${userId}-${Date.now()}.${ext}`;
-    const bucket = process.env.S3_BUCKET;
+    const bucket = storageConfig.bucket;
     if (!bucket) throw Object.assign(new Error("S3_BUCKET not configured"), { status: 500 });
     const url = await uploadToS3({ bucket, key, body: buffer, contentType });
     const user = await User.findByIdAndUpdate(userId, { avatarUrl: url }, { new: true });

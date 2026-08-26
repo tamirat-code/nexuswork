@@ -1,5 +1,7 @@
+import { env } from "./env.js";
+
 export const mailConfig = {
-  resendApiKey: process.env.RESEND_API_KEY,
-  from: process.env.MAIL_FROM || "NexusWork <no-reply@yourdomain.com>",
-  appUrl: process.env.CLIENT_URL || "http://localhost:5173",
+  resendApiKey: env.resendApiKey,
+  from: env.mailFrom,
+  appUrl: env.clientUrl || "http://localhost:5173",
 };

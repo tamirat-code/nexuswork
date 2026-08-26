@@ -1,16 +1,17 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { storageConfig } from "../../config/storage.config.js";
 
-const region = process.env.S3_REGION || process.env.AWS_REGION || "us-east-1";
-const endpoint = process.env.S3_ENDPOINT || null;
-const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true";
+const region = storageConfig.region;
+const endpoint = storageConfig.endpoint;
+const forcePathStyle = storageConfig.forcePathStyle;
 
 const client = new S3Client({
   region,
   endpoint: endpoint || undefined,
   forcePathStyle,
-  credentials: process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY ? {
-    accessKeyId: process.env.S3_ACCESS_KEY,
-    secretAccessKey: process.env.S3_SECRET_KEY,
+  credentials: storageConfig.accessKey && storageConfig.secretKey ? {
+    accessKeyId: storageConfig.accessKey,
+    secretAccessKey: storageConfig.secretKey,
   } : undefined,
 });
 

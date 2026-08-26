@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/seed/index.js",
+    "syntax": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },
   "dependencies": {

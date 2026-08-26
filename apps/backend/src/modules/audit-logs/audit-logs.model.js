@@ -30,6 +30,7 @@ const auditLogsSchema = new mongoose.Schema(
     previousState: { type: mongoose.Schema.Types.Mixed, default: null, immutable: true },
     newState: { type: mongoose.Schema.Types.Mixed, default: null, immutable: true },
     metadata: { type: mongoose.Schema.Types.Mixed, default: {}, immutable: true },
+    requestId: { type: String, required: true, immutable: true },
     correlationId: { type: String, required: true, immutable: true },
 
     actor_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", immutable: true },
@@ -84,6 +85,7 @@ auditLogsSchema.pre(
 
 // Indexes for efficient querying
 auditLogsSchema.index({ createdAt: -1 }); // Most recent first
+auditLogsSchema.index({ requestId: 1, createdAt: -1 }); // Trace one request across events
 auditLogsSchema.index({ actor_id: 1, createdAt: -1 }); // By actor
 auditLogsSchema.index({ action_type: 1, createdAt: -1 }); // By action type
 auditLogsSchema.index({ entity_type: 1, entity_id: 1, createdAt: -1 }); // By affected entity
