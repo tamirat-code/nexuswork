@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Pencil, Plus, Tag, Trash2 } from "lucide-react";
 import { listCategories, createCategory, updateCategory, deleteCategory } from "../../services/api/categories.api.js";
+import { listSkills, updateSkill } from "../../services/api/skills.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
@@ -31,7 +32,7 @@ function slugify(value) {
     .replace(/(^-|-$)/g, "");
 }
 
-const EMPTY_FORM = { name: "", slug: "", description: "", icon: "", sort_order: 0 };
+const EMPTY_FORM = { name: "", slug: "", description: "", icon: "", sort_order: 0, proposal_price_floor: "" };
 
 function CategoryFormDialog({ token, category, trigger }) {
   const qc = useQueryClient();
@@ -45,6 +46,7 @@ function CategoryFormDialog({ token, category, trigger }) {
           description: category.description || "",
           icon: category.icon || "",
           sort_order: category.sort_order ?? 0,
+          proposal_price_floor: category.proposal_price_floor_minor ? String(category.proposal_price_floor_minor / 100) : "",
         }
       : EMPTY_FORM
   );
@@ -53,8 +55,8 @@ function CategoryFormDialog({ token, category, trigger }) {
   const save = useMutation({
     mutationFn: () =>
       isEdit
-        ? updateCategory(category._id, form, token)
-        : createCategory(form, token),
+        ? updateCategory(category._id, { ...form, proposal_price_floor_minor: Math.round(Number(form.proposal_price_floor || 0) * 100) }, token)
+        : createCategory({ ...form, proposal_price_floor_minor: Math.round(Number(form.proposal_price_floor || 0) * 100) }, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-categories"] });
       qc.invalidateQueries({ queryKey: ["categories"] });
@@ -134,6 +136,19 @@ function CategoryFormDialog({ token, category, trigger }) {
               />
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cat-price-floor">Minimum proposal price</Label>
+            <Input
+              id="cat-price-floor"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.proposal_price_floor}
+              onChange={(e) => setForm((f) => ({ ...f, proposal_price_floor: e.target.value }))}
+              placeholder="0.00 (project currency)"
+            />
+            <p className="text-xs text-slate-300">Applied to proposals in this category. Stored as integer minor units.</p>
+          </div>
         </div>
         <DialogFooter>
           <Button
@@ -146,6 +161,69 @@ function CategoryFormDialog({ token, category, trigger }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SkillFloorsManager() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ["admin-skills"], queryFn: () => listSkills("?all=true") });
+  const skills = data?.data ?? [];
+  const [drafts, setDrafts] = useState({});
+  useEffect(() => {
+    setDrafts((current) => Object.fromEntries(skills.map((skill) => {
+      if (current[skill._id]) return [skill._id, current[skill._id]];
+      const configured = skill.proposal_price_floor_minor_by_level || {};
+      return [skill._id, Object.fromEntries(["beginner", "intermediate", "advanced", "expert"].map((level) => [level, String((configured[level] || 0) / 100)]))];
+    })));
+  }, [data]);
+  const save = useMutation({
+    mutationFn: ({ id, floors }) => updateSkill(id, {
+      proposal_price_floor_minor_by_level: Object.fromEntries(
+        Object.entries(floors).map(([level, value]) => [level, Math.round(Number(value || 0) * 100)])
+      ),
+    }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-skills"] });
+      toast.success("Skill price floor updated");
+    },
+    onError: (err) => toast.error(err.message || "Could not update skill floor"),
+  });
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-lg">Skill-level proposal floors</CardTitle>
+        <CardDescription>Set minimum proposal prices by skill level. Values are shown in major currency units.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading && <Skeleton className="h-10 w-full" />}
+        {skills.map((skill) => {
+          const floors = drafts[skill._id] || {};
+          return (
+            <div key={skill._id} className="grid gap-3 rounded-lg border border-border p-3 md:grid-cols-[1.2fr_repeat(4,1fr)_auto] md:items-end">
+              <div>
+                <p className="font-semibold text-slate">{skill.name}</p>
+                <p className="text-xs text-slate-300">{skill.category || "Uncategorized"}</p>
+              </div>
+              {["beginner", "intermediate", "advanced", "expert"].map((level) => (
+                <label key={level} className="text-xs capitalize text-slate-300">
+                  {level}
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={floors[level]}
+                    onChange={(event) => setDrafts((current) => ({ ...current, [skill._id]: { ...floors, [level]: event.target.value } }))}
+                  />
+                </label>
+              ))}
+              <Button size="sm" loading={save.isPending} onClick={() => save.mutate({ id: skill._id, floors })}>Save</Button>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -178,6 +256,7 @@ export default function CategoriesManager() {
   });
 
   return (
+    <>
     <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <div>
@@ -267,5 +346,7 @@ export default function CategoriesManager() {
         </Table>
       </CardContent>
     </Card>
+    <SkillFloorsManager />
+    </>
   );
 }

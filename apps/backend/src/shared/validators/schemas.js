@@ -236,6 +236,12 @@ export const createSkillSchema = z.object({
   slug: z.string().trim().min(1, "Slug is required").max(100),
   category: z.string().trim().max(100).optional().default(""),
   description: z.string().trim().max(1000).optional().default(""),
+  proposal_price_floor_minor_by_level: z.object({
+    beginner: z.coerce.number().int().min(0).optional(),
+    intermediate: z.coerce.number().int().min(0).optional(),
+    advanced: z.coerce.number().int().min(0).optional(),
+    expert: z.coerce.number().int().min(0).optional(),
+  }).optional(),
 });
 
 export const updateSkillSchema = createSkillSchema.partial();
@@ -248,6 +254,7 @@ export const createCategorySchema = z.object({
   icon: z.string().trim().max(100).optional().default(""),
   sort_order: z.coerce.number().int().optional().default(0),
   is_active: z.coerce.boolean().optional().default(true),
+  proposal_price_floor_minor: z.coerce.number().int().min(0).optional().default(0),
 });
 
 export const updateCategorySchema = createCategorySchema.partial();

@@ -7,6 +7,13 @@ const skillSchema = new mongoose.Schema(
     category: { type: String, default: "" },
     description: { type: String, default: "" },
     is_active: { type: Boolean, default: true },
+    // Optional per-level proposal floors in integer minor units.
+    proposal_price_floor_minor_by_level: {
+      beginner: { type: Number, min: 0, default: 0 },
+      intermediate: { type: Number, min: 0, default: 0 },
+      advanced: { type: Number, min: 0, default: 0 },
+      expert: { type: Number, min: 0, default: 0 },
+    },
   },
   { timestamps: true }
 );

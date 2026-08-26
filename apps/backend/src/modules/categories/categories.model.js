@@ -8,6 +8,8 @@ const categorySchema = new mongoose.Schema(
     icon: { type: String, default: "" },
     is_active: { type: Boolean, default: true },
     sort_order: { type: Number, default: 0 },
+    // Integer minor units; currency is taken from the project using this category.
+    proposal_price_floor_minor: { type: Number, min: 0, default: 0 },
   },
   { timestamps: true }
 );
