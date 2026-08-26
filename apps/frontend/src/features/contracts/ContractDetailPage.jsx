@@ -33,6 +33,7 @@ import FundMilestoneDialog from "./FundMilestoneDialog.jsx";
 import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
 import { deleteFile, uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
+import { getMilestonePortfolioConsent, respondToMilestonePortfolioConsent } from "../../services/api/portfolios.api.js";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -509,6 +510,12 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
   });
   const submissions = submissionsQuery.data?.data ?? [];
   const latestSubmission = submissions.at(-1);
+  const portfolioConsentQuery = useQuery({
+    queryKey: ["portfolio-consent", milestone._id],
+    queryFn: () => getMilestonePortfolioConsent(milestone._id, token),
+    enabled: role === ROLES.CLIENT && milestone.status === MILESTONE_STATUS.RELEASED,
+  });
+  const portfolioConsent = portfolioConsentQuery.data?.data;
   const canFund = role === ROLES.CLIENT && milestone.status === MILESTONE_STATUS.NOT_FUNDED;
   const canContinueFunding = role === ROLES.CLIENT && milestone.status === MILESTONE_STATUS.FUNDING_PENDING;
   const canStart = role === ROLES.STUDENT && [MILESTONE_STATUS.FUNDED, MILESTONE_STATUS.REVISION_REQUESTED].includes(milestone.status);
@@ -552,6 +559,15 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
       }
     },
     onError: (error) => toast.error(error.message || "Could not retry the payout"),
+  });
+
+  const portfolioConsentMutation = useMutation({
+    mutationFn: (decision) => respondToMilestonePortfolioConsent(portfolioConsent._id, decision, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-consent", milestone._id] });
+      toast.success("Portfolio consent updated.");
+    },
+    onError: (error) => toast.error(error.message || "Could not update portfolio consent"),
   });
 
   return (
@@ -622,6 +638,25 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
                 <p className="mt-2 text-xs text-slate-300">
                   {Math.max(Number(milestone.max_revisions ?? 3) - Number(milestone.revision_count ?? 0), 0)} revisions remaining
                 </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {role === ROLES.CLIENT && milestone.status === MILESTONE_STATUS.RELEASED && portfolioConsent && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-brass/30 bg-brass/5 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate">Portfolio permission</p>
+              <p className="mt-1 text-xs text-slate-300">
+                {portfolioConsent.consent_status === "pending"
+                  ? "Allow the student to showcase this released work publicly."
+                  : `You ${portfolioConsent.consent_status} publication of this work.`}
+              </p>
+            </div>
+            {portfolioConsent.consent_status === "pending" && (
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => portfolioConsentMutation.mutate("denied")} loading={portfolioConsentMutation.isPending}>Keep private</Button>
+                <Button size="sm" onClick={() => portfolioConsentMutation.mutate("approved")} loading={portfolioConsentMutation.isPending}>Allow publication</Button>
               </div>
             )}
           </div>

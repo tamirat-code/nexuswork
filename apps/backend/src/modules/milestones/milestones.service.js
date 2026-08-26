@@ -180,6 +180,19 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       );
     }
 
+    // Released work is eligible for a portfolio entry, but remains private
+    // until the client explicitly grants consent.
+    try {
+      const { addFromMilestone } = await import("../portfolios/portfolios.service.js");
+      await addFromMilestone(contract.student_id, milestone._id);
+    } catch (err) {
+      // A duplicate is harmless on a retry; payout/release must not be rolled
+      // back because portfolio generation is a secondary projection.
+      if (!/already been added/i.test(err.message || "")) {
+        logger.error(`[milestones] failed to create pending portfolio item for ${milestone._id}:`, err.message);
+      }
+    }
+
   } catch (err) {
     milestone.status = "release_failed";
     milestone.payout_status = "failed";
