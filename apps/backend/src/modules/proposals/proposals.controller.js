@@ -12,6 +12,7 @@ import {
   submitProposal,
   listForProject,
   listForClient,
+  listForStudent,
   acceptProposal,
   rejectProposal,
 } from "./proposals.service.js";
@@ -109,6 +110,15 @@ export const getIncomingProposals =
     });
 
   });
+
+export const getMyProposals = asyncHandler(async (req, res) => {
+  if (req.user.role !== "student") {
+    throw new ForbiddenError("Only students can view their proposals");
+  }
+
+  const proposals = await listForStudent(req.user._id);
+  res.json({ success: true, data: proposals });
+});
 
 export const getProjectProposals =
   asyncHandler(async (req, res) => {

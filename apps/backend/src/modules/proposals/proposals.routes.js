@@ -4,6 +4,7 @@ import {
   createProposal,
   getProjectProposals,
   getIncomingProposals,
+  getMyProposals,
   accept,
   reject,
 } from "./proposals.controller.js";
@@ -23,6 +24,13 @@ router.post(
   requireRole("student"),
   validateBody(submitProposalSchema),
   createProposal
+);
+
+router.get(
+  "/",
+  requireAuth,
+  requireRole("student"),
+  getMyProposals
 );
 
 

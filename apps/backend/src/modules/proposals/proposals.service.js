@@ -3,6 +3,9 @@ import Project from "../projects/projects.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { buildContractTerms } from "../contracts/contracts.service.js";
 import User from "../users/users.model.js";
+import StudentProfile from "../students/students.model.js";
+import Category from "../categories/categories.model.js";
+import Skill from "../skills/skills.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import crypto from "node:crypto";
 
@@ -15,10 +18,45 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../shared/exceptions/AppError.js";
+import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
 
 import {
   createNotification,
 } from "../notifications/notifications.service.js";
+
+async function getProposalPriceFloor(project, studentId) {
+  const [category, profile] = await Promise.all([
+    project.category
+      ? Category.findOne({ $or: [{ slug: project.category }, { name: project.category }], is_active: true }).select("proposal_price_floor_minor").lean()
+      : null,
+    StudentProfile.findOne({ user_id: studentId }).select("skills").lean(),
+  ]);
+
+  let floorMinor = Number(category?.proposal_price_floor_minor || 0);
+  const requiredSkills = new Set((project.required_skills || []).map((skill) => String(skill).toLowerCase()));
+  if (requiredSkills.size) {
+    const skills = await Skill.find({ is_active: true }).select("name slug proposal_price_floor_minor_by_level").lean();
+    for (const skill of skills) {
+      if (!requiredSkills.has(String(skill.name).toLowerCase()) && !requiredSkills.has(String(skill.slug).toLowerCase())) continue;
+      const studentSkill = (profile?.skills || []).find((candidate) =>
+        requiredSkills.has(String(candidate.name).toLowerCase()) &&
+        (String(candidate.name).toLowerCase() === String(skill.name).toLowerCase() || String(candidate.name).toLowerCase() === String(skill.slug).toLowerCase())
+      );
+      const level = studentSkill?.level || project.experience_level || "beginner";
+      floorMinor = Math.max(floorMinor, Number(skill.proposal_price_floor_minor_by_level?.[level] || 0));
+    }
+  }
+  return { floorMinor, currency: String(project.currency || "USD").toLowerCase() };
+}
+
+async function assertProposalPriceFloor(project, studentId, price) {
+  const projectMoney = moneyFromLegacyMajorUnits(price, project.currency || "USD", "proposal.price");
+  const { floorMinor, currency } = await getProposalPriceFloor(project, studentId);
+  if (projectMoney.amountMinor < floorMinor) {
+    throw new ValidationError(`Proposal price must be at least ${(floorMinor / 100).toFixed(2)} ${currency.toUpperCase()} for this category and skill level`);
+  }
+  return projectMoney;
+}
 
 
 export async function submitProposal(
@@ -41,6 +79,8 @@ export async function submitProposal(
     );
 
   }
+
+  const proposalMoney = await assertProposalPriceFloor(project, studentId, data.price);
 
   const student =
     await User.findById(studentId)
@@ -66,6 +106,8 @@ export async function submitProposal(
     await Proposal.create({
       ...data,
       student_id: studentId,
+      price_minor: proposalMoney.amountMinor,
+      currency: proposalMoney.currency,
     });
 
 
@@ -175,6 +217,16 @@ export async function listForProject(
       createdAt: -1,
     })
 
+    .lean();
+}
+
+export async function listForStudent(studentId) {
+  return Proposal.find({ student_id: studentId })
+    .populate(
+      "project_id",
+      ["title", "description", "budget", "deadline", "status", "currency"].join(" ")
+    )
+    .sort({ createdAt: -1 })
     .lean();
 }
 
@@ -418,6 +470,8 @@ export async function acceptProposal(
 
   const project =
     proposal.project_id;
+
+  await assertProposalPriceFloor(project, proposal.student_id._id, proposal.price);
 
 
   if (
