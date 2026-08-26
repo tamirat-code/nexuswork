@@ -1,6 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { ValidationError, NotFoundError } from "../../shared/exceptions/AppError.js";
 import * as filesService from "./files.service.js";
+import { validateUploadedFile } from "./files.upload.js";
 import { assertFileAccess, assertFileUploadAccess } from "../../shared/authorization/resource-authorization.js";
 
 const VALID_RELATED_TYPES = new Set([
@@ -18,6 +19,8 @@ export const uploadFile = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ValidationError('No file was uploaded (expected field name "file")');
   }
+
+  const content = await validateUploadedFile(req.file);
 
   const relatedType = req.body.related_type || "other";
   const relatedId = req.body.related_id;
@@ -42,6 +45,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
   const file = await filesService.createFileRecord({
     ownerId: req.user._id,
     multerFile: req.file,
+    contentHash: content.sha256,
     related_type: relatedType,
     related_id: relatedId,
     auditContext: { actor: req.user, correlationId: req.correlationId },

@@ -7,6 +7,7 @@ const fileSchema = new mongoose.Schema(
     original_name: { type: String, required: true },
     mimetype: { type: String, required: true },
     size: { type: Number, required: true },
+    content_sha256: { type: String, match: /^[a-f0-9]{64}$/ },
     url: { type: String, required: true },
     related_type: {
       type: String,

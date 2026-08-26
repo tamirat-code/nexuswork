@@ -12,7 +12,7 @@ import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.
 import { isOrgMember } from "../clients/clients.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
-export async function createFileRecord({ ownerId, multerFile, related_type, related_id, auditContext = {} }) {
+export async function createFileRecord({ ownerId, multerFile, related_type, related_id, contentHash, auditContext = {} }) {
   const filename = storageConfig.driver === "s3"
     ? `${crypto.randomUUID()}${path.extname(multerFile.originalname).toLowerCase()}`
     : multerFile.filename;
@@ -31,6 +31,7 @@ export async function createFileRecord({ ownerId, multerFile, related_type, rela
     original_name: path.basename(multerFile.originalname).replace(/[\u0000-\u001f\u007f]/g, "_").slice(0, 255),
     mimetype: multerFile.mimetype,
     size: multerFile.size,
+    content_sha256: contentHash,
     // Private content is served only through the authenticated file endpoint.
     url: "",
     related_type: related_type || "other",
