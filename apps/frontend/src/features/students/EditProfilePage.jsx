@@ -43,7 +43,7 @@ export default function EditProfilePage() {
 
             <div className="mt-4 flex items-center gap-5">
 
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-ink-300 bg-[#0b5960] text-xl font-bold text-brass">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-ink-300 bg-brand-soft text-xl font-bold text-brass">
                 {user?.name
                   ? user.name
                       .split(" ")

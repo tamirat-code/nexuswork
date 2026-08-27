@@ -26,22 +26,22 @@ export default function BarChart({ data, valueFormatter, height = 220 }) {
       <RechartsBarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <XAxis
           dataKey="label"
-          tick={{ fill: "#9CA3AF", fontSize: 11 }}
-          axisLine={{ stroke: "#2a2f3a" }}
+          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+          axisLine={{ stroke: "var(--border-strong)" }}
           tickLine={false}
         />
         <YAxis
-          tick={{ fill: "#9CA3AF", fontSize: 11 }}
+          tick={{ fill: "var(--text-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           width={40}
           tickFormatter={(v) => (valueFormatter ? valueFormatter(v) : v)}
         />
         <Tooltip
-          cursor={{ fill: "rgba(0, 200, 180, 0.08)" }}
+          cursor={{ fill: "var(--brand-soft)" }}
           content={<ChartTooltip valueFormatter={valueFormatter} />}
         />
-        <Bar dataKey="total" fill="#00c8b4" radius={[4, 4, 0, 0]} maxBarSize={36} />
+        <Bar dataKey="total" fill="var(--brand)" radius={[4, 4, 0, 0]} maxBarSize={36} />
       </RechartsBarChart>
     </ResponsiveContainer>
   );

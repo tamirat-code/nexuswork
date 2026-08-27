@@ -6,6 +6,7 @@ import { listAdminStats } from "../../services/api/admin.api.js";
 import { getMyUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
+import { chartColors, chartTooltipStyle } from "../../lib/chartStyles.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
@@ -35,7 +36,6 @@ export default function AnalyticsPage() {
   const a = data?.data ?? {};
   const adminDashboard = adminDashboardRes?.data ?? {};
   const universitySuppressed = !isAdmin && a.privacy_suppressed;
-  const chartColors = ["#00b3a4", "#d9a441", "#547bff", "#e56b6f", "#8b9aa8"];
   const adminRoleData = (adminDashboard.users?.by_role || [])
     .map((item) => ({ name: String(item._id || "unknown").replaceAll("_", " "), value: item.count }))
     .filter((item) => item.value > 0);
@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
                     <Pie data={isAdmin ? adminRoleData : universityOutcomeData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
                       {(isAdmin ? adminRoleData : universityOutcomeData).map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                    <Tooltip contentStyle={chartTooltipStyle} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -196,7 +196,7 @@ export default function AnalyticsPage() {
                       <Pie data={dataSet} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
                         {dataSet.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                      <Tooltip contentStyle={chartTooltipStyle} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
                   <Pie data={secondaryChartData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
                     {secondaryChartData.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                  <Tooltip contentStyle={chartTooltipStyle} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>

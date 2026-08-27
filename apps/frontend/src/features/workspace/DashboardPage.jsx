@@ -10,6 +10,7 @@ import { listMyContracts } from "../../services/api/contracts.api.js";
 import { getMyWallet } from "../../services/api/wallets.api.js";
 import { listAdminStats } from "../../services/api/admin.api.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
+import { chartColors, chartTooltipStyle } from "../../lib/chartStyles.js";
 import Button from "../../components/ui/Button.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Stat, { StatGrid } from "../../components/ui/Stat.jsx";
@@ -189,7 +190,6 @@ export default function DashboardPage() {
           })),
         ].slice(0, 5)
       : [];
-  const chartColors = ["#00a896", "#547bff", "#d9a441", "#e56b6f", "#8b9aa8"];
   const dashboardChart = isStudent
     ? {
         title: "Your work pipeline",
@@ -301,7 +301,7 @@ export default function DashboardPage() {
                       <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#10232d", border: "1px solid #29434c", borderRadius: 8, color: "#f4f7f6" }} />
+                  <Tooltip contentStyle={chartTooltipStyle} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>

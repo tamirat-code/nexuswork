@@ -422,27 +422,27 @@ function CredentialCardPreview({ verification, user }) {
   const issued = formatCredentialDate(verification?.reviewed_at || verification?.updatedAt || verification?.createdAt);
 
   return (
-    <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-brass/20 bg-[#07313a] shadow-[0_18px_50px_-34px_rgba(0,0,0,0.5)]">
+    <div className="mt-5 overflow-hidden rounded-card border border-border-strong bg-surface-elevated shadow-elevated">
       <div className="grid md:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative p-6 text-white sm:p-7">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brass via-escrow to-sky-300" />
+        <div className="relative p-6 text-content-primary sm:p-7">
+          <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-full border border-brass/50 bg-brass/10 text-brass">
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-brass-300">NexusWork</p>
-              <p className="text-sm font-semibold text-cyan-50">Verified Credential Card</p>
+              <p className="text-sm font-semibold text-content-primary">Verified Credential Card</p>
             </div>
           </div>
           <p className="mt-8 text-3xl font-black leading-tight tracking-normal sm:text-4xl">{name}</p>
-          <p className="mt-3 max-w-md text-sm leading-6 text-cyan-100">
+          <p className="mt-3 max-w-md text-sm leading-6 text-content-secondary">
             University enrollment verified for {verification?.program || "an approved academic program"}.
           </p>
         </div>
-        <div className="bg-white p-6 text-slate sm:p-7">
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <div className="bg-surface p-6 text-slate sm:p-7">
+          <div className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1 text-xs font-extrabold uppercase tracking-widest text-success">
+            <span className="h-2 w-2 rounded-full bg-success" />
             Signed VC / Open Badge
           </div>
           <dl className="mt-7 space-y-4">

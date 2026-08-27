@@ -8,7 +8,7 @@ export default function TermsCheckbox({ checked, onChange, error }) {
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 bg-ink-100 text-brass accent-[#00c8b4]"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 bg-ink-100 text-brass accent-[var(--brand)]"
         />
         <span>
           I agree to the{" "}

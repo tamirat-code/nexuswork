@@ -3,14 +3,13 @@ import { ArrowUpRight, Clock3, MapPin, ShieldCheck, Users } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeAgo, formatTimeLeft } from "../../utils/date.utils.js";
 
-/* Strictly professional marketplace tones: Teal, Cyan, Blue, Emerald, Amber, Slate — NO Pink / Rose / Purple */
 const CATEGORY_TAG_STYLES = {
-  Development: "border-teal-500/30 bg-teal-500/10 text-teal-800 dark:text-teal-300",
-  Design: "border-cyan-500/30 bg-cyan-500/10 text-cyan-800 dark:text-cyan-300",
-  "Data & Research": "border-blue-500/30 bg-blue-500/10 text-blue-800 dark:text-blue-300",
-  Writing: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-300",
-  "Video & Motion": "border-slate-500/30 bg-slate-500/10 text-slate-800 dark:text-slate-300",
-  Marketing: "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
+  Development: "border-brand/30 bg-brand-soft text-brand-dark",
+  Design: "border-info/30 bg-info/10 text-info",
+  "Data & Research": "border-info/40 bg-info-soft text-info",
+  Writing: "border-amber/35 bg-amber/10 text-amber",
+  "Video & Motion": "border-border-strong bg-surface-muted text-content-secondary",
+  Marketing: "border-success/35 bg-success-soft text-success",
 };
 
 export default function ProjectCard({ project }) {
