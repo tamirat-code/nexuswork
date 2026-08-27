@@ -16,6 +16,7 @@ import {
   acceptProposal,
   rejectProposal,
 } from "./proposals.service.js";
+import { getCommissionPreview } from "../payments/commission.service.js";
 
 export const createProposal =
   asyncHandler(async (req, res) => {
@@ -49,6 +50,10 @@ export const createProposal =
           req.user._id,
           req.body
         );
+      const commissionPreview = await getCommissionPreview(req.user._id, {
+        amount: req.body.price,
+        currency: proposal.currency,
+      });
 
 
       res.status(201).json({
@@ -56,8 +61,12 @@ export const createProposal =
         success:
           true,
 
-        data:
-          proposal,
+        data: {
+          ...(proposal.toObject ? proposal.toObject() : proposal),
+          commission_rate_bps: commissionPreview.rateBps,
+          commission_waived: commissionPreview.waived,
+          commission_completed_milestones: commissionPreview.completedMilestones,
+        },
 
       });
 
@@ -118,6 +127,17 @@ export const getMyProposals = asyncHandler(async (req, res) => {
 
   const proposals = await listForStudent(req.user._id);
   res.json({ success: true, data: proposals });
+});
+
+export const getCommissionPreviewForStudent = asyncHandler(async (req, res) => {
+  if (req.user.role !== "student") {
+    throw new ForbiddenError("Only students can view their commission preview");
+  }
+  const preview = await getCommissionPreview(req.user._id, {
+    amount: req.query.amount,
+    currency: req.query.currency,
+  });
+  res.json({ success: true, data: preview });
 });
 
 export const getProjectProposals =

@@ -33,6 +33,7 @@ import StudentsPage from "../../features/students/StudentsPage.jsx";
 import StudentProfilePage from "../../features/students/ProfilePage.jsx";
 import ClientsPage from "../../features/clients/ClientsPage.jsx";
 import UniversitiesPage from "../../features/universities/UniversitiesPage.jsx";
+import CredentialVerifyPage from "../../features/verifications/CredentialVerifyPage.jsx";
 import AnalyticsPage from "../../features/analytics/AnalyticsPage.jsx";
 import RecommendationPage from "../../features/recommendation/RecommendationPage.jsx";
 import SearchPage from "../../features/search/SearchPage.jsx";
@@ -67,6 +68,7 @@ export default function AppRouter() {
       <Route path="/students" element={<StudentsPage />} />
       <Route path="/profile/:id" element={<StudentProfilePage />} />
       <Route path="/universities" element={<UniversitiesPage />} />
+      <Route path="/verify-credential" element={<CredentialVerifyPage />} />
       <Route path="/search" element={<SearchPage />} />
 
       {/* Workspace */}

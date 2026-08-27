@@ -59,6 +59,7 @@ export function validateEnv(config = env) {
 
   if (config.isProduction) {
     requireUrl(missing, config.clientUrl, "CLIENT_URL");
+    requireValue(missing, config.credentialIssuerPrivateKey, "CREDENTIAL_ISSUER_PRIVATE_KEY");
     if (config.clientUrl === "*") missing.push("CLIENT_URL (wildcard is not allowed in production)");
     if (config.storageDriver === "local") {
       missing.push("STORAGE_DRIVER (production must use durable object storage, not local disk)");
@@ -81,6 +82,9 @@ export function validateEnv(config = env) {
   }
   if (!Number.isInteger(config.commissionRateBps) || config.commissionRateBps < 0 || config.commissionRateBps >= 10000) {
     throw new Error("COMMISSION_RATE must resolve to basis points between 0 and 9999");
+  }
+  if (!Number.isInteger(config.commissionWaiverMilestoneThreshold) || config.commissionWaiverMilestoneThreshold < 0) {
+    throw new Error("COMMISSION_WAIVER_MILESTONE_THRESHOLD must be a non-negative integer");
   }
   if (config.recaptchaMinScore < 0 || config.recaptchaMinScore > 1) {
     throw new Error("RECAPTCHA_MIN_SCORE must be between 0 and 1");

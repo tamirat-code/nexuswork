@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, FileJson, ShieldCheck } from "lucide-react";
 import {
   Alert,
   Badge,
@@ -21,7 +22,12 @@ import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
 import { listUniversities } from "../../services/api/universities.api.js";
-import { exportMyCredential, getMyVerifications, requestVerification } from "../../services/api/verifications.api.js";
+import {
+  downloadCredentialCardPdf,
+  exportMyCredential,
+  getMyVerifications,
+  requestVerification,
+} from "../../services/api/verifications.api.js";
 import { getMyStaffVerifications, requestStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
@@ -405,6 +411,60 @@ export default function ProfilePage() {
 const VERIFICATION_DOC_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 const VERIFICATION_DOC_MAX_MB = 10;
 
+function formatCredentialDate(value) {
+  if (!value) return "Issued by NexusWork";
+  return new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function CredentialCardPreview({ verification, user }) {
+  const university = verification?.university_id?.name || user?.university || "Verified university";
+  const name = verification?.full_name || user?.name || "Verified student";
+  const issued = formatCredentialDate(verification?.reviewed_at || verification?.updatedAt || verification?.createdAt);
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-brass/20 bg-[#07313a] shadow-[0_18px_50px_-34px_rgba(0,0,0,0.5)]">
+      <div className="grid md:grid-cols-[1.05fr_0.95fr]">
+        <div className="relative p-6 text-white sm:p-7">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brass via-escrow to-sky-300" />
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full border border-brass/50 bg-brass/10 text-brass">
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-brass-300">NexusWork</p>
+              <p className="text-sm font-semibold text-cyan-50">Verified Credential Card</p>
+            </div>
+          </div>
+          <p className="mt-8 text-3xl font-black leading-tight tracking-normal sm:text-4xl">{name}</p>
+          <p className="mt-3 max-w-md text-sm leading-6 text-cyan-100">
+            University enrollment verified for {verification?.program || "an approved academic program"}.
+          </p>
+        </div>
+        <div className="bg-white p-6 text-slate sm:p-7">
+          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Signed VC / Open Badge
+          </div>
+          <dl className="mt-7 space-y-4">
+            <div>
+              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Institution</dt>
+              <dd className="mt-1 text-base font-bold text-slate">{university}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Issued</dt>
+              <dd className="mt-1 text-base font-bold text-slate">{issued}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Proof</dt>
+              <dd className="mt-1 text-sm font-semibold text-slate-300">Cryptographic signature included in download</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UniversityVerificationCard({ user, token }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -433,16 +493,28 @@ function UniversityVerificationCard({ user, token }) {
   const isApproved = latest?.status === "approved" || Boolean(user?.universityVerified);
 
   const exportCredential = useMutation({
-    mutationFn: () => exportMyCredential(latest?._id, token),
-    onSuccess: (res) => {
-      const blob = new Blob([JSON.stringify(res?.data ?? res, null, 2)], { type: "application/json" });
+    mutationFn: async (format) => {
+      if (format === "card") {
+        await downloadCredentialCardPdf(latest?._id, token);
+        return { format };
+      }
+      const res = await exportMyCredential(latest?._id, token);
+      return { res, format };
+    },
+    onSuccess: ({ res, format }) => {
+      if (format === "card") {
+        toast.show("Credential card PDF downloaded.");
+        return;
+      }
+      const credential = res?.data ?? res;
+      const blob = new Blob([JSON.stringify(credential, null, 2)], { type: "application/ld+json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `nexuswork-credential-${latest._id}.json`;
+      link.download = `nexuswork-credential-${latest._id}.vc.jsonld`;
       link.click();
       URL.revokeObjectURL(url);
-      toast.show("Credential exported as JSON.");
+      toast.show("Signed credential exported.");
     },
     onError: (err) => toast.show(err?.message || "Could not export your credential.", { variant: "error" }),
   });
@@ -539,14 +611,24 @@ function UniversityVerificationCard({ user, token }) {
               : "Your university has confirmed your enrollment. Your proposals now show a verified badge."}
           </Alert>
           {latest?._id && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-ink-300 bg-ink-50 p-4">
-              <div>
-                <p className="text-sm font-semibold text-slate">Verified credential</p>
-                <p className="mt-1 text-xs text-slate-300">Download your standards-shaped credential document for your records.</p>
+            <div className="mt-4 rounded-card border border-ink-300 bg-ink-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate">Verified credential</p>
+                  <p className="mt-1 text-xs text-slate-300">Download a polished credential card or the signed VC/Open Badge data file.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => exportCredential.mutate("card")} loading={exportCredential.isPending}>
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Download card
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => exportCredential.mutate("vc")} loading={exportCredential.isPending}>
+                    <FileJson className="h-4 w-4" aria-hidden="true" />
+                    Signed VC
+                  </Button>
+                </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => exportCredential.mutate()} loading={exportCredential.isPending}>
-                Export credential
-              </Button>
+              <CredentialCardPreview verification={latest} user={user} />
             </div>
           )}
         </>

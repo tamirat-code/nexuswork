@@ -6,6 +6,7 @@ import File from "../files/files.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 import { env } from "../../config/env.js";
+import { signCredential } from "./credential-signing.js";
 
 export function buildStudentCredential({ verification, university, user, profile }) {
   const credentialId = `${env.credentialIssuerUrl}/v1/verifications/${verification._id}/credential`;
@@ -22,7 +23,7 @@ export function buildStudentCredential({ verification, university, user, profile
       certifiedAt: skill.certified_at,
     }));
 
-  return {
+  const credential = {
     "@context": [
       "https://www.w3.org/ns/credentials/v2",
       "https://purl.imsglobal.org/spec/ob/v3p0/context.json",
@@ -30,7 +31,7 @@ export function buildStudentCredential({ verification, university, user, profile
     id: credentialId,
     type: ["VerifiableCredential", "OpenBadgeCredential"],
     name: `NexusWork university verification — ${university.name}`,
-    description: "An unsigned Open Badges 3.0 / W3C VC-compatible credential document. Cryptographic proof is not yet attached.",
+    description: "A signed Open Badges 3.0 / W3C VC-compatible credential document issued by NexusWork.",
     issuer: { id: issuerId, name: "NexusWork" },
     validFrom: verification.reviewed_at || verification.updatedAt || verification.createdAt,
     credentialSubject: {
@@ -61,6 +62,8 @@ export function buildStudentCredential({ verification, university, user, profile
       status: "active",
     },
   };
+
+  return signCredential(credential);
 }
 
 export async function exportVerifiedCredential(verificationId, userId) {

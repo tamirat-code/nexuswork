@@ -7,6 +7,7 @@ describe("centralized environment configuration", () => {
       NODE_ENV: "development",
       PORT: "5050",
       COMMISSION_RATE: "0.15",
+      COMMISSION_WAIVER_MILESTONE_THRESHOLD: "4",
       STORAGE_DRIVER: "S3",
       AI_PROVIDER: "NONE",
     });
@@ -15,6 +16,12 @@ describe("centralized environment configuration", () => {
     expect(config.commissionRate).toBe(0.15);
     expect(config.storageDriver).toBe("s3");
     expect(config.aiProvider).toBe("none");
+    expect(config.commissionWaiverMilestoneThreshold).toBe(4);
+  });
+
+  test("rejects an invalid commission waiver threshold", () => {
+    const config = buildEnv({ NODE_ENV: "development", COMMISSION_WAIVER_MILESTONE_THRESHOLD: "1.5" });
+    expect(() => validateEnv(config)).toThrow(/COMMISSION_WAIVER_MILESTONE_THRESHOLD/);
   });
 
   test("rejects production configuration with missing required values", () => {

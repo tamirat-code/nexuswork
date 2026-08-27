@@ -31,6 +31,8 @@ export function buildEnv(source = process.env) {
     mongoUri: optional(source.MONGO_URI),
     clientUrl: optional(source.CLIENT_URL),
     credentialIssuerUrl: optional(source.CREDENTIAL_ISSUER_URL) || "http://localhost:5000",
+    credentialIssuerPrivateKey: optional(source.CREDENTIAL_ISSUER_PRIVATE_KEY),
+    credentialIssuerPublicKey: optional(source.CREDENTIAL_ISSUER_PUBLIC_KEY),
     jwtSecret: optional(source.JWT_SECRET),
     jwtExpiresIn: source.JWT_EXPIRES_IN || "7d",
 
@@ -41,6 +43,7 @@ export function buildEnv(source = process.env) {
     paymentCurrency: (source.PAYMENT_CURRENCY || "usd").toLowerCase(),
     commissionRate: number(source.COMMISSION_RATE, 0.1),
     commissionRateBps: basisPoints(source.COMMISSION_RATE, 0.1),
+    commissionWaiverMilestoneThreshold: number(source.COMMISSION_WAIVER_MILESTONE_THRESHOLD, 3),
     stripeConnectRefreshUrl: source.STRIPE_CONNECT_REFRESH_URL || "http://localhost:5173/wallet?connect=refresh",
     stripeConnectReturnUrl: source.STRIPE_CONNECT_RETURN_URL || "http://localhost:5173/wallet?connect=done",
     chapaApiBaseUrl: source.CHAPA_API_BASE_URL || "https://api.chapa.co/v1",

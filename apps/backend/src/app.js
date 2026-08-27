@@ -11,6 +11,7 @@ import { rateLimiter } from "./middleware/rateLimiter.middleware.js";
 import { notFound, errorHandler } from "./middleware/error.middleware.js";
 import { v1Router } from "./api/v1/index.js";
 import { WebhooksRoutes } from "./modules/webhooks/index.js";
+import { getCredentialIssuerPublicKey } from "./modules/verifications/credential-signing.js";
 
 const app = express();
 
@@ -33,6 +34,10 @@ app.get("/ready", (req, res) => {
   } catch (err) {
     return res.status(503).json({ ready: false });
   }
+});
+
+app.get("/.well-known/nexuswork-issuer-key", (req, res) => {
+  res.json(getCredentialIssuerPublicKey());
 });
 
 app.use("/webhooks", express.raw({ type: "application/json" }), WebhooksRoutes);

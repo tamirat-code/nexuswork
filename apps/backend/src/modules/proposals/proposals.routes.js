@@ -5,6 +5,7 @@ import {
   getProjectProposals,
   getIncomingProposals,
   getMyProposals,
+  getCommissionPreviewForStudent,
   accept,
   reject,
 } from "./proposals.controller.js";
@@ -31,6 +32,13 @@ router.get(
   requireAuth,
   requireRole("student"),
   getMyProposals
+);
+
+router.get(
+  "/commission-preview",
+  requireAuth,
+  requireRole("student"),
+  getCommissionPreviewForStudent
 );
 
 

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
 import { getProject } from "../../services/api/projects.api.js";
-import { submitProposal, listProjectProposals, acceptProposal } from "../../services/api/proposals.api.js";
+import { submitProposal, listProjectProposals, acceptProposal, getCommissionPreview } from "../../services/api/proposals.api.js";
 import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -57,6 +57,13 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) 
     resolver: zodResolver(proposalSchema),
     defaultValues: { price: "", delivery_time_days: 7, cover_note: "" },
   });
+  const proposalPrice = form.watch("price");
+  const { data: commissionRes, isLoading: commissionLoading } = useQuery({
+    queryKey: ["commission-preview", proposalPrice],
+    queryFn: () => getCommissionPreview({ amount: proposalPrice, currency }, token),
+    enabled: !!token && verified,
+  });
+  const commissionPreview = commissionRes?.data;
 
   const mutation = useMutation({
     mutationFn: (payload) => submitProposal(payload, token),
@@ -96,6 +103,14 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) 
                 <FormControl><Textarea rows={5} placeholder="Why are you the right person? What's your approach?" {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
+            <div className="rounded-control border border-brass/20 bg-brass/5 p-3 text-xs text-slate-300">
+              <p className="font-semibold text-slate">Your estimated payout</p>
+              <p className="mt-1">
+                {commissionLoading ? "Checking your current commission rate…" : commissionPreview
+                  ? `${commissionPreview.waived ? "Commission waived" : `${(commissionPreview.rateBps / 100).toFixed(2)}% commission`} · Estimated payout ${Number(commissionPreview.studentPayout ?? 0).toFixed(2)} ${currency}`
+                  : "Commission details will appear before submission."}
+              </p>
+            </div>
             <DialogFooter>
               <Button type="submit" loading={mutation.isPending}>Submit proposal</Button>
             </DialogFooter>

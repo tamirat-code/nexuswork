@@ -17,6 +17,7 @@ import { logger } from "../../shared/logger/logger.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
 import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
+import { getEffectiveCommissionRateBps } from "../payments/commission.service.js";
 
 async function auditMilestoneEvent({ actor, correlationId, ...event }) {
   return recordEvent({
@@ -36,7 +37,8 @@ export async function finalizeReleasedMilestoneAccounting(milestone, contract, r
   const totalMoney = Number.isSafeInteger(milestone.amount_minor)
     ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
     : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
-  const payoutMinor = Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000);
+  const commission = await getEffectiveCommissionRateBps(contract.student_id);
+  const payoutMinor = Math.round(totalMoney.amountMinor * (10000 - commission.rateBps) / 10000);
   const commissionMinor = totalMoney.amountMinor - payoutMinor;
   const payoutMoney = money(payoutMinor, totalMoney.currency);
   const commissionMoney = money(commissionMinor, totalMoney.currency);
@@ -95,7 +97,8 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
   const totalMoney = Number.isSafeInteger(milestone.amount_minor)
     ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
     : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
-  const payoutMinor = Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000);
+  const commission = await getEffectiveCommissionRateBps(contract.student_id);
+  const payoutMinor = Math.round(totalMoney.amountMinor * (10000 - commission.rateBps) / 10000);
   const commissionMinor = totalMoney.amountMinor - payoutMinor;
   const payoutMoney = money(payoutMinor, totalMoney.currency);
   const commissionMoney = money(commissionMinor, totalMoney.currency);

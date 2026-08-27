@@ -49,6 +49,14 @@ export const listMyProposals = (
     }
   );
 
+export const getCommissionPreview = (params, token) => {
+  const query = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") query.set(key, value);
+  });
+  return apiRequest(`/proposals/commission-preview?${query.toString()}`, { token });
+};
+
 
 
 export const acceptProposal = (
