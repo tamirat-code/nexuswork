@@ -96,7 +96,10 @@ describe("Milestones module", () => {
         .send();
 
       expect(release.status).toBe(200);
-      const expectedPayout = 200 * (1 - paymentConfig.commissionRate);
+      const effectiveRate = paymentConfig.commissionWaiverMilestoneThreshold > 0
+        ? 0
+        : paymentConfig.commissionRate;
+      const expectedPayout = 200 * (1 - effectiveRate);
       const expectedCommission = 200 - expectedPayout;
       const released = await Milestone.findById(milestone._id);
       expect(released.status).toBe("released");

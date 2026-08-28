@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import Milestone from "./milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
+import Project from "../projects/projects.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import Payment from "../payments/payments.model.js";
 import Submission from "../submissions/submissions.model.js";
@@ -57,7 +58,7 @@ export async function finalizeReleasedMilestoneAccounting(milestone, contract, r
         { accountBase: "escrow_liability", debitMinor: totalMoney.amountMinor, creditMinor: 0, currency: totalMoney.currency },
         { accountBase: "student_payable", ownerId: contract.student_id, debitMinor: 0, creditMinor: payoutMoney.amountMinor, currency: totalMoney.currency },
         { accountBase: "platform_revenue", debitMinor: 0, creditMinor: commissionMoney.amountMinor, currency: totalMoney.currency },
-      ],
+      ].filter((entry) => entry.debitMinor > 0 || entry.creditMinor > 0),
       metadata: { paymentId: releasePayment?._id, milestoneId: milestone._id },
       session,
     });
@@ -147,6 +148,7 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
       if (outstanding === 0) {
         contract.status = "completed";
         await contract.save();
+        await Project.findByIdAndUpdate(contract.project_id, { status: "completed" });
       }
     }
 
