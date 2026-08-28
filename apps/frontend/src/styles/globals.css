@@ -187,6 +187,25 @@ html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Cat
 html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="How it works"] article:hover {
   box-shadow: 0 10px 26px rgba(21, 73, 66, .08);
 }
+html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Open projects"] {
+  background-image: radial-gradient(circle at 12% 45%, rgba(0, 158, 143, .08), transparent 26rem),
+    linear-gradient(180deg, #f5faf9, #eaf4f5);
+}
+html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Trust signals"] {
+  background: linear-gradient(180deg, #e8f5f2, #f5faf9);
+}
+html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Customer stories"] {
+  background: radial-gradient(circle at 78% 50%, rgba(48, 123, 191, .12), transparent 24rem), #edf4fb;
+}
+html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Categories"] {
+  background: linear-gradient(135deg, #f8fafc 0%, #eaf2fa 100%);
+}
+html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="How it works"] {
+  background: radial-gradient(circle at 18% 12%, rgba(0, 158, 143, .09), transparent 24rem), #f2f8f5;
+}
+html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Frequently asked questions"] {
+  background: linear-gradient(180deg, #fffdf7, #f6f4ed);
+}
 html[data-theme="light"]:has(section[aria-label="Hero"]) section[aria-label="Call to action"] {
   background: radial-gradient(circle at 15% 10%, rgba(76, 214, 190, .30), transparent 34%),
     linear-gradient(135deg, #075e63 0%, #087d76 52%, #0b625e 100%);

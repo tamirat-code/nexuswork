@@ -14,6 +14,7 @@ import { verifyGoogleIdToken } from "./google.client.js";
 import { verifyRecaptcha } from "../../shared/recaptcha/recaptcha.service.js";
 import { requireStrongPassword } from "../../shared/validators/password.js";
 import { ValidationError } from "../../shared/exceptions/AppError.js";
+import { logger } from "../../shared/logger/logger.js";
 import { getSessionVersion } from "./session-version.js";
 import {
   buildOtpAuthUri,
@@ -130,7 +131,13 @@ export async function registerUser({
     });
   }
   
-  await issueVerificationEmail(user);
+  try {
+    await issueVerificationEmail(user);
+  } catch (err) {
+    // Keep the account usable when the mail provider is temporarily down;
+    // the authenticated user can resend from the verification banner.
+    logger.error("[auth] verification email delivery failed:", err.message);
+  }
 
   return { token: signToken(user), user };
 }
@@ -276,8 +283,10 @@ export async function loginOrRegisterWithGoogle(
     student_id_number,
     program,
     enrollment_status,
+    recaptchaToken,
   } = {}
 ) {
+  await verifyRecaptcha(recaptchaToken);
   const { googleId, email, emailVerified, name } = await verifyGoogleIdToken(idToken);
 
   let user = await User.findOne({ google_id: googleId }).select("+mfa_secret_encrypted +mfa_pending_secret_encrypted +mfa_recovery_code_hashes");
@@ -455,6 +464,7 @@ export async function verifyEmail(rawToken) {
   if (!record) {
     throw new ValidationError("This verification link is invalid or has expired");
   }
-  await User.findByIdAndUpdate(record.user_id, { email_verified: true });
+  const user = await User.findByIdAndUpdate(record.user_id, { email_verified: true }, { new: true });
+  if (!user) throw new ValidationError("This verification link is invalid or has expired");
   await EmailVerificationToken.deleteOne({ _id: record._id });
 }

@@ -1,8 +1,10 @@
-const BRAND_COLOR = "#111827";
-const BODY_BG = "#f4f4f5";
+const BRAND_COLOR = "#008f83";
+const BRAND_DARK = "#073b4c";
+const GOLD = "#d6a84f";
+const BODY_BG = "#eef7f5";
 const CARD_BG = "#ffffff";
-const TEXT_COLOR = "#1f2937";
-const MUTED_COLOR = "#6b7280";
+const TEXT_COLOR = "#17333a";
+const MUTED_COLOR = "#5f747a";
 
 export function renderEmailLayout({ preheader = "", title, bodyHtml, ctaLabel, ctaUrl }) {
   return `<!DOCTYPE html>
@@ -24,12 +26,12 @@ export function renderEmailLayout({ preheader = "", title, bodyHtml, ctaLabel, c
 
           <tr>
             <td style="padding: 0 0 24px 0;">
-              <span style="font-size: 20px; font-weight: 700; color: ${BRAND_COLOR};">NexusWork</span>
+              <span style="font-size: 22px; font-weight: 800; letter-spacing:-0.03em; color: ${BRAND_DARK};">Nexus<span style="color:${BRAND_COLOR};">Work</span></span>
             </td>
           </tr>
 
           <tr>
-            <td style="background-color:${CARD_BG}; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+            <td style="background-color:${CARD_BG}; border-radius: 16px; padding: 32px; border:1px solid #d7e8e4; box-shadow: 0 10px 30px rgba(7,59,76,0.10);">
               <h1 style="margin: 0 0 16px 0; font-size: 20px; color: ${TEXT_COLOR};">${title}</h1>
               <div style="font-size: 15px; line-height: 1.6; color: ${TEXT_COLOR};">
                 ${bodyHtml}
@@ -39,7 +41,7 @@ export function renderEmailLayout({ preheader = "", title, bodyHtml, ctaLabel, c
                 ctaUrl
                   ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top: 24px;">
                        <tr>
-                         <td style="background-color:${BRAND_COLOR}; border-radius: 8px;">
+                         <td style="background:linear-gradient(135deg,${BRAND_COLOR},#00a99a); border-radius: 9px; box-shadow:0 5px 14px rgba(0,143,131,0.25);">
                            <a href="${ctaUrl}" style="display:inline-block; padding: 12px 24px; font-size: 14px; font-weight: 600; color:#ffffff; text-decoration:none;">
                              ${ctaLabel}
                            </a>

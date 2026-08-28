@@ -65,6 +65,9 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState(null);
+  const googleRecaptchaRef = useRef(null);
+  const [pendingGoogleCredential, setPendingGoogleCredential] = useState(null);
 
   const { data: universitiesRes, isLoading: universitiesLoading } = useQuery({
     queryKey: ["universities-all"],
@@ -142,6 +145,7 @@ export default function RegisterPage() {
   function validateGoogleRegistration() {
     const next = {};
     if (!termsAccepted) next.terms = "You must accept the Terms of Service and Privacy Policy";
+    if (!googleRecaptchaToken) next.recaptcha = "Please complete the reCAPTCHA challenge";
     setErrors((prev) => ({ ...prev, ...next }));
     return Object.keys(next).length === 0;
   }
@@ -176,21 +180,44 @@ export default function RegisterPage() {
 
   async function handleGoogleCredential(credential, err) {
     if (err) return show(err.message, { variant: "error" });
+    setPendingGoogleCredential(credential);
+    setGoogleRecaptchaToken(null);
+  }
+
+  async function continueGoogleRegistration() {
     if (!validateGoogleRegistration()) return;
 
     setGoogleLoading(true);
     try {
-      const result = await loginWithGoogle(credential, {
+      const result = await loginWithGoogle(pendingGoogleCredential, {
         role,
         phone: form.phone.trim() || undefined,
         termsAccepted,
+        recaptchaToken: googleRecaptchaToken,
         ...roleFieldsPayload(),
       });
+
+      if (result.mfaRequired) {
+        navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
+        return;
+      }
+      if (result.mfaSetupRequired) {
+        navigate("/mfa/setup", {
+          state: {
+            setupToken: result.setupToken,
+            secret: result.secret,
+            otpauthUri: result.otpauthUri,
+          },
+        });
+        return;
+      }
 
       show(result.isNewUser ? "Account created with Google." : "Welcome back.");
       navigate("/dashboard");
     } catch (err) {
       show(err.message, { variant: "error" });
+      googleRecaptchaRef.current?.reset();
+      setGoogleRecaptchaToken(null);
     } finally {
       setGoogleLoading(false);
     }
@@ -220,7 +247,14 @@ export default function RegisterPage() {
 
         <TermsCheckbox checked={termsAccepted} onChange={setTermsAccepted} error={errors.terms} />
 
-        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading} />
+        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading || Boolean(pendingGoogleCredential)} />
+        {pendingGoogleCredential && <>
+          <div className="flex justify-center">
+            <ReCAPTCHA ref={googleRecaptchaRef} sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setGoogleRecaptchaToken} onExpired={() => setGoogleRecaptchaToken(null)} />
+          </div>
+          <Button onClick={continueGoogleRegistration} loading={googleLoading} disabled={!googleRecaptchaToken} className="w-full" size="lg">Continue with Google</Button>
+          <button type="button" onClick={() => { setPendingGoogleCredential(null); setGoogleRecaptchaToken(null); }} className="w-full text-sm text-slate-300 hover:underline">Use a different sign-in method</button>
+        </>}
         <p className="text-center text-xs text-slate-400">
           Sign up with Google and you're in — no extra fields needed right now.
         </p>

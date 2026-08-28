@@ -15,7 +15,7 @@ import {
   verifyMfa,
 } from "./auth.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
-import { loginRateLimiter } from "../../middleware/rateLimiter.middleware.js";
+import { loginRateLimiter, verificationRateLimiter } from "../../middleware/rateLimiter.middleware.js";
 import { validateBody } from "../../shared/validators/ZodValidator.js";
 import {
   registerSchema,
@@ -42,6 +42,6 @@ router.patch("/password", requireAuth, validateBody(changePasswordSchema), chang
 router.post("/password/forgot", validateBody(forgotPasswordSchema), forgotPassword);
 router.post("/password/reset", validateBody(resetPasswordSchema), resetPassword);
 router.post("/verify-email", validateBody(verifyEmailSchema), verifyEmail);
-router.post("/resend-verification", requireAuth, resendVerification);
+router.post("/resend-verification", requireAuth, verificationRateLimiter, resendVerification);
 
 export default router;

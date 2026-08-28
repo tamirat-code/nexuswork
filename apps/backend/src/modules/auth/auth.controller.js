@@ -106,6 +106,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
       role: req.body.role,
       phone: req.body.phone,
       termsAccepted: req.body.termsAccepted,
+      recaptchaToken: req.body.recaptchaToken,
       organizationName: req.body.organizationName,
       organizationType: req.body.organizationType,
       university_id: req.body.university_id,

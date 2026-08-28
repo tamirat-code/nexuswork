@@ -40,6 +40,7 @@ export function AuthProvider({ children }) {
     async (payload) => {
       const { data } = await authApi.register(payload);
       persist(data.token, data.user);
+      return data;
     },
     [persist]
   );

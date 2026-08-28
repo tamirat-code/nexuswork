@@ -12,6 +12,7 @@ import WorkspaceFooter from "../common/WorkspaceFooter.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getWorkspacePageMeta } from "../../config/navigation.js";
 import LanguageSelector from "../common/LanguageSelector.jsx";
+import EmailVerificationBanner from "../common/EmailVerificationBanner.jsx";
 
 
 export default function AppLayout({ children }) {
@@ -86,6 +87,7 @@ export default function AppLayout({ children }) {
 
           {/* ── Page content ── */}
           <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <EmailVerificationBanner />
             {children}
           </main>
 

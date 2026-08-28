@@ -62,6 +62,7 @@ export const mfaCodeSchema = z.object({
 export const googleAuthSchema = z
   .object({
     credential: z.string().min(1, "Google credential is required"),
+    recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
     phone: z.string().trim().min(7).max(30).regex(/^[+0-9()\-\s]+$/, "Invalid phone number").optional(),
     role: z.string().optional(),
     termsAccepted: z.boolean().optional(),

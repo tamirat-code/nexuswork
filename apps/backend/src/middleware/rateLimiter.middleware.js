@@ -16,6 +16,16 @@ export const loginRateLimiter = rateLimit({
   message: { success: false, message: "Too many login attempts. Please try again later." },
 });
 
+// Verification emails are throttled per account to prevent abuse.
+export const verificationRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.user?._id || req.ip),
+  message: { success: false, message: "Too many verification emails requested. Please try again later." },
+});
+
 export const meetingRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,

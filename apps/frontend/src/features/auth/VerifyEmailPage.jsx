@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { verifyEmail } from "../../services/api/auth.api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 import AuthShell from "./components/AuthShell.jsx";
 import { SealMark } from "./components/AuthShell.jsx";
 import Skeleton from "../../components/loaders/Skeleton.jsx";
@@ -8,6 +9,7 @@ import Skeleton from "../../components/loaders/Skeleton.jsx";
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const { user, setLocalUser, refreshMe } = useAuth();
   const [status, setStatus] = useState("verifying");
   const [error, setError] = useState("");
 
@@ -18,7 +20,16 @@ export default function VerifyEmailPage() {
       return;
     }
     verifyEmail(token)
-      .then(() => setStatus("success"))
+      .then(async () => {
+        if (user) {
+          try {
+            await refreshMe();
+          } catch {
+            setLocalUser({ ...user, email_verified: true });
+          }
+        }
+        setStatus("success");
+      })
       .catch((err) => {
         setStatus("error");
         setError(err.message);

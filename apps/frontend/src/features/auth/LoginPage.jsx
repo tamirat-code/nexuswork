@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
@@ -8,6 +8,7 @@ import RolePicker from "./components/RolePicker.jsx";
 import TermsCheckbox from "./components/TermsCheckbox.jsx";
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
+import ReCAPTCHA from "react-google-recaptcha";
 
 export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
@@ -24,6 +25,9 @@ export default function LoginPage() {
   const [pendingTerms, setPendingTerms] = useState(false);
   const [pendingTermsError, setPendingTermsError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState(null);
+  const [googleCheckPassed, setGoogleCheckPassed] = useState(false);
+  const googleRecaptchaRef = useRef(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -55,11 +59,25 @@ export default function LoginPage() {
 
   async function handleGoogleCredential(credential, err) {
     if (err) return show(err.message, { variant: "error" });
+    setPendingGoogleCredential(credential);
+    setGoogleRecaptchaToken(null);
+    setGoogleCheckPassed(false);
+  }
+
+  async function continueGoogleLogin() {
+    if (!googleRecaptchaToken) {
+      show("Please complete the reCAPTCHA challenge.", { variant: "error" });
+      return;
+    }
     setGoogleLoading(true);
+    setGoogleCheckPassed(true);
     try {
-      const result = await loginWithGoogle(credential);
+      const result = await loginWithGoogle(pendingGoogleCredential, { recaptchaToken: googleRecaptchaToken });
       if (result.needsRole) {
-        setPendingGoogleCredential(credential);
+        // The verification token is single-use. The role-completion request
+        // must receive a fresh challenge token.
+        googleRecaptchaRef.current?.reset();
+        setGoogleRecaptchaToken(null);
         return;
       }
       if (result.mfaRequired) {
@@ -80,6 +98,9 @@ export default function LoginPage() {
       navigate("/dashboard");
     } catch (err) {
       show(err.message, { variant: "error" });
+      googleRecaptchaRef.current?.reset();
+      setGoogleRecaptchaToken(null);
+      setGoogleCheckPassed(false);
     } finally {
       setGoogleLoading(false);
     }
@@ -90,9 +111,13 @@ export default function LoginPage() {
       setPendingTermsError("You must accept the Terms of Service and Privacy Policy");
       return;
     }
+    if (!googleRecaptchaToken) {
+      show("Please complete the reCAPTCHA challenge.", { variant: "error" });
+      return;
+    }
     setGoogleLoading(true);
 try {
-  const result = await loginWithGoogle(pendingGoogleCredential, { role: pendingRole, termsAccepted: pendingTerms });
+  const result = await loginWithGoogle(pendingGoogleCredential, { role: pendingRole, termsAccepted: pendingTerms, recaptchaToken: googleRecaptchaToken });
   if (result.needsRole) {
     
     show("Something went wrong creating your account. Please try again.", { variant: "error" });
@@ -121,19 +146,16 @@ try {
     }
   }
 
-  if (pendingGoogleCredential) {
+  if (pendingGoogleCredential && !googleCheckPassed) {
     return (
       <AuthShell
         eyebrow="One more thing"
-        title="Which best describes you?"
-        subtitle="We couldn't find an existing account for that Google sign-in — pick a role to finish creating one."
+        title="Verify your Google sign-in"
+        subtitle="Complete the security check before continuing with Google."
       >
         <div className="space-y-5">
-          <RolePicker value={pendingRole} onChange={setPendingRole} />
-          <TermsCheckbox checked={pendingTerms} onChange={setPendingTerms} error={pendingTermsError} />
-          <Button onClick={completeGoogleWithRole} loading={googleLoading} className="w-full" size="lg">
-            Create account
-          </Button>
+          <ReCAPTCHA ref={googleRecaptchaRef} sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setGoogleRecaptchaToken} onExpired={() => setGoogleRecaptchaToken(null)} />
+          <Button onClick={continueGoogleLogin} loading={googleLoading} className="w-full" size="lg">Continue with Google</Button>
           <button
             type="button"
             onClick={() => setPendingGoogleCredential(null)}
@@ -141,6 +163,22 @@ try {
           >
             Use a different sign-in method
           </button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (pendingGoogleCredential && googleCheckPassed && !googleLoading) {
+    return (
+      <AuthShell eyebrow="One more thing" title="Which best describes you?" subtitle="Pick a role to finish creating your account.">
+        <div className="space-y-5">
+          <RolePicker value={pendingRole} onChange={setPendingRole} />
+          <TermsCheckbox checked={pendingTerms} onChange={setPendingTerms} error={pendingTermsError} />
+          <div className="flex justify-center">
+            <ReCAPTCHA ref={googleRecaptchaRef} sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setGoogleRecaptchaToken} onExpired={() => setGoogleRecaptchaToken(null)} />
+          </div>
+          <Button onClick={completeGoogleWithRole} loading={googleLoading} className="w-full" size="lg">Create account</Button>
+          <button type="button" onClick={() => { setPendingGoogleCredential(null); setGoogleRecaptchaToken(null); }} className="text-sm text-slate-300 hover:underline">Use a different sign-in method</button>
         </div>
       </AuthShell>
     );

@@ -5,12 +5,13 @@ export function verificationEmail({ verifyUrl }) {
     subject: "Verify your NexusWork email",
     html: renderEmailLayout({
       preheader: "Confirm your email address to finish setting up your account.",
-      title: "Verify your email address",
+      title: "Welcome to NexusWork",
       bodyHtml: `
-        <p>Thanks for signing up for NexusWork. Confirm your email address to finish setting up your account.</p>
-        <p>This link is valid for <strong>24 hours</strong>.</p>
+        <p>Thanks for joining NexusWork — a trusted place for university talent and real client work.</p>
+        <p>Confirm your email address to unlock projects, proposals, contracts, and escrow-protected payments.</p>
+        <p>This secure link expires in <strong>24 hours</strong>.</p>
       `,
-      ctaLabel: "Verify email",
+      ctaLabel: "Verify my email",
       ctaUrl: verifyUrl,
     }),
   };
