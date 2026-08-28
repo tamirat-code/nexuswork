@@ -11,3 +11,6 @@ if (process.env.NODE_ENV === "test") {
   else segments.push(databaseName);
   process.env.MONGO_URI = `${segments.join("/")}${query ? `?${query}` : ""}`;
 }
+
+process.env.CHAPA_CALLBACK_URL ||= "http://localhost:5000/v1/webhooks/chapa";
+process.env.CHAPA_RETURN_URL ||= "http://localhost:5173/payment/chapa/return";
