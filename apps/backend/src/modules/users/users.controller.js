@@ -5,6 +5,7 @@ import {
   updateMe as updateMeService,
   updateAvatar as updateAvatarService,
   removeAvatar as removeAvatarService,
+  updateLanguage as updateLanguageService,
 } from "./users.service.js";
 
 export const getUser = asyncHandler(async (req, res) => {
@@ -22,6 +23,11 @@ export const getMe = asyncHandler(async (req, res) => {
 export const updateMe = asyncHandler(async (req, res) => {
   const updated = await updateMeService(req.user._id, req.body);
   if (!updated) return res.status(404).json({ success: false, message: "User not found" });
+  res.json({ success: true, data: updated });
+});
+
+export const updatePreferences = asyncHandler(async (req, res) => {
+  const updated = await updateLanguageService(req.user._id, req.body.preferred_language);
   res.json({ success: true, data: updated });
 });
 

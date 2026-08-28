@@ -1,0 +1,17 @@
+import { Router } from "express";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+import { meetingRateLimiter } from "../../middleware/rateLimiter.middleware.js";
+import { validateBody, validateParams } from "../../shared/validators/ZodValidator.js";
+import { meetingCreateSchema, meetingUpdateSchema, objectIdParamsSchema } from "../../shared/validators/schemas.js";
+import * as controller from "./meetings.controller.js";
+const router = Router();
+router.post("/", requireAuth, meetingRateLimiter, validateBody(meetingCreateSchema), controller.create);
+router.get("/contract/:contractId", requireAuth, validateParams(objectIdParamsSchema("contractId")), controller.list);
+router.get("/:id", requireAuth, validateParams(objectIdParamsSchema("id")), controller.get);
+router.patch("/:id", requireAuth, meetingRateLimiter, validateParams(objectIdParamsSchema("id")), validateBody(meetingUpdateSchema), controller.update);
+router.post("/:id/start", requireAuth, meetingRateLimiter, validateParams(objectIdParamsSchema("id")), controller.start);
+router.post("/:id/end", requireAuth, meetingRateLimiter, validateParams(objectIdParamsSchema("id")), controller.end);
+router.post("/:id/join", requireAuth, meetingRateLimiter, validateParams(objectIdParamsSchema("id")), controller.join);
+router.post("/:id/leave", requireAuth, meetingRateLimiter, validateParams(objectIdParamsSchema("id")), controller.leave);
+router.delete("/:id", requireAuth, meetingRateLimiter, validateParams(objectIdParamsSchema("id")), controller.cancel);
+export default router;

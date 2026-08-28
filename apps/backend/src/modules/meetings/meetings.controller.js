@@ -1,0 +1,11 @@
+import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import * as service from "./meetings.service.js";
+export const create = asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await service.createMeeting({ contractId: req.body.contract_id, user: req.user, title: req.body.title, description: req.body.description, scheduledStart: req.body.scheduled_start, scheduledEnd: req.body.scheduled_end, milestoneId: req.body.milestone_id }) }));
+export const list = asyncHandler(async (req, res) => res.json({ success: true, data: await service.listMeetings(req.params.contractId, req.user._id) }));
+export const get = asyncHandler(async (req, res) => res.json({ success: true, data: await service.getMeeting(req.params.id, req.user._id) }));
+export const update = asyncHandler(async (req, res) => res.json({ success: true, data: await service.updateMeeting(req.params.id, req.user, req.body) }));
+export const start = asyncHandler(async (req, res) => res.json({ success: true, data: await service.transition(req.params.id, req.user, "start") }));
+export const end = asyncHandler(async (req, res) => res.json({ success: true, data: await service.transition(req.params.id, req.user, "end") }));
+export const cancel = asyncHandler(async (req, res) => res.json({ success: true, data: await service.transition(req.params.id, req.user, "cancel") }));
+export const join = asyncHandler(async (req, res) => res.json({ success: true, data: await service.joinMeeting(req.params.id, req.user) }));
+export const leave = asyncHandler(async (req, res) => res.json({ success: true, data: await service.leaveMeeting(req.params.id, req.user) }));

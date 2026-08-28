@@ -41,6 +41,8 @@ import AdminPage from "../../features/admin/AdminPage.jsx";
 import TermsPage from "../../features/legal/TermsPage.jsx";
 import PrivacyPage from "../../features/legal/PrivacyPage.jsx";
 import NotFoundPage from "../../features/misc/NotFoundPage.jsx";
+import MeetingPage from "../../features/meetings/MeetingPage.jsx";
+import MeetingsListPage from "../../features/meetings/MeetingsListPage.jsx";
 
 const protect = (element, allowedRoles) => (
   <ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>
@@ -96,6 +98,8 @@ export default function AppRouter() {
       <Route path="/admin" element={protect(<AdminPage />, [ROLES.ADMIN])} />
       <Route path="/settings" element={protect(<SettingsPage />)} />
       <Route path="/profile" element={protect(<ProfilePage />)} />
+      <Route path="/meetings/:meetingId" element={protect(<MeetingPage />)} />
+      <Route path="/meetings" element={protect(<MeetingsListPage />)} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

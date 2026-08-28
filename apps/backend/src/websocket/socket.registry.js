@@ -28,3 +28,8 @@ export function emitToUser(userId, event, payload) {
     .to(`user:${String(userId)}`)
     .emit(event, payload);
 }
+
+export function emitToMeeting(roomId, event, payload) {
+  if (!ioInstance || !roomId) return;
+  ioInstance.of("/meetings").to(`meeting:${roomId}`).emit(event, payload);
+}

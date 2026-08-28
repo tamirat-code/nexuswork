@@ -9,6 +9,7 @@ import { validateEnv } from "./config/env.validation.js";
 import mongoose from "mongoose";
 
 import "./events/handlers/milestone.handlers.js";
+import { registerJobs } from "./jobs/index.js";
 
 validateEnv();
 
@@ -16,6 +17,7 @@ async function start() {
   await connectDB();
   const server = http.createServer(app);
   const io = initSocket(server);
+  const stopJobs = registerJobs();
 
   server.listen(appConfig.port, () => {
     logger.info(`NexusWork API listening on port ${appConfig.port}`);
@@ -32,6 +34,7 @@ async function start() {
 
       
       try {
+        stopJobs?.();
         if (io && typeof io.close === "function") {
           await new Promise((resolve) => io.close(resolve));
         }

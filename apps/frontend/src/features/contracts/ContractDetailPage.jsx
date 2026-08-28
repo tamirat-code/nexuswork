@@ -34,6 +34,7 @@ import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
 import { deleteFile, uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
 import { getMilestonePortfolioConsent, respondToMilestonePortfolioConsent } from "../../services/api/portfolios.api.js";
+import { createMeeting, listContractMeetings } from "../../services/api/meetings.api.js";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -67,6 +68,27 @@ const DISPUTABLE_STATUSES = [
   MILESTONE_STATUS.DELIVERED,
   MILESTONE_STATUS.REVISION_REQUESTED,
 ];
+
+function MeetingCreateDialog({ contractId, token, onCreated }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [attempted, setAttempted] = useState(false);
+  const titleMissing = attempted && !title.trim();
+  const startMissing = attempted && !start;
+  const endInvalid = attempted && start && end && new Date(end) <= new Date(start);
+  const startPast = attempted && start && new Date(start) <= new Date();
+  const mutation = useMutation({
+    mutationFn: () => createMeeting({ contract_id: contractId, title: title.trim(), description: description.trim(), scheduled_start: new Date(start).toISOString(), scheduled_end: end ? new Date(end).toISOString() : null }, token),
+    onSuccess: () => { setOpen(false); setTitle(""); setDescription(""); setStart(""); setEnd(""); setAttempted(false); onCreated?.(); toast.success("Meeting scheduled."); },
+    onError: (error) => toast.error(error.message || "Could not schedule meeting"),
+  });
+  const submit = () => { setAttempted(true); if (!title.trim() || !start || startPast || endInvalid) return; mutation.mutate(); };
+  const minStart = new Date(Date.now() + 60_000).toISOString().slice(0, 16);
+  return <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setAttempted(false); }}><DialogTrigger asChild><Button size="sm" variant="secondary">Schedule meeting</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Schedule a video meeting</DialogTitle><DialogDescription>Invite the other participant on this contract.</DialogDescription></DialogHeader><div className="space-y-3"><div><Input aria-label="Meeting title" aria-invalid={titleMissing} placeholder="Meeting title" value={title} onChange={(e) => setTitle(e.target.value)} />{titleMissing && <p className="mt-1 text-xs text-brick">Enter a meeting title.</p>}</div><Textarea aria-label="Description" placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} /><div className="grid gap-3 sm:grid-cols-2"><div><Input type="datetime-local" aria-label="Start time" aria-invalid={startMissing || startPast} min={minStart} value={start} onChange={(e) => setStart(e.target.value)} />{startMissing && <p className="mt-1 text-xs text-brick">Choose a start time.</p>}{startPast && <p className="mt-1 text-xs text-brick">Start time must be in the future.</p>}</div><div><Input type="datetime-local" aria-label="End time" aria-invalid={endInvalid} min={start || minStart} value={end} onChange={(e) => setEnd(e.target.value)} />{endInvalid && <p className="mt-1 text-xs text-brick">End time must be after start.</p>}</div></div></div><DialogFooter><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button loading={mutation.isPending} onClick={submit}>Schedule</Button></DialogFooter></DialogContent></Dialog>;
+}
 
 function ContractTermsSummary({ contract }) {
   const terms = contract?.terms || {};
@@ -836,6 +858,11 @@ export default function ContractDetailPage() {
     queryFn: () => listContractMilestones(id, token),
     enabled: !!token,
   });
+  const meetingsQuery = useQuery({
+    queryKey: ["meetings", id],
+    queryFn: () => listContractMeetings(id, token),
+    enabled: !!token,
+  });
 
   const contract = data?.data;
   const milestones = milestonesQuery.data?.data?.milestones ?? [];
@@ -845,6 +872,7 @@ export default function ContractDetailPage() {
   const isClient = Boolean(contract && currentUserId && String(clientId) === String(currentUserId));
   const isStudent = Boolean(contract && currentUserId && String(studentId) === String(currentUserId));
   const role = isClient ? ROLES.CLIENT : isStudent ? ROLES.STUDENT : user?.role;
+  const meetings = meetingsQuery.data?.data ?? [];
 
   const milestoneProgress = useMemo(() => {
     if (!milestones.length) return 0;
@@ -990,6 +1018,13 @@ export default function ContractDetailPage() {
         </div>
         <StatusBadge kind="contract" status={contract?.status} showDot />
       </div>
+
+      {contract?.status === "active" && (
+        <Card className="mt-6">
+          <CardHeader className="flex flex-row items-center justify-between gap-3"><div><CardTitle className="text-lg">Video meetings</CardTitle><p className="mt-1 text-sm text-slate-300">Schedule a secure call with your contract partner.</p></div><MeetingCreateDialog contractId={id} token={token} onCreated={() => queryClient.invalidateQueries({ queryKey: ["meetings", id] })} /></CardHeader>
+          <CardContent className="space-y-2">{meetings.length ? meetings.map((meeting) => <div key={meeting._id} className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-ink-300 bg-ink-50 p-3"><div><p className="font-semibold text-slate">{meeting.title}</p><p className="text-xs text-slate-300">{formatDate(meeting.scheduled_start)} · {meeting.status}</p></div><Link to={`/meetings/${meeting._id}`}><Button size="sm">{meeting.status === "ended" ? "View" : "Join"}</Button></Link></div>) : <p className="text-sm text-slate-300">No meetings scheduled yet.</p>}</CardContent>
+        </Card>
+      )}
 
       {contract?.status === "pending_review" && (
         <Card className="mt-6 border-brass/30 bg-brass/5">

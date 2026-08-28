@@ -17,3 +17,6 @@ export function createNotificationSocket(token) {
     autoConnect: false,
   });
 }
+export function createMeetingSocket(token) {
+  return io(`${SOCKET_URL}/meetings`, { auth: { token }, autoConnect: false, reconnection: true });
+}

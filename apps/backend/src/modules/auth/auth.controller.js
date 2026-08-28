@@ -14,6 +14,7 @@ function toPublicUser(user) {
     universityVerified: user.universityVerified,
     notification_prefs: user.notification_prefs,
     mfa_enabled: user.mfa_enabled,
+    preferred_language: user.preferred_language || "en",
   };
 }
 

@@ -10,5 +10,5 @@ export function errorHandler(err, req, res, next) {
   const status = err.status || (err.name === "MulterError" ? 400 : isProviderError ? 502 : 500);
   const isSafeApplicationError = status < 500 && Boolean(err.status);
   const message = isSafeApplicationError || isProviderError ? err.message : "Internal server error";
-  res.status(status).json({ success: false, message });
+  res.status(status).json({ success: false, message, ...(err.code ? { code: err.code } : {}) });
 }

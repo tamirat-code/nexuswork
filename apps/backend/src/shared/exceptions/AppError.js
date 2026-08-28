@@ -1,24 +1,25 @@
 export class AppError extends Error {
-  constructor(message, status = 500) {
+  constructor(message, status = 500, code = null) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message = "Resource not found") {
-    super(message, 404);
+  constructor(message = "Resource not found", code = null) {
+    super(message, 404, code);
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message = "Insufficient permissions") {
-    super(message, 403);
+  constructor(message = "Insufficient permissions", code = null) {
+    super(message, 403, code);
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(message = "Invalid input") {
-    super(message, 400);
+  constructor(message = "Invalid input", code = null) {
+    super(message, 400, code);
   }
 }

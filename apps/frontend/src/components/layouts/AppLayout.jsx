@@ -11,6 +11,7 @@ import CommandPalette from "../common/CommandPalette.jsx";
 import WorkspaceFooter from "../common/WorkspaceFooter.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getWorkspacePageMeta } from "../../config/navigation.js";
+import LanguageSelector from "../common/LanguageSelector.jsx";
 
 
 export default function AppLayout({ children }) {
@@ -74,6 +75,7 @@ export default function AppLayout({ children }) {
             {/* Header right actions */}
             <div className="ml-auto flex items-center gap-1.5">
               <ThemeToggle />
+              <LanguageSelector compact />
               <NotificationBell />
               <UserMenu />
             </div>

@@ -8,6 +8,8 @@ export const optionalObjectId = z
   .optional()
   .nullable();
 
+export const objectIdParamsSchema = (key = "id") => z.object({ [key]: objectId });
+
 export const email = z.string().trim().toLowerCase().email("Invalid email address");
 export const password = z
   .string()
@@ -280,6 +282,21 @@ export const submitWorkSchema = z.object({
   file_ids: z.array(objectId).max(10, "A submission can contain at most 10 files").optional().default([]),
   note: z.string().trim().max(5000).optional().default(""),
 });
+
+export const meetingCreateSchema = z.object({
+  contract_id: objectId,
+  milestone_id: optionalObjectId,
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2000).optional().default(""),
+  scheduled_start: z.coerce.date(),
+  scheduled_end: z.coerce.date().optional().nullable(),
+});
+export const meetingUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().trim().max(2000).optional(),
+  scheduled_start: z.coerce.date().optional(),
+  scheduled_end: z.coerce.date().optional().nullable(),
+}).refine((v) => Object.keys(v).length > 0, "At least one field is required");
 
 // --- Submissions ---
 export const createSubmissionSchema = z.object({

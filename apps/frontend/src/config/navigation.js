@@ -34,6 +34,7 @@ export const workspaceNav = [
         roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN],
       },
       { to: "/contracts", label: "Contracts", icon: "shield", roles: [ROLES.STUDENT, ROLES.CLIENT] },
+      { to: "/meetings", label: "Meetings", icon: "video", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       { to: "/disputes", label: "Disputes", icon: "flag", roles: [ROLES.STUDENT, ROLES.CLIENT, ROLES.ADMIN] },
     ],
   },
@@ -93,6 +94,7 @@ export const WORKSPACE_PATHS = [
   "/settings",
   "/profile",
   "/recommendations",
+  "/meetings",
 ];
 
 // Paths above that must match exactly, never as a prefix — because a sibling dynamic

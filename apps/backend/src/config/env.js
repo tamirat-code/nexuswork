@@ -62,6 +62,10 @@ export function buildEnv(source = process.env) {
     termsVersion: source.TERMS_VERSION || "1.0",
     recaptchaSecretKey: optional(source.RECAPTCHA_SECRET_KEY),
     recaptchaMinScore: number(source.RECAPTCHA_MIN_SCORE, 0.5),
+    webrtcStunUrl: optional(source.WEBRTC_STUN_URL),
+    webrtcTurnUrl: optional(source.WEBRTC_TURN_URL),
+    webrtcTurnUsername: optional(source.WEBRTC_TURN_USERNAME),
+    webrtcTurnCredential: optional(source.WEBRTC_TURN_CREDENTIAL),
 
     storageDriver: (source.STORAGE_DRIVER || "local").toLowerCase(),
     uploadDir: source.UPLOAD_DIR || "uploads",

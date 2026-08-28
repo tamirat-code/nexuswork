@@ -10,6 +10,7 @@ export function validateUpdateMe(payload) {
   if (payload.headline !== undefined && typeof payload.headline !== "string") errors.push("headline");
   if (payload.bio !== undefined && typeof payload.bio !== "string") errors.push("bio");
   if (payload.skills !== undefined && typeof payload.skills !== "string") errors.push("skills");
+  if (payload.preferred_language !== undefined && !["en", "am", "af"].includes(payload.preferred_language)) errors.push("preferred_language");
 
   if (errors.length) {
     const err = new Error(`Invalid profile fields: ${errors.join(",")}`);

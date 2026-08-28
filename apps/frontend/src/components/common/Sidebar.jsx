@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 import NavIcon from "./NavIcon.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { cn } from "../../lib/cn.js";
+import { useTranslation } from "react-i18next";
 
 /**
  * Sidebar — Quiet navigation canvas supporting page hierarchy.
@@ -12,6 +13,7 @@ import { cn } from "../../lib/cn.js";
  */
 export default function Sidebar({ role, onNavigate, showBrand = false, className = "" }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const groups = navForRole(role || user?.role);
 
   const initials = (user?.name || user?.email || "?")
@@ -56,7 +58,7 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
                     }
                   >
                     <NavIcon name={item.icon} className="h-4 w-4 shrink-0 opacity-75" />
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    <span className="min-w-0 flex-1 truncate">{t(`navigation.${item.to.slice(1).split("/")[0]}`, { defaultValue: item.label })}</span>
                   </NavLink>
                 </li>
               ))}

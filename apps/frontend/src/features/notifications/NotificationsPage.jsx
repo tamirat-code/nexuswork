@@ -183,6 +183,12 @@ export default function NotificationsPage() {
       const notificationType =
         notification.type;
 
+      const meetingId = notification.data?.meeting_id || notification.data?.meetingId;
+      if (meetingId && (notificationType.startsWith("meeting_") || notification.data?.action === "view_meeting")) {
+        navigate(`/meetings/${meetingId}`);
+        return;
+      }
+
 
       const proposalId =
         notification.data?.proposal_id ||

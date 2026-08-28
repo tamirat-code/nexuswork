@@ -13,7 +13,12 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.message || `Request failed with status ${res.status}`);
+    let message = data.message || `Request failed with status ${res.status}`;
+    if (data.code && typeof window !== "undefined") {
+      const translated = window.__nwI18n?.t(`errors.${data.code}`);
+      if (translated && translated !== `errors.${data.code}`) message = translated;
+    }
+    const err = new Error(message);
     err.status = res.status;
     Object.assign(err, data);
     throw err;

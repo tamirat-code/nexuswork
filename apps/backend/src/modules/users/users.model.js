@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema(
       email: { type: Boolean, default: true },
       push: { type: Boolean, default: true },
     },
+    preferred_language: { type: String, enum: ["en", "am", "af"], default: "en" },
     // True only once a platform admin has approved this user's StaffVerification
     // request — matching an email domain at registration is never sufficient.
     staffVerified: { type: Boolean, default: false },

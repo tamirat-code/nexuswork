@@ -10,6 +10,8 @@ import NotificationBell from "./NotificationBell.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import UserMenu from "./UserMenu.jsx";
 import { cn } from "../../lib/cn.js";
+import LanguageSelector from "./LanguageSelector.jsx";
+import { useTranslation } from "react-i18next";
 
 function isNavItemActive(to, pathname, hash) {
   const [toPath, toHash] = to.split("#");
@@ -28,6 +30,7 @@ export default function Navbar() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const { t } = useTranslation();
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
@@ -54,7 +57,7 @@ export default function Navbar() {
               <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
                 <span className="flex items-center gap-1.5 whitespace-nowrap">
                   <NavIcon name={l.icon} className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  {l.label}
+                  {t(`navigation.${l.to.slice(1).split("/")[0]}`, { defaultValue: l.label })}
                 </span>
               </Link>
             );
@@ -63,6 +66,7 @@ export default function Navbar() {
 
         <div className="hidden shrink-0 items-center gap-2 md:flex">
           <ThemeToggle />
+          <LanguageSelector compact />
           {user ? (
             <>
               <NotificationBell />

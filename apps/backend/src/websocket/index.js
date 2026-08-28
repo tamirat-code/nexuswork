@@ -3,6 +3,7 @@ import { socketConfig } from "../config/socket.config.js";
 
 import { registerContractNamespace } from "./namespaces/contract.namespace.js";
 import { registerNotificationNamespace } from "./namespaces/notification.namespace.js";
+import { registerMeetingNamespace } from "./namespaces/meeting.namespace.js";
 
 import { setIO } from "./socket.registry.js";
 
@@ -15,6 +16,7 @@ export function initSocket(httpServer) {
   registerContractNamespace(io);
 
   registerNotificationNamespace(io);
+  registerMeetingNamespace(io);
 
   return io;
 }

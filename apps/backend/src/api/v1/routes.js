@@ -30,6 +30,7 @@ import { AnalyticsRoutes } from "../../modules/analytics/index.js";
 import { AdminRoutes } from "../../modules/admin/index.js";
 import { AuditLogsRoutes } from "../../modules/audit-logs/index.js";
 import { HealthRoutes } from "../../modules/health/index.js";
+import { MeetingsRoutes } from "../../modules/meetings/index.js";
 
 const router = Router();
 
@@ -63,5 +64,6 @@ router.use("/analytics", AnalyticsRoutes);
 router.use("/admin", AdminRoutes);
 router.use("/audit-logs", AuditLogsRoutes);
 router.use("/health", HealthRoutes);
+router.use("/meetings", MeetingsRoutes);
 
 export default router;

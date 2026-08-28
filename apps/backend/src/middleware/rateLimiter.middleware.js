@@ -15,3 +15,11 @@ export const loginRateLimiter = rateLimit({
   keyGenerator: (req) => req.body?.email?.toLowerCase() || req.ip,
   message: { success: false, message: "Too many login attempts. Please try again later." },
 });
+
+export const meetingRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, code: "MEETING_RATE_LIMITED", message: "Too many meeting requests. Please try again later." },
+});

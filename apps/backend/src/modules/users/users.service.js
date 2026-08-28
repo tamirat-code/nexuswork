@@ -32,6 +32,7 @@ export async function getPrivateProfile(userId) {
     avatarUrl,
     universityVerified,
     notification_prefs,
+    preferred_language,
   } = user;
   return {
     id: _id,
@@ -48,11 +49,12 @@ export async function getPrivateProfile(userId) {
     avatarUrl,
     universityVerified,
     notification_prefs,
+    preferred_language,
   };
 }
 
 export async function updateMe(userId, payload) {
-  const allowed = ["name", "email", "headline", "bio", "location", "university", "skills", "website", "notification_prefs"];
+  const allowed = ["name", "email", "headline", "bio", "location", "university", "skills", "website", "notification_prefs", "preferred_language"];
   const update = {};
   for (const k of allowed) {
     if (Object.prototype.hasOwnProperty.call(payload, k)) update[k] = payload[k];
@@ -61,6 +63,10 @@ export async function updateMe(userId, payload) {
   const user = await User.findByIdAndUpdate(userId, update, { new: true, runValidators: true });
   if (!user) return null;
   return getPrivateProfile(user._id);
+}
+
+export async function updateLanguage(userId, preferred_language) {
+  return updateMe(userId, { preferred_language });
 }
 
 export async function updateAvatar(userId, avatarData) {

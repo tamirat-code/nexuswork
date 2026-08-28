@@ -18,6 +18,7 @@ const AUDIT_ACTION_TYPES = [
   "PAYMENT_CREATED", "PAYMENT_SUCCEEDED", "PAYMENT_FAILED", "REFUND_REQUESTED",
   "REFUND_SUCCEEDED", "REFUND_FAILED", "DISPUTE_OPENED", "DISPUTE_RESOLVED",
   "RELEASE_REQUESTED", "RELEASE_SUCCEEDED", "RELEASE_FAILED",
+  "MEETING_CREATED", "MEETING_UPDATED", "MEETING_CANCELLED", "MEETING_STARTED", "MEETING_ENDED", "MEETING_JOINED", "MEETING_LEFT",
   "WITHDRAWAL_REQUESTED", "WITHDRAWAL_SUCCEEDED", "WITHDRAWAL_FAILED",
 ];
 
@@ -48,7 +49,7 @@ const auditLogsSchema = new mongoose.Schema(
     },
       entity_type: {
       type: String,
-      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice"],
+      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting"],
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },

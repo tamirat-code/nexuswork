@@ -91,6 +91,10 @@ export function validateEnv(config = env) {
   }
   if (config.maxFileSizeMB <= 0) throw new Error("MAX_FILE_SIZE_MB must be greater than zero");
 
+  if (config.webrtcTurnUrl && (!config.webrtcTurnUsername || !config.webrtcTurnCredential)) {
+    missing.push("WEBRTC_TURN_USERNAME and WEBRTC_TURN_CREDENTIAL (required with WEBRTC_TURN_URL)");
+  }
+
   if (missing.length > 0) {
     throw new Error(`Missing or invalid required environment variables: ${missing.join(", ")}`);
   }
