@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { SealMark } from "../../features/auth/components/AuthShell.jsx";
 
 const columns = [
   {
@@ -33,8 +32,8 @@ export default function Footer() {
       <div className="grid w-full gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4 sm:px-10 lg:px-16">
         <div>
           <Link to="/" className="flex items-center gap-2.5">
-            <SealMark className="h-6 w-6 text-brass" />
-            <span className="font-display text-base font-bold text-slate">NexusWork</span>
+            <img src="/logo.svg" alt="NexusWork" className="h-9 w-9 object-contain" />
+            <span className="font-display text-lg font-extrabold tracking-tight text-slate">NexusWork</span>
           </Link>
           <p className="mt-3 max-w-xs text-xs leading-relaxed text-slate-300">
             Student talent, real client work, milestones funded in escrow before anyone starts.

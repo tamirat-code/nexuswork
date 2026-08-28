@@ -57,7 +57,10 @@ export default function AppLayout({ children }) {
                 </h1>
               </div>
             ) : (
-              <span className="font-display text-sm font-bold text-slate lg:hidden">NexusWork</span>
+              <span className="flex items-center gap-2 font-display text-base font-extrabold text-slate lg:hidden">
+                <img src="/logo.svg" alt="NexusWork" className="h-8 w-8 object-contain" />
+                NexusWork
+              </span>
             )}
 
             {/* Desktop page context */}

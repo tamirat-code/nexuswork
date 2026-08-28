@@ -1,6 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
 import { navForRole } from "../../config/navigation.js";
-import { SealMark } from "../../features/auth/components/AuthShell.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import NavIcon from "./NavIcon.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
@@ -28,8 +27,8 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
       <nav aria-label="Workspace" className="flex flex-col gap-4">
         {showBrand && (
           <Link to="/" onClick={onNavigate} className="mb-2 flex items-center gap-2.5 px-2 py-1">
-            <SealMark className="h-6 w-6 text-brand" />
-            <span className="font-display text-base font-bold tracking-tight text-content-primary">
+            <img src="/logo.svg" alt="NexusWork" className="h-9 w-9 object-contain" />
+            <span className="font-display text-lg font-extrabold tracking-tight text-content-primary">
               NexusWork
             </span>
           </Link>

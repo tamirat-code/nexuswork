@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { SealMark } from "../../features/auth/components/AuthShell.jsx";
 
 export default function WorkspaceFooter() {
   const year = new Date().getFullYear();
@@ -8,9 +7,9 @@ export default function WorkspaceFooter() {
     <footer className="mt-16 border-t border-ink-300 bg-ink-50 px-6 py-8 shadow-card">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <SealMark className="h-6 w-6 text-brass" />
+          <img src="/logo.svg" alt="NexusWork" className="h-9 w-9 object-contain" />
           <div>
-            <span className="font-display text-base font-extrabold text-slate">NexusWork</span>
+            <span className="font-display text-lg font-extrabold tracking-tight text-slate">NexusWork</span>
             <p className="text-xs text-slate-400">Escrow-protected student freelance marketplace</p>
           </div>
         </div>

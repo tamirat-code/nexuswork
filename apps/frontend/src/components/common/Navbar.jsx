@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { marketingNav } from "../../config/navigation.js";
-import { SealMark } from "../../features/auth/components/AuthShell.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import Button from "../ui/Button.jsx";
 import Drawer from "../ui/Drawer.jsx";
@@ -36,16 +35,16 @@ export default function Navbar() {
 
   const linkClass = (active) =>
     cn(
-      "whitespace-nowrap shrink-0 rounded-control px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
-      active ? "font-bold text-brass bg-brass/10" : "text-slate-300 hover:text-brass hover:bg-ink-50/50"
+      "whitespace-nowrap shrink-0 rounded-control px-4 py-2.5 text-base font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
+      active ? "font-bold text-brass bg-brass/10 shadow-sm" : "text-slate-300 hover:text-brass hover:bg-ink-50/70"
     );
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95 backdrop-blur-md">
-      <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:px-8 lg:px-10">
-        <Link to="/" className="flex shrink-0 items-center gap-2.5">
-          <SealMark className="h-6 w-6 text-brass" />
-          <span className="font-display text-lg font-bold tracking-tight text-slate">
+      <div className="flex h-[84px] w-full items-center justify-between gap-5 px-4 sm:px-8 lg:px-10">
+        <Link to="/" className="group flex shrink-0 items-center gap-3">
+          <img src="/logo.svg" alt="NexusWork" className="h-12 w-12 object-contain transition-transform duration-200 group-hover:scale-105" />
+          <span className="font-display text-2xl font-extrabold tracking-[-0.02em] text-slate sm:text-[1.7rem]">
             NexusWork
           </span>
         </Link>
@@ -55,10 +54,9 @@ export default function Navbar() {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
             return (
               <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
-                <span className="flex items-center gap-1.5 whitespace-nowrap">
-                  <NavIcon name={l.icon} className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  {t(`navigation.${l.to.slice(1).split("/")[0]}`, { defaultValue: l.label })}
-                </span>
+              <span className="whitespace-nowrap">
+                {t(`navigation.${l.to.slice(1).split("/")[0]}`, { defaultValue: l.label })}
+              </span>
               </Link>
             );
           })}
@@ -116,7 +114,6 @@ export default function Navbar() {
                   active ? "bg-brass/15 font-bold text-brass" : "text-slate-300 hover:bg-ink-50"
                 )}
               >
-                <NavIcon name={l.icon} className="h-4 w-4 shrink-0" />
                 {l.label}
               </Link>
             );
