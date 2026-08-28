@@ -50,7 +50,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-1.5 md:flex">
+        <nav aria-label={t("common.mainNavigation", "Main")} className="hidden items-center gap-1.5 md:flex">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
             return (
@@ -76,12 +76,12 @@ export default function Navbar() {
             <>
               <Link to="/login">
                 <Button variant="ghost" size="sm">
-                  Log in
+                  {t("auth.login", "Log in")}
                 </Button>
               </Link>
               <Link to="/register">
                 <Button size="sm">
-                  Sign up
+                  {t("auth.signup", "Sign up")}
                 </Button>
               </Link>
             </>
@@ -93,7 +93,7 @@ export default function Navbar() {
           size="sm"
           iconOnly
           className="md:hidden"
-          aria-label="Open menu"
+          aria-label={t("common.openMenu", "Open menu")}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen(true)}
         >
@@ -101,8 +101,8 @@ export default function Navbar() {
         </Button>
       </div>
 
-      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" side="right">
-        <nav aria-label="Mobile" className="flex flex-col gap-1">
+      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title={t("common.menu", "Menu")} side="right">
+        <nav aria-label={t("common.mobileNavigation", "Mobile")} className="flex flex-col gap-1">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
             return (
@@ -127,28 +127,28 @@ export default function Navbar() {
           {user ? (
             <>
               <Link to="/dashboard" onClick={() => setMenuOpen(false)}>
-                <Button fullWidth size="md">Go to dashboard</Button>
+              <Button fullWidth size="md">{t("navigation.dashboard", "Go to dashboard")}</Button>
               </Link>
               <Link to="/notifications" onClick={() => setMenuOpen(false)}>
                 <Button variant="secondary" fullWidth size="md">
-                  Notifications
+                  {t("navigation.notifications", "Notifications")}
                 </Button>
               </Link>
             </>
           ) : (
             <>
               <Link to="/register" onClick={() => setMenuOpen(false)}>
-                <Button fullWidth size="md">Create an account</Button>
+                <Button fullWidth size="md">{t("auth.createAccount", "Create an account")}</Button>
               </Link>
               <Link to="/login" onClick={() => setMenuOpen(false)}>
                 <Button variant="secondary" fullWidth size="md">
-                  Log in
+                  {t("auth.login", "Log in")}
                 </Button>
               </Link>
             </>
           )}
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xs font-semibold text-slate-300">Theme</span>
+            <span className="text-xs font-semibold text-slate-300">{t("common.theme", "Theme")}</span>
             <ThemeToggle />
           </div>
         </div>

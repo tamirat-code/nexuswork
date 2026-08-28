@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import * as authApi from "../../services/api/auth.api.js";
 import { storage } from "../../utils/storage.utils.js";
+import i18n from "../../i18n/index.js";
 
 const AuthContext = createContext(null);
 
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
     setUser(user);
     storage.set("nw_token", token);
     storage.set("nw_user", JSON.stringify(user));
+    if (user?.preferred_language) i18n.changeLanguage(user.preferred_language);
   }, []);
 
   const clear = useCallback(() => {
@@ -70,6 +72,7 @@ export function AuthProvider({ children }) {
       const { data } = await authApi.getMe(token);
       setUser(data);
       storage.set("nw_user", JSON.stringify(data));
+      if (data?.preferred_language) i18n.changeLanguage(data.preferred_language);
     } catch (err) {
       // A cached token can outlive a password reset, session-version change,
       // user deactivation, or database refresh. Do not leave the UI looking

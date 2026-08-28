@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/shadcn/dialog.jsx";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/shadcn/form.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
+import { uploadFile } from "../../services/api/files.api.js";
 
 const proposalSchema = z.object({
   price: z.coerce.number().min(1, "Enter a price").max(1000000),
@@ -51,8 +52,10 @@ function VerificationRequiredNotice() {
   );
 }
 
-function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) {
+function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", projectStatus = "open" }) {
   const queryClient = useQueryClient();
+  const [cvFile, setCvFile] = useState(null);
+  const cvUpload = useMutation({ mutationFn: (file) => uploadFile(file, { relatedType: "cv", token }), onSuccess: (response) => setCvFile(response.data) });
   const form = useForm({
     resolver: zodResolver(proposalSchema),
     defaultValues: { price: "", delivery_time_days: 7, cover_note: "" },
@@ -74,6 +77,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) 
     onError: (err) => toast.error(err.message || "Could not submit proposal"),
   });
 
+  if (projectStatus !== "open") return <p className="rounded-control border border-ink-300 bg-ink-50 p-3 text-sm text-slate-300">This project is no longer accepting proposals.</p>;
   if (!verified) return <VerificationRequiredNotice />;
 
   return (
@@ -103,6 +107,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) 
                 <FormControl><Textarea rows={5} placeholder="Why are you the right person? What's your approach?" {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
+            <div className="space-y-1.5"><FormLabel>CV / resume (PDF or document)</FormLabel><Input type="file" accept=".pdf,.doc,.docx" onChange={(event) => event.target.files?.[0] && cvUpload.mutate(event.target.files[0])} />{cvFile ? <p className="text-xs text-escrow">Attached: {cvFile.original_name}</p> : <p className="text-xs text-slate-300">Upload your CV before submitting.</p>}</div>
             <div className="rounded-control border border-brass/20 bg-brass/5 p-3 text-xs text-slate-300">
               <p className="font-semibold text-slate">Your estimated payout</p>
               <p className="mt-1">
@@ -112,7 +117,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD" }) 
               </p>
             </div>
             <DialogFooter>
-              <Button type="submit" loading={mutation.isPending}>Submit proposal</Button>
+              <Button type="submit" loading={mutation.isPending} disabled={!cvFile || cvUpload.isPending}>Submit proposal</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -340,7 +345,7 @@ export default function ProjectDetailPage() {
               <p className="text-xs text-slate-300">Fixed price</p>
 
               {isStudent ? (
-                <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} verified={Boolean(user?.universityVerified)} currency={project.currency || "USD"} /></div>
+                <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} verified={Boolean(user?.universityVerified)} currency={project.currency || "USD"} projectStatus={project.status} /></div>
               ) : !isClientOwner && !user ? (
                 <>
                   <p className="mt-6 text-sm leading-relaxed text-slate-300">Sign in with your university email to submit a proposal.</p>

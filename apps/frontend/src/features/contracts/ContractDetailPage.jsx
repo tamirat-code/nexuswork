@@ -554,7 +554,8 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
   // payout_status "pending" and a reason. Without this check the UI just shows a
   // plain "Approved" badge and the student's wallet silently stays at $0.
   const hasPayoutFailure =
-    milestone.status === MILESTONE_STATUS.APPROVED && milestone.payout_status === "pending";
+    [MILESTONE_STATUS.APPROVED, "release_pending", "release_failed"].includes(milestone.status) &&
+    milestone.payout_status !== "paid";
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["milestones"] });
@@ -931,10 +932,14 @@ export default function ContractDetailPage() {
 
   const approveMutation = useMutation({
     mutationFn: ({ milestoneId }) => approveMilestone(milestoneId, token),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["milestones", id] });
       queryClient.invalidateQueries({ queryKey: ["submissions"] });
-      toast.success("Milestone approved — escrow funds are being released.");
+      if (response?.data?.payout_pending) {
+        toast.error(response.data.payout_message || "Milestone approved, but payout is pending. Complete the student's payout setup and retry.");
+      } else {
+        toast.success("Milestone approved — escrow funds have been released.");
+      }
     },
     onError: (error) => toast.error(error.message || "Could not approve milestone"),
   });

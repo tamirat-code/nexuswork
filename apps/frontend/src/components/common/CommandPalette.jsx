@@ -4,6 +4,7 @@ import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, Comma
 import { navForRole } from "../../config/navigation.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Search, LayoutDashboard, Briefcase, FileText, ShieldCheck, Wallet, Sparkles, Users, Building2, BarChart3, Cog, Settings, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const ICONS = {
   grid: LayoutDashboard,
@@ -30,6 +31,7 @@ export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const down = (e) => {
@@ -52,9 +54,9 @@ export default function CommandPalette() {
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <Command className="rounded-card">
-        <CommandInput placeholder="Search projects, contracts, pages…" />
+        <CommandInput placeholder={t("common.searchPages", "Search projects, contracts, pages…")} />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{t("common.noResults", "No results found.")}</CommandEmpty>
           {groups.map((group) => (
             <CommandGroup key={group.section} heading={group.section}>
               {group.items.map((item) => {
@@ -69,14 +71,14 @@ export default function CommandPalette() {
             </CommandGroup>
           ))}
           <CommandSeparator />
-          <CommandGroup heading="Account">
+          <CommandGroup heading={t("common.account", "Account")}>
             <CommandItem onSelect={() => run("/profile")}>
               <User className="h-4 w-4" />
-              <span>My profile</span>
+              <span>{t("navigation.profile", "My profile")}</span>
             </CommandItem>
             <CommandItem onSelect={() => run("/settings")}>
               <Settings className="h-4 w-4" />
-              <span>Settings</span>
+              <span>{t("navigation.settings", "Settings")}</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>

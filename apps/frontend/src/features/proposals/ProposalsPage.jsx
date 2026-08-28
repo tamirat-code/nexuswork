@@ -71,6 +71,7 @@ import {
 
 import { ROLES } from "../../constants/roles.constants.js";
 import { PROPOSAL_STATUS } from "../../constants/status.constants.js";
+import { fetchFileBlob } from "../../services/api/files.api.js";
 
 
 function EmptyProposals({ isClient }) {
@@ -114,7 +115,11 @@ function ProposalReviewDialog({
   accepting,
   rejecting,
 }) {
+  const { token } = useAuth();
   if (!proposal) return null;
+  const openCv = async () => {
+    try { const blob = await fetchFileBlob(proposal.cv_file_id._id, token); window.open(URL.createObjectURL(blob), "_blank", "noopener,noreferrer"); } catch { /* the normal error surface remains in the dialog */ }
+  };
 
   const student = proposal.student_id || {};
   const project = proposal.project_id || {};
@@ -279,6 +284,12 @@ function ProposalReviewDialog({
             </div>
 
           </section>
+
+          {proposal.cv_file_id?.url && (
+            <button type="button" onClick={openCv} className="inline-flex items-center gap-2 text-sm font-semibold text-brass hover:underline">
+              <FileText className="h-4 w-4" /> View student CV ({proposal.cv_file_id.original_name})
+            </button>
+          )}
 
 
           {/* Status */}
