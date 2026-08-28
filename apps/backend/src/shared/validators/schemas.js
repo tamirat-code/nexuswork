@@ -29,7 +29,10 @@ export const registerSchema = z
     role,
     termsAccepted: z.boolean().refine((v) => v === true, "Terms must be accepted"),
     recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
-    phone: z.string().trim().min(7, "Phone number is required").max(30).regex(/^[+0-9()\-\s]+$/, "Invalid phone number"),
+    // Phone and all role-specific profile details (university, student ID,
+    // program, enrollment status, organization name) are optional at signup —
+    // collected later from account settings so registration stays quick.
+    phone: z.string().trim().max(30).regex(/^[+0-9()\-\s]+$/, "Invalid phone number").optional().or(z.literal("")),
     university_id: optionalObjectId,
     student_id_number: z.string().trim().max(50).optional(),
     program: z.string().trim().max(150).optional(),
@@ -38,26 +41,6 @@ export const registerSchema = z
     organizationType: z
       .enum(["individual", "company", "university_department", "ngo", "government"])
       .optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.role === "student") {
-      if (!value.university_id) {
-        ctx.addIssue({ code: "custom", path: ["university_id"], message: "University is required" });
-      }
-      if (!value.student_id_number) {
-        ctx.addIssue({ code: "custom", path: ["student_id_number"], message: "Student ID number is required" });
-      }
-      if (!value.program) {
-        ctx.addIssue({ code: "custom", path: ["program"], message: "Program / field of study is required" });
-      }
-      if (!value.enrollment_status) {
-        ctx.addIssue({ code: "custom", path: ["enrollment_status"], message: "Enrollment status is required" });
-      }
-    }
-
-    if (value.role === "client" && value.organizationType && value.organizationType !== "individual" && !value.organizationName) {
-      ctx.addIssue({ code: "custom", path: ["organizationName"], message: "Organization name is required for organizational clients" });
-    }
   });
 
 export const loginSchema = z.object({
@@ -84,22 +67,12 @@ export const googleAuthSchema = z
     organizationType: z
       .enum(["individual", "company", "university_department", "ngo", "government"])
       .optional(),
+    // Role-specific profile details are optional at signup for Google sign-in
+    // too — completed later from account settings.
     university_id: optionalObjectId,
     student_id_number: z.string().trim().max(50).optional(),
     program: z.string().trim().max(150).optional(),
     enrollment_status: z.enum(["enrolled", "graduated", "on_leave", "unknown"]).optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.role === "student") {
-      if (!value.university_id) ctx.addIssue({ code: "custom", path: ["university_id"], message: "University is required" });
-      if (!value.student_id_number) ctx.addIssue({ code: "custom", path: ["student_id_number"], message: "Student ID number is required" });
-      if (!value.program) ctx.addIssue({ code: "custom", path: ["program"], message: "Program / field of study is required" });
-      if (!value.enrollment_status) ctx.addIssue({ code: "custom", path: ["enrollment_status"], message: "Enrollment status is required" });
-    }
-
-    if (value.role === "client" && value.organizationType && value.organizationType !== "individual" && !value.organizationName) {
-      ctx.addIssue({ code: "custom", path: ["organizationName"], message: "Organization name is required for organizational clients" });
-    }
   });
 
 export const changePasswordSchema = z.object({
@@ -133,6 +106,8 @@ export const updateStudentProfileSchema = z.object({
   bio: z.string().trim().max(2000).optional(),
   university_id: optionalObjectId,
   enrollment_status: z.enum(["enrolled", "graduated", "on_leave", "unknown"]).optional(),
+  student_id_number: z.string().trim().max(50).optional(),
+  program: z.string().trim().max(150).optional(),
   skills: z
     .array(
       z.object({

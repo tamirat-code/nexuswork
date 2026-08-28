@@ -82,8 +82,12 @@ export async function registerUser({
 
   let university = null;
   if (role === "student") {
-    university = await University.findById(university_id);
-    if (!university) throw new ValidationError("Selected university was not found");
+    // University and the rest of the student profile are optional at signup —
+    // students can complete them later from their profile settings.
+    if (university_id) {
+      university = await University.findById(university_id);
+      if (!university) throw new ValidationError("Selected university was not found");
+    }
   } else if (role === "university_staff") {
     const domain = email.toLowerCase().split("@")[1];
     university = await University.findOne({ domain });
@@ -100,7 +104,7 @@ export async function registerUser({
     email,
     password_hash,
     name,
-    phone: phone.trim(),
+    phone: (phone || "").trim(),
     role,
     auth_provider: "local",
     terms_accepted_at: new Date(),
@@ -111,10 +115,10 @@ export async function registerUser({
     await Wallet.create({ user_id: user._id });
     await StudentProfile.create({
       user_id: user._id,
-      university_id,
-      student_id_number: student_id_number.trim(),
-      program: program.trim(),
-      enrollment_status,
+      ...(university_id ? { university_id } : {}),
+      student_id_number: (student_id_number || "").trim(),
+      program: (program || "").trim(),
+      enrollment_status: enrollment_status || "unknown",
       verification_status: "pending",
     });
   } else if (role === "client") {
@@ -340,14 +344,19 @@ export async function loginOrRegisterWithGoogle(
   } else {
     await Wallet.create({ user_id: user._id });
     if (role === "student") {
-      const studentUniversity = await University.findById(university_id);
-      if (!studentUniversity) throw new ValidationError("Selected university was not found");
+      // University, student ID, program, and enrollment status are optional at
+      // sign-up — students can fill these in later from their profile settings.
+      let studentUniversity = null;
+      if (university_id) {
+        studentUniversity = await University.findById(university_id);
+        if (!studentUniversity) throw new ValidationError("Selected university was not found");
+      }
       await StudentProfile.create({
         user_id: user._id,
-        university_id,
-        student_id_number: student_id_number.trim(),
-        program: program.trim(),
-        enrollment_status,
+        ...(university_id ? { university_id } : {}),
+        student_id_number: (student_id_number || "").trim(),
+        program: (program || "").trim(),
+        enrollment_status: enrollment_status || "unknown",
         verification_status: "pending",
       });
     }

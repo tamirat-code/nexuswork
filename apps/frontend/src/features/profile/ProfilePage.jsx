@@ -21,6 +21,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
+import { getMyStudentProfile, updateMyStudentProfile } from "../../services/api/students.api.js";
 import { listUniversities } from "../../services/api/universities.api.js";
 import {
   downloadCredentialCardPdf,
@@ -44,6 +45,13 @@ const EMPTY = {
   website: "",
 };
 
+const ENROLLMENT_STATUSES = [
+  { value: "enrolled", label: "Currently enrolled" },
+  { value: "on_leave", label: "Currently on leave" },
+  { value: "graduated", label: "Graduated" },
+  { value: "unknown", label: "Prefer not to say" },
+];
+
 const fromUser = (user) => ({
   ...EMPTY,
   ...Object.fromEntries(Object.keys(EMPTY).map((k) => [k, user?.[k] ?? ""])),
@@ -61,9 +69,28 @@ export default function ProfilePage() {
   const [touched, setTouched] = useState({});
   const [summary, setSummary] = useState("");
 
+  const isStudent = user?.role === "student";
+
+  // Enrollment status lives on the separate StudentProfile record (not the
+  // User document), and isn't collected at signup anymore — so it's fetched
+  // and saved independently here, the one place a student can set it.
+  const studentProfileQuery = useQuery({
+    queryKey: ["my-student-profile"],
+    queryFn: () => getMyStudentProfile(token),
+    enabled: isStudent && !!token,
+  });
+  const savedEnrollmentStatus = studentProfileQuery.data?.data?.enrollment_status || "unknown";
+  const [enrollmentStatus, setEnrollmentStatus] = useState(savedEnrollmentStatus);
+
+  useEffect(() => {
+    setEnrollmentStatus(savedEnrollmentStatus);
+  }, [savedEnrollmentStatus]);
+
   const dirty = useMemo(
-    () => Object.keys(EMPTY).some((k) => (form[k] ?? "") !== (initial[k] ?? "")),
-    [form, initial]
+    () =>
+      Object.keys(EMPTY).some((k) => (form[k] ?? "") !== (initial[k] ?? "")) ||
+      (isStudent && enrollmentStatus !== savedEnrollmentStatus),
+    [form, initial, isStudent, enrollmentStatus, savedEnrollmentStatus]
   );
   const completeness = useMemo(() => profileCompleteness(form), [form]);
 
@@ -80,12 +107,18 @@ export default function ProfilePage() {
     setErrors(validateProfile(form));
   };
 
+  const qc = useQueryClient();
+
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = Object.fromEntries(
         Object.entries(form).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])
       );
-      return updateMe(payload, token);
+      const result = await updateMe(payload, token);
+      if (isStudent && enrollmentStatus !== savedEnrollmentStatus) {
+        await updateMyStudentProfile({ enrollment_status: enrollmentStatus }, token);
+      }
+      return result;
     },
     onSuccess: (res) => {
       const next = res?.data ?? { ...user, ...form };
@@ -93,6 +126,7 @@ export default function ProfilePage() {
       setForm(fromUser(next));
       setTouched({});
       setSummary("");
+      if (isStudent) qc.invalidateQueries({ queryKey: ["my-student-profile"] });
       toast.show("Profile updated.");
     },
     onError: (err) => {
@@ -144,6 +178,7 @@ export default function ProfilePage() {
 
   function reset() {
     setForm(initial);
+    setEnrollmentStatus(savedEnrollmentStatus);
     setErrors({});
     setTouched({});
     setSummary("");
@@ -296,6 +331,19 @@ export default function ProfilePage() {
                       maxLength={PROFILE_LIMITS.university}
                     />
                   </div>
+
+                  {isStudent && (
+                    <Select
+                      id="profile-enrollment-status"
+                      label="Enrollment status"
+                      optional
+                      value={enrollmentStatus}
+                      onChange={(e) => setEnrollmentStatus(e.target.value)}
+                      options={ENROLLMENT_STATUSES}
+                      disabled={studentProfileQuery.isLoading}
+                      hint="Shown to clients and used by your university for verification."
+                    />
+                  )}
 
                   <Input
                     id="profile-skills"

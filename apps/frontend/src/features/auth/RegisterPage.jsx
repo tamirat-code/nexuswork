@@ -52,11 +52,13 @@ export default function RegisterPage() {
     universityId: "",
     studentIdNumber: "",
     program: "",
-    enrollmentStatus: "enrolled",
+    enrollmentStatus: "",
     phone: "",
   });
 
+ 
   const [step, setStep] = useState(1);
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState(null);
@@ -78,19 +80,25 @@ export default function RegisterPage() {
     }
   };
 
-  function validateRoleFields(next = {}) {
+  // Role-specific fields (university, student ID, program, enrollment status,
+  // organization name) are all optional at signup — no validation blocks
+  // submission on them. Users complete them later from their profile.
+  function roleFieldsPayload() {
     if (role === "student") {
-      if (!form.universityId) next.universityId = "Please select your university";
-      if (!form.studentIdNumber.trim()) next.studentIdNumber = "Enter your student ID number";
-      if (!form.program.trim()) next.program = "Enter your program or field of study";
-      if (!form.enrollmentStatus) next.enrollmentStatus = "Select your enrollment status";
+      return {
+        ...(form.universityId ? { university_id: form.universityId } : {}),
+        ...(form.studentIdNumber.trim() ? { student_id_number: form.studentIdNumber.trim() } : {}),
+        ...(form.program.trim() ? { program: form.program.trim() } : {}),
+        ...(form.enrollmentStatus ? { enrollment_status: form.enrollmentStatus } : {}),
+      };
     }
-
-    if (role === "client" && form.organizationType !== "individual" && !form.organizationName.trim()) {
-      next.organizationName = "Enter your organization name";
+    if (role === "client") {
+      return {
+        organizationName: form.organizationName.trim() || undefined,
+        organizationType: form.organizationType,
+      };
     }
-
-    return next;
+    return {};
   }
 
   function validatePrimaryStep() {
@@ -107,13 +115,6 @@ export default function RegisterPage() {
     return Object.keys(next).length === 0;
   }
 
-  function validateProfileStep() {
-    const next = {};
-    validateRoleFields(next);
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
   function validate() {
     const next = {};
 
@@ -124,10 +125,9 @@ export default function RegisterPage() {
     if (pwIssue) next.password = pwIssue;
     if (form.confirmPassword !== form.password) next.confirmPassword = "Passwords don't match";
 
-    validateRoleFields(next);
-
-    if (!form.phone.trim()) next.phone = "Enter your phone number";
-    else if (!/^[+0-9()\-\s]{7,30}$/.test(form.phone.trim())) next.phone = "Enter a valid phone number";
+    if (form.phone.trim() && !/^[+0-9()\-\s]{7,30}$/.test(form.phone.trim())) {
+      next.phone = "Enter a valid phone number";
+    }
 
     if (!termsAccepted) {
       next.terms = "You must accept the Terms of Service and Privacy Policy";
@@ -141,9 +141,6 @@ export default function RegisterPage() {
 
   function validateGoogleRegistration() {
     const next = {};
-    validateRoleFields(next);
-    if (!form.phone.trim()) next.phone = "Enter your phone number";
-    else if (!/^[+0-9()\-\s]{7,30}$/.test(form.phone.trim())) next.phone = "Enter a valid phone number";
     if (!termsAccepted) next.terms = "You must accept the Terms of Service and Privacy Policy";
     setErrors((prev) => ({ ...prev, ...next }));
     return Object.keys(next).length === 0;
@@ -163,20 +160,7 @@ export default function RegisterPage() {
         phone: form.phone.trim(),
         termsAccepted,
         recaptchaToken,
-        ...(role === "student"
-          ? {
-              university_id: form.universityId,
-              student_id_number: form.studentIdNumber.trim(),
-              program: form.program.trim(),
-              enrollment_status: form.enrollmentStatus,
-            }
-          : {}),
-        ...(role === "client"
-          ? {
-              organizationName: form.organizationName.trim() || undefined,
-              organizationType: form.organizationType,
-            }
-          : {}),
+        ...roleFieldsPayload(),
       });
 
       show("Account created. Check your email to verify it.");
@@ -198,22 +182,9 @@ export default function RegisterPage() {
     try {
       const result = await loginWithGoogle(credential, {
         role,
-        phone: form.phone.trim(),
+        phone: form.phone.trim() || undefined,
         termsAccepted,
-        ...(role === "student"
-          ? {
-              university_id: form.universityId,
-              student_id_number: form.studentIdNumber.trim(),
-              program: form.program.trim(),
-              enrollment_status: form.enrollmentStatus,
-            }
-          : {}),
-        ...(role === "client"
-          ? {
-              organizationName: form.organizationName.trim() || undefined,
-              organizationType: form.organizationType,
-            }
-          : {}),
+        ...roleFieldsPayload(),
       });
 
       show(result.isNewUser ? "Account created with Google." : "Welcome back.");
@@ -228,7 +199,6 @@ export default function RegisterPage() {
   function handleRoleChange(nextRole) {
     setRole(nextRole);
     setErrors({});
-    setStep(1);
   }
 
   return (
@@ -246,21 +216,20 @@ export default function RegisterPage() {
       }
     >
       <div className="space-y-5">
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          {[1, 2, 3].map((item) => (
-            <div
-              key={item}
-              className={`h-1.5 flex-1 rounded-full ${step >= item ? "bg-cyan-400" : "bg-ink-300"}`}
-            />
-          ))}
-        </div>
-        <div className="flex items-center justify-between text-xs text-slate-300">
-          <span className={step === 1 ? "font-semibold text-brass" : ""}>1. Primary</span>
-          <span className={step === 2 ? "font-semibold text-brass" : ""}>2. Profile</span>
-          <span className={step === 3 ? "font-semibold text-brass" : ""}>3. Finish</span>
-        </div>
-
         <RolePicker value={role} onChange={handleRoleChange} />
+
+        <TermsCheckbox checked={termsAccepted} onChange={setTermsAccepted} error={errors.terms} />
+
+        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading} />
+        <p className="text-center text-xs text-slate-400">
+          Sign up with Google and you're in — no extra fields needed right now.
+        </p>
+
+        <div className="flex items-center gap-3 text-xs text-slate-300">
+          <div className="h-px flex-1 bg-ink-300" />
+          or with email
+          <div className="h-px flex-1 bg-ink-300" />
+        </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {step === 1 && (
@@ -320,18 +289,40 @@ export default function RegisterPage() {
 
           {step === 2 && (
             <>
-              {role === "student" && (
+              <Input
+                label="Phone number"
+                optional
+                type="tel"
+                value={form.phone}
+                onChange={update("phone")}
+                error={errors.phone}
+                autoComplete="tel"
+                placeholder="e.g. +251 9XX XXX XXX"
+                maxLength={30}
+                hint="You can add this later from your profile if you'd rather skip it now."
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowOptionalDetails((v) => !v)}
+                className="text-xs font-medium text-cyan-400 hover:text-cyan-300"
+              >
+                {showOptionalDetails ? "Hide" : "Add"} {role === "student" ? "student" : "client"} details (optional)
+              </button>
+
+              {showOptionalDetails && role === "student" && (
                 <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
                   <div>
                     <p className="text-sm font-semibold text-slate">Student information</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                      These details create your student profile and are used later for university verification.
+                      Optional for now — used later for university verification. You can fill this in
+                      any time from your profile settings.
                     </p>
                   </div>
 
                   <Select
                     label="University"
-                    required
+                    optional
                     placeholder={universitiesLoading ? "Loading universities..." : "Select your university"}
                     value={form.universityId}
                     onChange={update("universityId")}
@@ -351,7 +342,7 @@ export default function RegisterPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
                       label="Student ID number"
-                      required
+                      optional
                       value={form.studentIdNumber}
                       onChange={update("studentIdNumber")}
                       error={errors.studentIdNumber}
@@ -361,7 +352,7 @@ export default function RegisterPage() {
                     />
                     <Select
                       label="Enrollment status"
-                      required
+                      optional
                       value={form.enrollmentStatus}
                       onChange={update("enrollmentStatus")}
                       options={ENROLLMENT_STATUSES}
@@ -371,7 +362,7 @@ export default function RegisterPage() {
 
                   <Input
                     label="Program / field of study"
-                    required
+                    optional
                     value={form.program}
                     onChange={update("program")}
                     error={errors.program}
@@ -381,18 +372,18 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              {role === "client" && (
+              {showOptionalDetails && role === "client" && (
                 <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
                   <div>
                     <p className="text-sm font-semibold text-slate">Client information</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                      Tell students whether you are hiring personally or on behalf of an organization.
+                      Optional — tell students whether you're hiring personally or on behalf of an
+                      organization. You can add this later from your profile settings.
                     </p>
                   </div>
 
                   <Select
                     label="Client type"
-                    required
                     value={form.organizationType}
                     onChange={update("organizationType")}
                     options={CLIENT_ORGANIZATION_TYPES}
@@ -402,7 +393,7 @@ export default function RegisterPage() {
                   {form.organizationType !== "individual" && (
                     <Input
                       label="Organization name"
-                      required
+                      optional
                       value={form.organizationName}
                       onChange={update("organizationName")}
                       error={errors.organizationName}
@@ -413,35 +404,6 @@ export default function RegisterPage() {
                   )}
                 </div>
               )}
-
-              <Button
-                type="button"
-                className="w-full"
-                size="lg"
-                onClick={() => {
-                  if (validateProfileStep()) setStep(3);
-                }}
-              >
-                Next
-              </Button>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <Input
-                label="Phone number"
-                required
-                type="tel"
-                value={form.phone}
-                onChange={update("phone")}
-                error={errors.phone}
-                autoComplete="tel"
-                placeholder="e.g. +251 9XX XXX XXX"
-                maxLength={30}
-              />
-
-              <TermsCheckbox checked={termsAccepted} onChange={setTermsAccepted} error={errors.terms} />
 
               <div>
                 <ReCAPTCHA
@@ -465,7 +427,7 @@ export default function RegisterPage() {
                   size="lg"
                   onClick={() => {
                     setErrors({});
-                    setStep(2);
+                    setStep(1);
                   }}
                 >
                   Back
@@ -477,14 +439,6 @@ export default function RegisterPage() {
             </>
           )}
         </form>
-
-        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading || step !== 3} />
-
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          <div className="h-px flex-1 bg-ink-300" />
-          or with email
-          <div className="h-px flex-1 bg-ink-300" />
-        </div>
       </div>
     </AuthShell>
   );

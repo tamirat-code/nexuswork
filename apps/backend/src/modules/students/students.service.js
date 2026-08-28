@@ -106,7 +106,7 @@ export async function listStudentDirectory({ search = "", department = "", limit
 }
 
 export async function updateProfile(userId, updates) {
-  const allowed = ["bio", "skills", "university_id", "enrollment_status"];
+  const allowed = ["bio", "skills", "university_id", "enrollment_status", "student_id_number", "program"];
   const patch = {};
   for (const key of allowed) if (updates[key] !== undefined) patch[key] = updates[key];
 
