@@ -9,6 +9,7 @@ import Strands from "../../components/Strands.jsx";
 import ProjectCard from "../../components/cards/ProjectCard.jsx";
 import Spinner from "../../components/loaders/Spinner.jsx";
 import { listProjects } from "../../services/api/projects.api.js";
+import { formatCurrency } from "../../utils/currency.utils.js";
 
 import Button from "../../components/ui/Button.jsx";
 
@@ -327,8 +328,15 @@ function HeroTestimonial() {
 }
 
 function HeroMarketplaceVisual() {
+  const { data } = useQuery({
+    queryKey: ["projects", "hero-preview"],
+    queryFn: () => listProjects(),
+  });
+  const project = data?.data?.[0];
+  const skills = project?.required_skills?.slice(0, 3) || ["React", "UX research", "2–3 weeks"];
+
   return (
-    <div className="relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#286174] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.28)] sm:p-6" aria-label="NexusWork product preview">
+    <div className="hero-marketplace-visual relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#286174] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.28)] sm:p-6" aria-label="NexusWork product preview">
       <div className="pointer-events-none absolute inset-0 opacity-35" aria-hidden="true">
         <Strands colors={["#00c8b4", "#2788b0", "#7ce3d1"]} count={4} speed={0.3} opacity={0.7} scale={1.2} glow={1.4} intensity={0.45} />
       </div>
@@ -346,16 +354,16 @@ function HeroMarketplaceVisual() {
       </div>
 
       <div className="relative z-10 mt-5 grid gap-3 sm:grid-cols-[1fr_0.9fr]">
-        <Link to="/projects" className="group rounded-control border border-white/10 bg-[#0a3042]/90 p-4 transition-colors hover:border-[#62d9cc]/70 hover:bg-[#0d394b]">
+        <Link to={project?._id ? `/projects/${project._id}` : "/projects"} className="group rounded-control border border-white/10 bg-[#0a3042]/90 p-4 transition-colors hover:border-[#62d9cc]/70 hover:bg-[#0d394b]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Example brief</p>
-              <p className="mt-1.5 text-sm font-bold text-white">Build a student community hub</p>
+              <p className="mt-1.5 line-clamp-2 text-sm font-bold text-white">{project?.title || "Explore open student projects"}</p>
             </div>
             <ArrowUpRight className="h-4 w-4 text-[#6ce1d0] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </div>
           <div className="mt-5 flex flex-wrap gap-1.5">
-            {['React', 'UX research', '2–3 weeks'].map((tag) => <span key={tag} className="rounded bg-white/8 px-2 py-1 text-[10px] font-medium text-[#b7d6d8]">{tag}</span>)}
+            {skills.map((tag) => <span key={tag} className="rounded bg-white/8 px-2 py-1 text-[10px] font-medium text-[#b7d6d8]">{tag}</span>)}
           </div>
           <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-3">
             <span className="text-[11px] text-[#8db6bf]">Explore real open briefs</span>
@@ -368,7 +376,7 @@ function HeroMarketplaceVisual() {
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Illustrative milestone</p>
             <ShieldCheck className="h-4 w-4 text-[#72e1c8]" />
           </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-white">$600.00</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-white">{project ? formatCurrency(project.budget) : "Protected escrow"}</p>
           <p className="mt-1 text-[11px] text-[#9ac6c6]">Funds stay protected until approval</p>
           <div className="mt-5 space-y-2.5">
             {[['Brief agreed', true], ['Student working', true], ['Release on approval', false]].map(([label, done]) => (
@@ -390,35 +398,44 @@ function HeroMarketplaceVisual() {
   );
 }
 
-function HeroVideoBackground() {
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduceMotion(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener?.("change", update);
-    return () => mediaQuery.removeEventListener?.("change", update);
-  }, []);
+function HeroTrustBar() {
+  const { data } = useQuery({ queryKey: ["projects", "hero-preview"], queryFn: () => listProjects() });
+  const project = data?.data?.[0];
+  const client = project?.client_id?.client_profile?.organization_name || project?.client_id?.name;
+  const context = project?.title ? `Live brief: ${project.title}` : "Students, clients and universities moving work forward together.";
+  const initials = (client || "NW")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
   return (
+    <div className="flex w-full max-w-[570px] items-center gap-3 rounded-control border border-border-subtle bg-surface px-4 py-3 shadow-card">
+      <div className="flex -space-x-2" aria-hidden="true">
+        <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#b7e2d8] text-[9px] font-bold text-[#17695f]">{initials}</span>
+        <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#c7d9ef] text-[9px] font-bold text-[#31557f]">ST</span>
+      </div>
+      <p className="text-xs leading-relaxed text-content-secondary"><span className="font-bold text-content-primary">{client ? `${client} is hiring.` : "Built on trust."}</span> {context}</p>
+      <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-brand" />
+    </div>
+  );
+}
+
+function HeroVideoBackground() {
+  return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      {!reduceMotion && (
-        <video
-          className="absolute inset-0 h-full w-full object-cover object-[68%_50%] opacity-100 saturate-150 contrast-125"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          poster="/hero-poster.svg"
-        >
-          <source src="/videos/nexuswork-hero-background.mp4" type="video/mp4" />
-        </video>
-      )}
-      <div className="hero-video-overlay absolute inset-0" />
-      <div className="hero-video-vignette absolute inset-0" />
-      <div className="hero-video-grid absolute inset-0" />
+      <video
+        className="absolute inset-0 h-full w-full object-cover object-[68%_50%] opacity-100 saturate-150 contrast-125"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        poster="/hero-poster.svg"
+      >
+        <source src="/videos/herobg.mp4" type="video/mp4" />
+      </video>
     </div>
   );
 }
@@ -428,8 +445,6 @@ export default function LandingPage() {
     <div className="bg-canvas">
       <section className="relative overflow-hidden border-b border-border-subtle bg-canvas" aria-label="Hero">
         <HeroVideoBackground />
-        <div className="pointer-events-none absolute -left-24 top-20 z-[1] h-72 w-72 rounded-full bg-brand/10 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute right-0 top-0 z-[1] h-96 w-96 rounded-full bg-[#c9e8f0]/35 blur-3xl" aria-hidden="true" />
 
         <motion.div
           className="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-[1440px] items-center gap-12 px-6 py-14 sm:px-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:px-14 lg:py-16 xl:px-20"
@@ -438,9 +453,6 @@ export default function LandingPage() {
           variants={STAGGER_CONTAINER}
         >
           <div className="hero-copy-panel max-w-xl text-center lg:text-left">
-            <motion.div variants={FADE_UP} className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-dark">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand" /> The student work marketplace
-            </motion.div>
             <motion.h1
               variants={FADE_UP}
               className="font-display text-[2.7rem] font-extrabold leading-[1.03] tracking-[-0.04em] text-content-primary sm:text-[4.25rem]"
@@ -483,11 +495,7 @@ export default function LandingPage() {
 
           <motion.div variants={FADE_UP} className="flex w-full flex-col items-center gap-4 lg:items-end">
             <HeroMarketplaceVisual />
-            <div className="flex w-full max-w-[570px] items-center gap-3 rounded-control border border-border-subtle bg-surface px-4 py-3 shadow-card">
-              <div className="flex -space-x-2" aria-hidden="true"><span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#b7e2d8] text-[9px] font-bold text-[#17695f]">MR</span><span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#c7d9ef] text-[9px] font-bold text-[#31557f]">DO</span><span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#f5d6af] text-[9px] font-bold text-[#81542b]">PC</span></div>
-              <p className="text-xs leading-relaxed text-content-secondary"><span className="font-bold text-content-primary">Built on trust.</span> Students, clients and universities moving work forward together.</p>
-              <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-brand" />
-            </div>
+            <HeroTrustBar />
           </motion.div>
         </motion.div>
       </section>
