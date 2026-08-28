@@ -33,6 +33,7 @@ const userSchema = new mongoose.Schema(
       push: { type: Boolean, default: true },
     },
     preferred_language: { type: String, enum: ["en", "am", "af"], default: "en" },
+    cv_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File", default: null },
     // True only once a platform admin has approved this user's StaffVerification
     // request — matching an email domain at registration is never sufficient.
     staffVerified: { type: Boolean, default: false },

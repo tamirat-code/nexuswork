@@ -3,6 +3,7 @@ import { ValidationError, NotFoundError } from "../../shared/exceptions/AppError
 import * as filesService from "./files.service.js";
 import { validateUploadedFile } from "./files.upload.js";
 import { assertFileAccess, assertFileUploadAccess } from "../../shared/authorization/resource-authorization.js";
+import User from "../users/users.model.js";
 
 const VALID_RELATED_TYPES = new Set([
   "project_attachment",
@@ -12,6 +13,7 @@ const VALID_RELATED_TYPES = new Set([
   "contract",
   "verification_document",
   "staff_verification_document",
+  "cv",
   "other",
 ]);
 
@@ -50,6 +52,10 @@ export const uploadFile = asyncHandler(async (req, res) => {
     related_id: relatedId,
     auditContext: { actor: req.user, correlationId: req.correlationId },
   });
+
+  if (relatedType === "cv") {
+    await User.findByIdAndUpdate(req.user._id, { cv_file_id: file._id });
+  }
 
   res.status(201).json({ success: true, data: file });
 });

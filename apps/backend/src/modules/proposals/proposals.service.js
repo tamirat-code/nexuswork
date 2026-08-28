@@ -85,20 +85,21 @@ export async function submitProposal(
   const student =
     await User.findById(studentId)
       .select(
-        "name email university universityVerified"
+        "name email university universityVerified cv_file_id"
       )
       .lean();
 
 
-  if (
-    !student ||
-    !student.universityVerified
-  ) {
+  if (!student || !student.universityVerified) {
 
     throw new ForbiddenError(
       "Your university verification must be approved before you can submit proposals"
     );
 
+  }
+
+  if (!student.cv_file_id) {
+    throw new ValidationError("Upload your CV from your profile before submitting a proposal");
   }
 
 
@@ -108,6 +109,7 @@ export async function submitProposal(
       student_id: studentId,
       price_minor: proposalMoney.amountMinor,
       currency: proposalMoney.currency,
+      cv_file_id: student.cv_file_id,
     });
 
 
@@ -202,6 +204,7 @@ export async function listForProject(
       ].join(" ")
     )
 
+    .populate("cv_file_id", "original_name url mimetype size")
     .populate(
       "project_id",
       [
@@ -222,6 +225,7 @@ export async function listForProject(
 
 export async function listForStudent(studentId) {
   return Proposal.find({ student_id: studentId })
+    .populate("cv_file_id", "original_name url mimetype size")
     .populate(
       "project_id",
       ["title", "description", "budget", "deadline", "status", "currency"].join(" ")

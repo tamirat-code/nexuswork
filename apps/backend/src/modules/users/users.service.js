@@ -33,6 +33,7 @@ export async function getPrivateProfile(userId) {
     universityVerified,
     notification_prefs,
     preferred_language,
+    cv_file_id,
   } = user;
   return {
     id: _id,
@@ -50,6 +51,7 @@ export async function getPrivateProfile(userId) {
     universityVerified,
     notification_prefs,
     preferred_language,
+    cv_file_id,
   };
 }
 

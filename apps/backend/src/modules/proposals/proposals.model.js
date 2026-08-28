@@ -9,6 +9,9 @@ const proposalSchema = new mongoose.Schema(
     currency: { type: String, lowercase: true, trim: true },
     delivery_time_days: { type: Number, required: true },
     cover_note: { type: String, required: true },
+    // Optional for legacy proposals created before CV attachments existed.
+    // New submissions are enforced in proposals.service.js.
+    cv_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File", default: null },
     status: {
       type: String,
       enum: ["pending", "accepted", "rejected", "withdrawn"],
