@@ -1,6 +1,7 @@
 
 import StudentProfile from "./students.model.js";
 import User from "../users/users.model.js";
+import Contract from "../contracts/contracts.model.js";
 import { NotFoundError } from "../../shared/exceptions/AppError.js";
 
 export async function getProfileByUserId(userId) {
@@ -15,6 +16,10 @@ export async function getPublicStudentProfile(userId) {
   if (!user) throw new NotFoundError("Student not found");
 
   const profile = await StudentProfile.findOne({ user_id: userId }).lean();
+  const [totalContracts, completedContracts] = await Promise.all([
+    Contract.countDocuments({ student_id: userId }),
+    Contract.countDocuments({ student_id: userId, status: "completed" }),
+  ]);
 
   const skills = profile?.skills?.length
     ? profile.skills
@@ -39,6 +44,8 @@ export async function getPublicStudentProfile(userId) {
     program: profile?.program || "",
     skills,
     memberSince: user.createdAt,
+    totalContracts,
+    completedContracts,
   };
 }
 

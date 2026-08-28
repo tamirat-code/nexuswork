@@ -40,7 +40,7 @@ export async function submitReview(contractId, reviewerId, { reviewee_id, rating
 
 export async function listForUser(userId, { limit = 50, skip = 0 } = {}) {
   const [reviews, total] = await Promise.all([
-    Review.find({ reviewee_id: userId }).sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)).lean(),
+    Review.find({ reviewee_id: userId }).populate("reviewer_id", "name avatarUrl role").sort({ createdAt: -1 }).skip(Number(skip)).limit(Number(limit)).lean(),
     Review.countDocuments({ reviewee_id: userId }),
   ]);
   return { reviews, total, limit: Number(limit), skip: Number(skip) };

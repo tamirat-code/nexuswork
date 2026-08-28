@@ -113,6 +113,7 @@ export default function ReviewsSection({ userId, contractId, showForm = false })
                 <div className="flex items-center gap-2">
                   <StarRating value={r.rating} readOnly />
                   <span className="font-mono text-sm text-slate-300">{r.rating}.0</span>
+                  {r.reviewer_id?.name && <span className="text-sm font-semibold text-slate">{r.reviewer_id.name}</span>}
                 </div>
                 <span className="text-xs text-slate-300">{formatDate(r.createdAt)}</span>
               </div>

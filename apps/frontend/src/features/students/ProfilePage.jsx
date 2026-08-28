@@ -231,10 +231,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="border-t border-ink-300 px-4 pt-4 sm:border-t-0 sm:pt-0">
-                  <p className="text-lg font-semibold">
-                    {profile.memberSince ? formatDate(profile.memberSince) : "—"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">Member since</p>
+                  <p className="text-lg font-semibold">{profile.completedContracts ?? 0}</p>
+                  <p className="mt-1 text-xs text-slate-500">Completed contracts</p>
                 </div>
               </div>
             </div>
