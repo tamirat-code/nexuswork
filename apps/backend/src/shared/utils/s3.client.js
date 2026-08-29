@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { storageConfig } from "../../config/storage.config.js";
 
 const region = storageConfig.region;
@@ -23,12 +24,18 @@ export async function uploadToS3({ bucket, key, body, contentType }) {
     ContentType: contentType,
   });
   await client.send(cmd);
-
-  // Construct a sensible public URL.
   if (endpoint) {
-    // If using a custom endpoint (e.g. MinIO), use path-style URL
-    return `${endpoint.replace(/\/$/, "")}/${bucket}/${encodeURIComponent(key)}`;
+    const getCmd = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+    return getSignedUrl(client, getCmd, { expiresIn: 86400 });
   }
-  // Default S3 URL
-  return `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
+
+
+  const getCmd = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  return getSignedUrl(client, getCmd, { expiresIn: 86400 });
 }
