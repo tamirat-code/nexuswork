@@ -7,26 +7,17 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { storageConfig } from "../../config/storage.config.js";
 
-const region = storageConfig.region;
-const endpoint = storageConfig.endpoint;
-const forcePathStyle = storageConfig.forcePathStyle;
-
-if (!region) {
-  throw new Error("S3 region is not configured");
-}
-
-if (!storageConfig.accessKey || !storageConfig.secretKey) {
-  throw new Error("S3 credentials are not configured");
-}
-
 const client = new S3Client({
-  region,
-  endpoint: endpoint || undefined,
-  forcePathStyle,
-  credentials: {
-    accessKeyId: storageConfig.accessKey,
-    secretAccessKey: storageConfig.secretKey,
-  },
+  region: storageConfig.region,
+  endpoint: storageConfig.endpoint || undefined,
+  forcePathStyle: storageConfig.forcePathStyle,
+  credentials:
+    storageConfig.accessKey && storageConfig.secretKey
+      ? {
+          accessKeyId: storageConfig.accessKey,
+          secretAccessKey: storageConfig.secretKey,
+        }
+      : undefined,
 });
 
 export async function uploadToS3({
@@ -35,6 +26,14 @@ export async function uploadToS3({
   body,
   contentType,
 }) {
+  if (!storageConfig.region) {
+    throw new Error("S3 region is not configured");
+  }
+
+  if (!storageConfig.accessKey || !storageConfig.secretKey) {
+    throw new Error("S3 credentials are not configured");
+  }
+
   if (!bucket) {
     throw new Error("S3 bucket is required");
   }
