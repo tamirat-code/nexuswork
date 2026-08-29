@@ -51,17 +51,19 @@ describe("uploadToS3", () => {
     );
   });
 
-  it("uploads an object without a canned ACL and returns a signed URL", async () => {
-    await expect(
-      uploadToS3({
-        bucket: "avatars",
-        key: "avatars/user-1.png",
-        body: Buffer.from("image"),
-        contentType: "image/png",
-      })
-    ).resolves.toBe(
+  it("uploads an object without sending a per-object canned ACL", async () => {
+    const result = await uploadToS3({
+      bucket: "avatars",
+      key: "avatars/user-1.png",
+      body: Buffer.from("image"),
+      contentType: "image/png",
+    });
+
+    expect(result).toBe(
       "https://s3.us-east-005.backblazeb2.com/avatars/avatars%2Fuser-1.png"
     );
+
+    expect(PutObjectCommand).toHaveBeenCalledTimes(1);
 
     expect(PutObjectCommand).toHaveBeenCalledWith({
       Bucket: "avatars",
@@ -70,17 +72,61 @@ describe("uploadToS3", () => {
       ContentType: "image/png",
     });
 
+    expect(PutObjectCommand.mock.calls[0][0]).not.toHaveProperty("ACL");
+
+    expect(send).toHaveBeenCalledTimes(1);
+
+    expect(GetObjectCommand).toHaveBeenCalledTimes(1);
+
     expect(GetObjectCommand).toHaveBeenCalledWith({
       Bucket: "avatars",
       Key: "avatars/user-1.png",
     });
 
+    expect(getSignedUrl).toHaveBeenCalledTimes(1);
+
     expect(getSignedUrl).toHaveBeenCalledWith(
       expect.anything(),
-      expect.any(GetObjectCommand),
+      expect.anything(),
       {
         expiresIn: 86400,
       }
     );
+  });
+
+  it("uses the same bucket and key for the signed GET URL", async () => {
+    await uploadToS3({
+      bucket: "nexuswork",
+      key: "avatars/user-2.png",
+      body: Buffer.from("avatar"),
+      contentType: "image/png",
+    });
+
+    expect(GetObjectCommand).toHaveBeenCalledWith({
+      Bucket: "nexuswork",
+      Key: "avatars/user-2.png",
+    });
+  });
+
+  it("rejects when the bucket is missing", async () => {
+    await expect(
+      uploadToS3({
+        bucket: "",
+        key: "avatars/user-3.png",
+        body: Buffer.from("image"),
+        contentType: "image/png",
+      })
+    ).rejects.toThrow("S3 bucket is required");
+  });
+
+  it("rejects when the object key is missing", async () => {
+    await expect(
+      uploadToS3({
+        bucket: "avatars",
+        key: "",
+        body: Buffer.from("image"),
+        contentType: "image/png",
+      })
+    ).rejects.toThrow("S3 object key is required");
   });
 });
