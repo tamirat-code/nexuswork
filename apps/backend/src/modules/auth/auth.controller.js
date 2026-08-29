@@ -1,6 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
 import * as authService from "./auth.service.js";
+import { clearAuthCookies, setAuthCookies } from "./auth.cookies.js";
 
 function toPublicUser(user) {
   return {
@@ -21,7 +22,8 @@ function toPublicUser(user) {
 export const register = asyncHandler(async (req, res) => {
   requireFields(req.body, ["email", "password", "name", "role", "termsAccepted", "recaptchaToken"]);
   const { token, user } = await authService.registerUser(req.body);
-  res.status(201).json({ success: true, data: { token, user: toPublicUser(user) } });
+  setAuthCookies(res, token);
+  res.status(201).json({ success: true, data: { user: toPublicUser(user) } });
 });
 
 export const login = asyncHandler(async (req, res) => {
@@ -41,7 +43,8 @@ export const login = asyncHandler(async (req, res) => {
       },
     });
   }
-  res.json({ success: true, data: { token: result.token, user: toPublicUser(result.user) } });
+  setAuthCookies(res, result.token);
+  res.json({ success: true, data: { user: toPublicUser(result.user) } });
 });
 
 export const initiateMfaSetup = asyncHandler(async (req, res) => {
@@ -52,13 +55,15 @@ export const initiateMfaSetup = asyncHandler(async (req, res) => {
 export const setupMfa = asyncHandler(async (req, res) => {
   requireFields(req.body, ["token", "code"]);
   const { token, user, recoveryCodes } = await authService.setupMfa(req.body.token, req.body.code);
-  res.json({ success: true, data: { token, user: toPublicUser(user), recoveryCodes } });
+  setAuthCookies(res, token);
+  res.json({ success: true, data: { user: toPublicUser(user), recoveryCodes } });
 });
 
 export const verifyMfa = asyncHandler(async (req, res) => {
   requireFields(req.body, ["token", "code"]);
   const { token, user } = await authService.verifyMfa(req.body.token, req.body.code);
-  res.json({ success: true, data: { token, user: toPublicUser(user) } });
+  setAuthCookies(res, token);
+  res.json({ success: true, data: { user: toPublicUser(user) } });
 });
 
 export const me = asyncHandler(async (req, res) => {
@@ -67,6 +72,7 @@ export const me = asyncHandler(async (req, res) => {
 
 export const logout = asyncHandler(async (req, res) => {
   await authService.logoutUser(req.tokenPayload);
+  clearAuthCookies(res);
   res.json({ success: true, data: { loggedOut: true } });
 });
 
@@ -120,8 +126,9 @@ export const googleAuth = asyncHandler(async (req, res) => {
       ...(result.mfaSetupRequired
         ? { mfaSetupRequired: true, setupToken: result.setupToken, secret: result.secret, otpauthUri: result.otpauthUri }
         : {}),
-      ...(result.token ? { token: result.token, user: toPublicUser(result.user) } : {}),
+      ...(result.token ? { user: toPublicUser(result.user) } : {}),
     };
+    if (result.token) setAuthCookies(res, result.token);
     res.status(result.isNewUser ? 201 : 200).json({ success: true, data });
   } catch (err) {
     if (err.needsRole) {

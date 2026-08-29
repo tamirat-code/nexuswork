@@ -1,36 +1,33 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import * as authApi from "../../services/api/auth.api.js";
-import { storage } from "../../utils/storage.utils.js";
 import i18n from "../../i18n/index.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => storage.get("nw_token"));
-  const [user, setUser] = useState(() => {
-    const raw = storage.get("nw_user");
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
 
-  const persist = useCallback((token, user) => {
-    setToken(token);
-    setUser(user);
-    storage.set("nw_token", token);
-    storage.set("nw_user", JSON.stringify(user));
-    if (user?.preferred_language) i18n.changeLanguage(user.preferred_language);
+  const persist = useCallback((nextUser) => {
+    setToken(nextUser ? true : null);
+    setUser(nextUser);
+    if (nextUser?.preferred_language) i18n.changeLanguage(nextUser.preferred_language);
   }, []);
 
   const clear = useCallback(() => {
     setToken(null);
     setUser(null);
-    storage.remove("nw_token");
-    storage.remove("nw_user");
   }, []);
+
+  useEffect(() => {
+    authApi.getMe().then(({ data }) => persist(data)).catch(() => clear()).finally(() => setReady(true));
+  }, [clear, persist]);
 
   const login = useCallback(
     async (email, password) => {
       const { data } = await authApi.login(email, password);
-      if (data.token) persist(data.token, data.user);
+      if (data.user) persist(data.user);
       return data;
     },
     [persist]
@@ -39,7 +36,7 @@ export function AuthProvider({ children }) {
   const register = useCallback(
     async (payload) => {
       const { data } = await authApi.register(payload);
-      persist(data.token, data.user);
+      persist(data.user);
       return data;
     },
     [persist]
@@ -49,7 +46,7 @@ export function AuthProvider({ children }) {
     async (credential, options) => {
       try {
         const { data } = await authApi.googleAuth(credential, options);
-        if (data.token) persist(data.token, data.user);
+        if (data.user) persist(data.user);
         return data;
       } catch (err) {
         if (err.needsRole) return { needsRole: true };
@@ -61,18 +58,17 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      if (token) await authApi.logout(token);
+      if (token) await authApi.logout();
     } finally {
       clear();
     }
   }, [token, clear]);
 
   const refreshMe = useCallback(async () => {
-    if (!token) return;
     try {
-      const { data } = await authApi.getMe(token);
+      const { data } = await authApi.getMe();
       setUser(data);
-      storage.set("nw_user", JSON.stringify(data));
+      setToken(true);
       if (data?.preferred_language) i18n.changeLanguage(data.preferred_language);
     } catch (err) {
       // A cached token can outlive a password reset, session-version change,
@@ -85,8 +81,7 @@ export function AuthProvider({ children }) {
 
   const setLocalUser = useCallback((nextUser) => {
     setUser(nextUser);
-    if (nextUser) storage.set("nw_user", JSON.stringify(nextUser));
-    else storage.remove("nw_user");
+    setToken(nextUser ? true : null);
   }, []);
 
   
@@ -94,7 +89,7 @@ export function AuthProvider({ children }) {
   const REFRESH_THROTTLE_MS = 30_000;
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !ready) return;
 
     const maybeRefresh = () => {
       const now = Date.now();
@@ -108,15 +103,15 @@ export function AuthProvider({ children }) {
     maybeRefresh();
     window.addEventListener("focus", maybeRefresh);
     return () => window.removeEventListener("focus", maybeRefresh);
-  }, [token, refreshMe]);
+  }, [token, ready, refreshMe]);
 
   const completeMfaLogin = useCallback(
-    (nextToken, nextUser) => persist(nextToken, nextUser),
+    (_nextToken, nextUser) => persist(nextUser),
     [persist]
   );
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, loginWithGoogle, completeMfaLogin, logout, refreshMe, setLocalUser }}>
+    <AuthContext.Provider value={{ token, user, ready, login, register, loginWithGoogle, completeMfaLogin, logout, refreshMe, setLocalUser }}>
       {children}
     </AuthContext.Provider>
   );

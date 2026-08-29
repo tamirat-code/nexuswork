@@ -45,6 +45,7 @@ import {
 import {
   formatTimeAgo,
 } from "../../utils/date.utils.js";
+import { logger } from "../../lib/logger.js";
 
 
 export default function NotificationsPage() {
@@ -170,10 +171,8 @@ export default function NotificationsPage() {
         } catch (err) {
 
         
-          console.error(
-            "Could not mark notification as read:",
-            err
-          );
+          logger.error("Could not mark notification as read", err, { notificationId: notification._id });
+          toast.error(err.message || "Could not mark notification as read");
 
         }
 

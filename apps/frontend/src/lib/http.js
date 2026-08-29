@@ -2,14 +2,21 @@ import { logger } from "./logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
 
+export function csrfHeaders() {
+  if (typeof document === "undefined") return {};
+  const match = document.cookie.match(/(?:^|; )nw_csrf=([^;]+)/);
+  return match ? { "X-CSRF-Token": decodeURIComponent(match[1]) } : {};
+}
+
 export async function apiRequest(path, { method = "GET", body, token } = {}) {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
+    credentials: "include",
     headers: {
       
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...csrfHeaders(),
     },
     body: isFormData ? body : body ? JSON.stringify(body) : undefined,
   });

@@ -1,4 +1,5 @@
-import { apiRequest } from "../../lib/http.js";
+import { apiRequest, csrfHeaders } from "../../lib/http.js";
+import { logger } from "../../lib/logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
 
@@ -16,11 +17,15 @@ export const verifyCredential = (credential) =>
 
 export async function downloadCredentialCardPdf(verificationId, token) {
   const res = await fetch(`${API_BASE_URL}/verifications/mine/${verificationId}/credential/card`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+    headers: { ...csrfHeaders() },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || `Download failed with status ${res.status}`);
+    const error = new Error(data.message || `Download failed with status ${res.status}`);
+    error.status = res.status;
+    logger.error("Credential download failed", error, { verificationId, status: res.status });
+    throw error;
   }
 
   const blob = await res.blob();

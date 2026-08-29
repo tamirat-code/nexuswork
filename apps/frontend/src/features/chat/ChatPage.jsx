@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MessageSquare, Paperclip, Send } from "lucide-react";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
+import { uploadFile } from "../../services/api/files.api.js";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useSocket } from "../../hooks/useSocket.js";
@@ -15,6 +16,7 @@ export default function ChatPage() {
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState(null);
 
   const contractId = conversationId || null;
 
@@ -87,10 +89,11 @@ export default function ChatPage() {
 
   const sendMutation = useMutation({
     mutationFn: () =>
-      sendMessage(contractId, { body: draft.trim(), attachments: [] }, token),
+      sendMessage(contractId, { body: draft.trim(), attachments: attachment ? [attachment._id] : [] }, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messages", contractId] });
       setDraft("");
+      setAttachment(null);
     },
     onError: (err) => toast.error(err.message || "That message couldn't be sent"),
   });
@@ -228,15 +231,18 @@ export default function ChatPage() {
                 sendMutation.mutate();
               }}
             >
+              {attachment && <span className="max-w-28 truncate text-xs text-brass" title={attachment.original_name}>{attachment.original_name}</span>}
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 iconOnly
                 aria-label="Attach file"
+                onClick={() => document.getElementById("chat-attachment")?.click()}
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
+              <input id="chat-attachment" type="file" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; if (!file.size || file.size > 10 * 1024 * 1024) { toast.error("Attachment must be between 1 byte and 10 MB."); return; } try { const response = await uploadFile(file, { relatedType: "message_attachment", token }); setAttachment(response.data); } catch (error) { toast.error(error.message || "Could not upload attachment"); } }} />
               <Input
                 maxLength={5000}
                 value={draft}

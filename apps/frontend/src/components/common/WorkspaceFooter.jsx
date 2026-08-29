@@ -24,10 +24,10 @@ export default function WorkspaceFooter() {
           <Link to="/wallet" className="transition-colors hover:text-brass">
             Wallet
           </Link>
-          <Link to="/legal/terms" className="transition-colors hover:text-brass">
+          <Link to="/terms" className="transition-colors hover:text-brass">
             Terms
           </Link>
-          <Link to="/legal/privacy" className="transition-colors hover:text-brass">
+          <Link to="/privacy" className="transition-colors hover:text-brass">
             Privacy
           </Link>
         </nav>

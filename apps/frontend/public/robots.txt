@@ -1,2 +1,15 @@
 User-agent: *
-Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /wallet
+Disallow: /contracts
+Disallow: /proposals
+Disallow: /chat
+Disallow: /settings
+Disallow: /profile
+Disallow: /notifications
+Disallow: /meetings
+Disallow: /disputes
+Disallow: /payments
+Disallow: /invoices
+Disallow: /portfolios

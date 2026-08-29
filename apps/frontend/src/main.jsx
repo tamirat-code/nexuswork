@@ -9,6 +9,7 @@ import { SocketProvider } from "./app/providers/SocketProvider.jsx";
 import { ThemeProvider } from "./app/providers/ThemeProvider.jsx";
 import { ToastProvider } from "./components/notifications/ToastProvider.jsx";
 import { Toaster } from "./components/ui/shadcn/sonner.jsx";
+import ErrorBoundary from "./components/common/ErrorBoundary.jsx";
 import "./styles/tailwind.css";
 import "./styles/globals.css";
 import "./i18n/index.js";
@@ -22,7 +23,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <ToastProvider>
               <AuthProvider>
                 <SocketProvider>
-                  <App />
+                  <ErrorBoundary><App /></ErrorBoundary>
                   <Toaster position="bottom-right" richColors />
                 </SocketProvider>
               </AuthProvider>

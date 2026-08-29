@@ -6,17 +6,17 @@ const SOCKET_URL =
 
 export function createContractSocket(token) {
   return io(`${SOCKET_URL}/contracts`, {
-    auth: { token },
+    withCredentials: true,
     autoConnect: false,
   });
 }
 
 export function createNotificationSocket(token) {
   return io(`${SOCKET_URL}/notifications`, {
-    auth: { token },
+    withCredentials: true,
     autoConnect: false,
   });
 }
 export function createMeetingSocket(token) {
-  return io(`${SOCKET_URL}/meetings`, { auth: { token }, autoConnect: false, reconnection: true });
+  return io(`${SOCKET_URL}/meetings`, { withCredentials: true, autoConnect: false, reconnection: true });
 }

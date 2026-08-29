@@ -1,4 +1,4 @@
-import { apiRequest } from "../../lib/http.js";
+import { apiRequest, csrfHeaders } from "../../lib/http.js";
 import { logger } from "../../lib/logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
@@ -25,7 +25,8 @@ export const deleteFile = (id, token) =>
 
 export const fetchFileBlob = async (id, token) => {
   const res = await fetch(`${API_BASE_URL}/files/content/${id}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: "include",
+    headers: { ...csrfHeaders() },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -40,7 +41,8 @@ export const fetchFileBlob = async (id, token) => {
 
 export const downloadFile = async (id, token, filename = "download") => {
   const res = await fetch(`${API_BASE_URL}/files/content/${id}?download=1`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: "include",
+    headers: { ...csrfHeaders() },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

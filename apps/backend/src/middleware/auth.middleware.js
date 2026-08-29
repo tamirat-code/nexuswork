@@ -3,11 +3,12 @@ import { authConfig } from "../config/auth.config.js";
 import User from "../modules/users/users.model.js";
 import { isTokenRevoked } from "../modules/auth/auth.service.js";
 import { isCurrentSession } from "../modules/auth/session-version.js";
+import { AUTH_COOKIE, getCookie } from "../modules/auth/auth.cookies.js";
 
 export async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
-    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    const token = header.startsWith("Bearer ") ? header.slice(7) : getCookie(req, AUTH_COOKIE);
     if (!token) {
       return res.status(401).json({ success: false, message: "Missing or invalid Authorization header" });
     }

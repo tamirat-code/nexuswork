@@ -12,6 +12,7 @@ import { notFound, errorHandler } from "./middleware/error.middleware.js";
 import { v1Router } from "./api/v1/index.js";
 import { WebhooksRoutes } from "./modules/webhooks/index.js";
 import { getCredentialIssuerPublicKey } from "./modules/verifications/credential-signing.js";
+import { csrfGuard } from "./modules/auth/auth.cookies.js";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(requestContext);
 
 app.use(helmet({ crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" } }));
 app.use(cors(corsConfig));
+app.use(csrfGuard);
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 
