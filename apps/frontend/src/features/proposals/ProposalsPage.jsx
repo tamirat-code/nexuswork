@@ -22,6 +22,7 @@ import {
   acceptProposal,
   rejectProposal,
   withdrawProposal,
+  markProposalCvViewed,
 } from "../../services/api/proposals.api.js";
 
 import { useAuth } from "../../hooks/useAuth.js";
@@ -114,11 +115,21 @@ function ProposalReviewDialog({
   onReject,
   accepting,
   rejecting,
+  cvViewed,
+  onCvViewed,
 }) {
   const { token } = useAuth();
   if (!proposal) return null;
   const openCv = async () => {
-    try { const blob = await fetchFileBlob(proposal.cv_file_id._id, token); window.open(URL.createObjectURL(blob), "_blank", "noopener,noreferrer"); } catch { /* the normal error surface remains in the dialog */ }
+    try {
+      const blob = await fetchFileBlob(proposal.cv_file_id._id, token);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await onCvViewed?.(proposal._id);
+    } catch (error) {
+      toast.error(error.message || "Could not open the student's CV");
+    }
   };
 
   const student = proposal.student_id || {};
@@ -285,11 +296,11 @@ function ProposalReviewDialog({
 
           </section>
 
-          {proposal.cv_file_id?.url && (
+          {proposal.cv_file_id ? (
             <button type="button" onClick={openCv} className="inline-flex items-center gap-2 text-sm font-semibold text-brass hover:underline">
-              <FileText className="h-4 w-4" /> View student CV ({proposal.cv_file_id.original_name})
+              <FileText className="h-4 w-4" /> {cvViewed ? "CV reviewed" : "View student CV"} ({proposal.cv_file_id.original_name})
             </button>
-          )}
+          ) : <p className="text-sm text-brick">This proposal has no CV attached and cannot be accepted.</p>}
 
 
           {/* Status */}
@@ -347,7 +358,7 @@ function ProposalReviewDialog({
             <Button
               size="sm"
               loading={accepting}
-              disabled={rejecting}
+              disabled={rejecting || !cvViewed}
               onClick={onAccept}
             >
               <CheckCircle2 className="h-4 w-4" />
@@ -392,6 +403,7 @@ export default function ProposalsPage() {
 
   const [reviewOpen, setReviewOpen] =
     useState(false);
+  const [cvViewed, setCvViewed] = useState(false);
 
 
   /*
@@ -484,6 +496,7 @@ export default function ProposalsPage() {
     }
 
     setSelectedProposal(proposal);
+    setCvViewed(String(proposal.cv_viewed_by) === String(user?.id || user?._id));
     setReviewOpen(true);
 
     /*
@@ -500,6 +513,7 @@ export default function ProposalsPage() {
   }, [
     requestedProposalId,
     proposals,
+    user,
     setSearchParams,
   ]);
 
@@ -549,6 +563,20 @@ export default function ProposalsPage() {
 
     },
 
+  });
+
+  const cvViewedMutation = useMutation({
+    mutationFn: (id) => markProposalCvViewed(id, token),
+    onSuccess: (_response, id) => {
+      setCvViewed(true);
+      queryClient.setQueryData(isClient ? ["incoming-proposals"] : ["my-proposals"], (current) => ({
+        ...current,
+        data: (current?.data || []).map((item) => String(item._id) === String(id)
+          ? { ...item, cv_viewed_by: user?.id || user?._id, cv_viewed_at: new Date().toISOString() }
+          : item),
+      }));
+    },
+    onError: (err) => toast.error(err.message || "Could not record CV review"),
   });
 
 
@@ -626,6 +654,7 @@ export default function ProposalsPage() {
   const openReview = (proposal) => {
 
     setSelectedProposal(proposal);
+    setCvViewed(String(proposal.cv_viewed_by) === String(user?.id || user?._id));
     setReviewOpen(true);
 
   };
@@ -1071,6 +1100,7 @@ export default function ProposalsPage() {
 
           if (!open) {
             setSelectedProposal(null);
+            setCvViewed(false);
           }
 
         }}
@@ -1082,6 +1112,9 @@ export default function ProposalsPage() {
         rejecting={
           rejectMutation.isPending
         }
+
+        cvViewed={cvViewed}
+        onCvViewed={(id) => cvViewedMutation.mutateAsync(id)}
 
         onAccept={() => {
 

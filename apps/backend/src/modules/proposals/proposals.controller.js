@@ -15,6 +15,7 @@ import {
   listForStudent,
   acceptProposal,
   rejectProposal,
+  markCvViewed,
 } from "./proposals.service.js";
 import { getCommissionPreview } from "../payments/commission.service.js";
 
@@ -185,6 +186,11 @@ export const accept =
     });
 
   });
+
+export const cvViewed = asyncHandler(async (req, res) => {
+  const proposal = await markCvViewed(req.params.id, req.user, { correlationId: req.correlationId });
+  res.json({ success: true, data: proposal });
+});
 
 
 

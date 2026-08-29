@@ -32,7 +32,7 @@ import { listMilestoneSubmissions } from "../../services/api/submissions.api.js"
 import FundMilestoneDialog from "./FundMilestoneDialog.jsx";
 import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
-import { deleteFile, uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
+import { deleteFile, uploadFile, fetchFileBlob, downloadFile } from "../../services/api/files.api.js";
 import { getMilestonePortfolioConsent, respondToMilestonePortfolioConsent } from "../../services/api/portfolios.api.js";
 import { createMeeting, listContractMeetings } from "../../services/api/meetings.api.js";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
@@ -191,26 +191,31 @@ function SubmissionFiles({ submission, token }) {
   return (
     <div className="space-y-2">
       {files.map((file) => (
-        <button
+        <div
           key={file._id}
-          type="button"
-          onClick={async () => {
+          className="flex w-full items-center gap-3 rounded-control border border-ink-300 bg-ink-50 p-2.5 text-left transition hover:border-brass/40"
+        >
+          <FileText className="h-4 w-4 shrink-0 text-brass" />
+          <span className="min-w-0 flex-1 truncate text-sm text-slate">{file.original_name}</span>
+          <span className="shrink-0 text-xs text-slate-300">{formatBytes(file.size)}</span>
+          <button type="button" onClick={async () => {
             try {
               const blob = await fetchFileBlob(file._id, token);
               const url = URL.createObjectURL(blob);
               window.open(url, "_blank", "noopener,noreferrer");
               window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
             } catch (error) {
-              toast.error(error.message || "Could not open file");
+              toast.error(error.message || "Could not preview file");
             }
-          }}
-          className="flex w-full items-center gap-3 rounded-control border border-ink-300 bg-ink-50 p-2.5 text-left transition hover:border-brass/40"
-        >
-          <FileText className="h-4 w-4 shrink-0 text-brass" />
-          <span className="min-w-0 flex-1 truncate text-sm text-slate">{file.original_name}</span>
-          <span className="shrink-0 text-xs text-slate-300">{formatBytes(file.size)}</span>
-          <Download className="h-4 w-4 shrink-0 text-slate-300" />
-        </button>
+          }} className="shrink-0 text-xs font-semibold text-brass hover:underline">Preview</button>
+          <button type="button" onClick={async () => {
+            try {
+              await downloadFile(file._id, token, file.original_name);
+            } catch (error) {
+              toast.error(error.message || "Could not download file");
+            }
+          }} className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brass hover:underline"><Download className="h-4 w-4" />Download</button>
+        </div>
       ))}
       {legacyUrls.map((url, index) => (
         <a

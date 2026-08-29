@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
 
 export async function apiRequest(path, { method = "GET", body, token } = {}) {
@@ -21,6 +23,7 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
     const err = new Error(message);
     err.status = res.status;
     Object.assign(err, data);
+    logger.error("API request failed", err, { method, path, status: res.status, code: data.code });
     throw err;
   }
   return data;

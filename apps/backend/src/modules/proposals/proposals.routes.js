@@ -8,6 +8,7 @@ import {
   getCommissionPreviewForStudent,
   accept,
   reject,
+  cvViewed,
 } from "./proposals.controller.js";
 
 import { requireAuth } from "../../middleware/auth.middleware.js";
@@ -63,6 +64,13 @@ router.post(
   requireAuth,
   requireRole("client", "admin"),
   accept
+);
+
+router.post(
+  "/:id/cv-viewed",
+  requireAuth,
+  requireRole("client", "admin"),
+  cvViewed
 );
 
 

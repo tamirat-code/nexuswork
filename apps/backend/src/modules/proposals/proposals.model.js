@@ -12,6 +12,8 @@ const proposalSchema = new mongoose.Schema(
     // Optional for legacy proposals created before CV attachments existed.
     // New submissions are enforced in proposals.service.js.
     cv_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File", default: null },
+    cv_viewed_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    cv_viewed_at: { type: Date, default: null },
     status: {
       type: String,
       enum: ["pending", "accepted", "rejected", "withdrawn"],

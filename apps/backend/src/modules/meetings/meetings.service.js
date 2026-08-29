@@ -64,6 +64,7 @@ export async function transition(meetingId, user, action) {
   const { meeting } = await context(meetingId, user._id);
   if (id(meeting.host_user_id) !== id(user._id)) throw new ForbiddenError("Only the meeting host can perform this action");
   const previous = meeting.status; const now = new Date();
+  if (action === "start" && now < meeting.scheduled_start) throw new ValidationError("Meeting cannot start before its scheduled time");
   const transitions = { start: { scheduled: "waiting", waiting: "active" }, end: { waiting: "ended", active: "ended" }, cancel: { scheduled: "cancelled", waiting: "cancelled" } };
   const next = transitions[action]?.[meeting.status];
   if (!next) throw new ValidationError(`Cannot ${action} a meeting in status ${meeting.status}`);
@@ -85,5 +86,17 @@ export async function joinMeeting(meetingId, user) {
   return { meeting, room_id: meeting.room_id, role: entry.role, ice_servers: iceServers() };
 }
 export async function leaveMeeting(meetingId, user) { const { meeting } = await context(meetingId, user._id); const entry = meeting.participants.find((p) => id(p.user_id) === id(user._id)); if (!entry) throw new ForbiddenError("Not an allowed participant"); entry.left_at = new Date(); await meeting.save(); await audit("LEFT", meeting, user); return meeting; }
+export async function expireMeetings() {
+  const now = new Date();
+  const meetings = await Meeting.find({ status: { $in: ["scheduled", "waiting", "active"] }, scheduled_end: { $ne: null, $lte: now } }).limit(100);
+  for (const meeting of meetings) {
+    meeting.status = "ended";
+    meeting.ended_at = meeting.ended_at || now;
+    await meeting.save();
+    await audit("ENDED", meeting, null, "scheduled_end", "ended");
+    emitToMeeting(meeting.room_id, "meeting:ended", { meetingId: meeting._id, status: "ended" });
+    await Promise.all(meeting.participants.map((p) => createNotification({ userId: p.user_id, type: "meeting_ended", title: "Meeting ended", body: meeting.title, data: { meeting_id: meeting._id, action: "view_meeting" } })));
+  }
+}
 export function canAccessMeeting(meeting, userId) { return meeting?.participants?.some((p) => id(p.user_id) === id(userId)) && !["cancelled", "ended"].includes(meeting.status); }
 export function iceServers() { const list = []; if (process.env.WEBRTC_STUN_URL) list.push({ urls: process.env.WEBRTC_STUN_URL }); if (process.env.WEBRTC_TURN_URL && process.env.WEBRTC_TURN_USERNAME && process.env.WEBRTC_TURN_CREDENTIAL) list.push({ urls: process.env.WEBRTC_TURN_URL, username: process.env.WEBRTC_TURN_USERNAME, credential: process.env.WEBRTC_TURN_CREDENTIAL }); return list; }

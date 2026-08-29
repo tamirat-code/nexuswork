@@ -204,7 +204,6 @@ export async function listForProject(
       ].join(" ")
     )
 
-    .populate("cv_file_id", "original_name url mimetype size")
     .populate(
       "project_id",
       [
@@ -216,11 +215,36 @@ export async function listForProject(
       ].join(" ")
     )
 
+    .populate("cv_file_id", "original_name url mimetype size")
+
     .sort({
       createdAt: -1,
     })
 
     .lean();
+}
+
+export async function markCvViewed(proposalId, requestingUser, auditContext = {}) {
+  const proposal = await Proposal.findById(proposalId).populate("project_id");
+  if (!proposal) throw new NotFoundError("Proposal not found");
+  await assertCanManageProposal(proposal, requestingUser);
+  if (!proposal.cv_file_id) throw new ValidationError("This proposal has no CV attached");
+
+  proposal.cv_viewed_by = requestingUser._id;
+  proposal.cv_viewed_at = new Date();
+  await proposal.save();
+  await recordEvent({
+    actor: requestingUser,
+    eventType: "PROPOSAL_CV_VIEWED",
+    action: "proposal.cv_viewed",
+    entityType: "proposal",
+    entityId: proposal._id,
+    previousState: null,
+    newState: "cv_viewed",
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { cvFileId: proposal.cv_file_id },
+  });
+  return proposal;
 }
 
 export async function listForStudent(studentId) {
@@ -373,6 +397,8 @@ export async function listForClient(
       ].join(" ")
     )
 
+    .populate("cv_file_id", "original_name url mimetype size")
+
     .sort({
       createdAt: -1,
     })
@@ -459,6 +485,10 @@ export async function acceptProposal(
     proposal,
     requestingUser
   );
+
+  if (!proposal.cv_file_id || String(proposal.cv_viewed_by) !== String(requestingUser._id)) {
+    throw new ValidationError("You must view the student's CV before accepting this proposal", "CV_REVIEW_REQUIRED");
+  }
 
 
   if (

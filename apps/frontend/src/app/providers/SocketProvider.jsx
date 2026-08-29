@@ -9,6 +9,7 @@ import {
   createContractSocket,
   createNotificationSocket,
 } from "../../lib/socket.js";
+import { logger } from "../../lib/logger.js";
 
 import { useAuth } from "./AuthProvider.jsx";
 
@@ -31,11 +32,11 @@ export function SocketProvider({ children }) {
     const contractSock = createContractSocket(token);
 
     contractSock.on("connect", () => {
-      console.log("[socket] contracts connected:", contractSock.id);
+      logger.info("Contracts socket connected", { socketId: contractSock.id });
     });
 
     contractSock.on("connect_error", (error) => {
-      console.error("[socket] contracts connection error:", error.message);
+      logger.error("Contracts socket connection failed", error);
     });
 
     contractSock.connect();
@@ -44,15 +45,15 @@ export function SocketProvider({ children }) {
     const notificationSock = createNotificationSocket(token);
 
     notificationSock.on("connect", () => {
-      console.log("[socket] notifications connected:", notificationSock.id);
+      logger.info("Notifications socket connected", { socketId: notificationSock.id });
     });
 
     notificationSock.on("notification:connected", (payload) => {
-      console.log("[socket] notification channel ready:", payload);
+      logger.debug("Notification channel ready", payload);
     });
 
     notificationSock.on("connect_error", (error) => {
-      console.error("[socket] notifications connection error:", error.message);
+      logger.error("Notifications socket connection failed", error);
     });
 
     notificationSock.connect();

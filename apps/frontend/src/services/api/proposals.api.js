@@ -71,6 +71,9 @@ export const acceptProposal = (
     }
   );
 
+export const markProposalCvViewed = (id, token) =>
+  apiRequest(`/proposals/${id}/cv-viewed`, { method: "POST", token });
+
 
 
 export const rejectProposal = (

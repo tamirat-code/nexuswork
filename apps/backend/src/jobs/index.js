@@ -1,11 +1,13 @@
 // Scheduled/background jobs (meeting reminders and future lifecycle tasks).
 import Meeting from "../modules/meetings/meetings.model.js";
 import { createNotification } from "../modules/notifications/notifications.service.js";
+import { expireMeetings } from "../modules/meetings/meetings.service.js";
 
 export function registerJobs() {
   const timer = setInterval(async () => {
     try {
       const now = new Date();
+      await expireMeetings();
       const soon = new Date(now.getTime() + 15 * 60 * 1000);
       const meetings = await Meeting.find({ status: "scheduled", scheduled_start: { $gt: now, $lte: soon }, reminder_sent_at: null }).limit(100);
       for (const meeting of meetings) {

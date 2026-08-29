@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { listMyNotifications } from "../services/api/notifications.api.js";
 import { useAuth } from "./useAuth.js";
 import { useNotificationSocket } from "../app/providers/SocketProvider.jsx";
+import { logger } from "../lib/logger.js";
 
 export function useNotifications() {
   const { token } = useAuth();
@@ -23,10 +24,7 @@ export function useNotifications() {
     if (!socket) return undefined;
     
     const handleNewNotification = (notification) => {
-      console.log(
-        "[notifications] new notification:",
-        notification
-      );
+      logger.debug("New notification received", { notificationId: notification?._id });
 
       queryClient.setQueryData(
         ["notifications"],

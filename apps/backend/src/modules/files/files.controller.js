@@ -79,7 +79,8 @@ export const content = asyncHandler(async (req, res) => {
 
   res.setHeader("Content-Type", file.mimetype);
   res.setHeader("Content-Length", String(file.size));
-  res.setHeader("Content-Disposition", `inline; filename="${String(file.original_name).replace(/[\"\r\n]/g, "_")}"`);
+  const disposition = ["1", "true"].includes(String(req.query.download).toLowerCase()) ? "attachment" : "inline";
+  res.setHeader("Content-Disposition", `${disposition}; filename="${String(file.original_name).replace(/[\"\r\n]/g, "_")}"`);
   res.setHeader("X-Content-Type-Options", "nosniff");
   object.Body.pipe(res);
 });

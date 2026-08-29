@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import AppRouter from "./app/router/index.jsx";
 import MarketingLayout from "./components/layouts/MarketingLayout.jsx";
@@ -5,11 +6,13 @@ import AppLayout from "./components/layouts/AppLayout.jsx";
 import ScrollToTop, { SkipLink } from "./components/common/ScrollToTop.jsx";
 import { STANDALONE_PATHS, WORKSPACE_PATHS, WORKSPACE_EXACT_PATHS } from "./config/navigation.js";
 import { useAuth } from "./hooks/useAuth.js";
+import { installGlobalErrorHandlers } from "./lib/logger.js";
 
 const matches = (paths, pathname) =>
   paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
 export default function App() {
+  useEffect(() => installGlobalErrorHandlers(), []);
   const { pathname } = useLocation();
   const { token } = useAuth();
 
