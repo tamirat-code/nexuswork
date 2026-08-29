@@ -21,7 +21,6 @@ export async function uploadToS3({ bucket, key, body, contentType }) {
     Key: key,
     Body: body,
     ContentType: contentType,
-    ACL: "public-read",
   });
   await client.send(cmd);
 
