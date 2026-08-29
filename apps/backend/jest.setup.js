@@ -1,5 +1,10 @@
 import "dotenv/config";
 
+// Database-backed integration setup includes connection and index migrations;
+// GitHub Actions can legitimately need more than Jest's 5-second hook default
+// while the Mongo service becomes ready.
+jest.setTimeout(30_000);
+
 // Never allow the integration suite to use a development database loaded from
 // .env. CI still supplies its own test URI; this only protects local runs.
 if (process.env.NODE_ENV === "test") {
