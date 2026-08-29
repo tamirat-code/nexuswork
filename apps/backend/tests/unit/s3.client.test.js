@@ -10,11 +10,16 @@ const PutObjectCommand = jest.fn(function PutObjectCommand(input) {
   this.input = input;
 });
 
+const GetObjectCommand = jest.fn(function GetObjectCommand(input) {
+  this.input = input;
+});
+
 const getSignedUrl = jest.fn();
 
 jest.unstable_mockModule("@aws-sdk/client-s3", () => ({
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
 }));
 
 jest.unstable_mockModule("@aws-sdk/s3-request-presigner", () => ({
@@ -25,9 +30,10 @@ jest.unstable_mockModule("../../src/config/storage.config.js", () => ({
   storageConfig: {
     region: "us-east-005",
     endpoint: "https://s3.us-east-005.backblazeb2.com",
-    forcePathStyle: false,
+    forcePathStyle: true,
     accessKey: "key-id",
     secretKey: "application-key",
+    bucket: "nexuswork",
   },
 }));
 
@@ -45,7 +51,7 @@ describe("uploadToS3", () => {
     );
   });
 
-  it("does not send a per-object canned ACL", async () => {
+  it("uploads an object without a canned ACL and returns a signed URL", async () => {
     await expect(
       uploadToS3({
         bucket: "avatars",
@@ -64,15 +70,17 @@ describe("uploadToS3", () => {
       ContentType: "image/png",
     });
 
+    expect(GetObjectCommand).toHaveBeenCalledWith({
+      Bucket: "avatars",
+      Key: "avatars/user-1.png",
+    });
+
     expect(getSignedUrl).toHaveBeenCalledWith(
       expect.anything(),
+      expect.any(GetObjectCommand),
       {
-        input: {
-          Bucket: "avatars",
-          Key: "avatars/user-1.png",
-        },
-      },
-      { expiresIn: 86400 }
+        expiresIn: 86400,
+      }
     );
   });
 });
