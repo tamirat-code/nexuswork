@@ -1,7 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
 import * as authService from "./auth.service.js";
-import { clearAuthCookies, setAuthCookies } from "./auth.cookies.js";
+import { clearAuthCookies, getCookie, setAuthCookies, setCsrfCookie, CSRF_COOKIE } from "./auth.cookies.js";
 
 function toPublicUser(user) {
   return {
@@ -68,6 +68,11 @@ export const verifyMfa = asyncHandler(async (req, res) => {
 
 export const me = asyncHandler(async (req, res) => {
   res.json({ success: true, data: toPublicUser(req.user) });
+});
+
+export const csrf = asyncHandler(async (req, res) => {
+  const token = getCookie(req, CSRF_COOKIE) || setCsrfCookie(res);
+  res.json({ success: true, data: { csrfToken: token } });
 });
 
 export const logout = asyncHandler(async (req, res) => {

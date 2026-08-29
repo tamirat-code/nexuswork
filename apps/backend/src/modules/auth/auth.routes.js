@@ -13,6 +13,7 @@ import {
   initiateMfaSetup,
   setupMfa,
   verifyMfa,
+  csrf,
 } from "./auth.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { loginRateLimiter, verificationRateLimiter } from "../../middleware/rateLimiter.middleware.js";
@@ -36,6 +37,7 @@ router.post("/google", loginRateLimiter, validateBody(googleAuthSchema), googleA
 router.post("/mfa/setup/initiate", requireAuth, initiateMfaSetup);
 router.post("/mfa/setup", loginRateLimiter, validateBody(mfaCodeSchema), setupMfa);
 router.post("/mfa/verify", loginRateLimiter, validateBody(mfaCodeSchema), verifyMfa);
+router.get("/csrf", csrf);
 router.get("/me", requireAuth, me);
 router.post("/logout", requireAuth, logout);
 router.patch("/password", requireAuth, validateBody(changePasswordSchema), changePassword);

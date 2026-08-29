@@ -3,16 +3,19 @@ import { env } from "../../config/env.js";
 
 export const AUTH_COOKIE = "nw_session";
 export const CSRF_COOKIE = "nw_csrf";
-// Vercel and Render are different sites even when the backend runs in the
-// staging environment. Cross-site authentication therefore needs the same
-// cookie policy as production; otherwise the browser withholds nw_session.
+
 const isDeployedHttps = ["production", "staging"].includes(env.nodeEnv) || env.clientUrl?.startsWith("https://");
 const cookieOptions = { httpOnly: true, secure: isDeployedHttps, sameSite: isDeployedHttps ? "none" : "lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 };
 const csrfOptions = { httpOnly: false, secure: isDeployedHttps, sameSite: isDeployedHttps ? "none" : "lax", path: "/", maxAge: cookieOptions.maxAge };
 
 export function setAuthCookies(res, token) {
   res.cookie(AUTH_COOKIE, token, cookieOptions);
-  res.cookie(CSRF_COOKIE, crypto.randomBytes(32).toString("base64url"), csrfOptions);
+  setCsrfCookie(res);
+}
+
+export function setCsrfCookie(res, token = crypto.randomBytes(32).toString("base64url")) {
+  res.cookie(CSRF_COOKIE, token, csrfOptions);
+  return token;
 }
 
 export function clearAuthCookies(res) {
