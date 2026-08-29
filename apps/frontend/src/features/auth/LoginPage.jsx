@@ -7,6 +7,7 @@ import GoogleAuthButton from "./components/GoogleAuthButton.jsx";
 import RolePicker from "./components/RolePicker.jsx";
 import TermsCheckbox from "./components/TermsCheckbox.jsx";
 import Input from "../../components/ui/Input.jsx";
+import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
 import ReCAPTCHA from "react-google-recaptcha";
 
@@ -215,7 +216,7 @@ try {
             autoComplete="email"
           />
           <div>
-            <Input
+            <PasswordInput
               label="Password"
               type="password"
               value={password}

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { resetPassword } from "../../services/api/auth.api.js";
 import AuthShell from "./components/AuthShell.jsx";
 import Input from "../../components/ui/Input.jsx";
+import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
 
 function passwordIssue(password) {
@@ -72,7 +73,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthShell eyebrow="Password reset" title="Choose a new password">
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <Input
+        <PasswordInput
           label="New password"
           type="password"
           value={password}
@@ -81,7 +82,7 @@ export default function ResetPasswordPage() {
           hint="At least 8 characters, with upper, lower, and a number"
           autoComplete="new-password"
         />
-        <Input
+        <PasswordInput
           label="Confirm new password"
           type="password"
           value={confirm}

@@ -9,9 +9,11 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
+import PasswordInput from "../../components/ui/shadcn/password-input.jsx";
 import { Label } from "../../components/ui/shadcn/label.jsx";
 import { Switch } from "../../components/ui/shadcn/switch.jsx";
 import { Separator } from "../../components/ui/shadcn/separator.jsx";
+import { passwordIssue, reportValidation } from "../../lib/validation.js";
 
 export default function SettingsPage() {
   const { token, user, refreshMe } = useAuth();
@@ -21,6 +23,8 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [emailNotifs, setEmailNotifs] = useState(user?.notification_prefs?.email ?? true);
   const [pushNotifs, setPushNotifs] = useState(user?.notification_prefs?.push ?? true);
+  const [profileError, setProfileError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const profileMutation = useMutation({
     mutationFn: () => updateMe({ name }, token),
@@ -89,7 +93,8 @@ export default function SettingsPage() {
               <Label htmlFor="settings-name">Full name</Label>
               <Input id="settings-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <Button size="sm" loading={profileMutation.isPending} onClick={() => profileMutation.mutate()}>Save profile</Button>
+            {profileError && <p className="text-xs text-brick" role="alert">{profileError}</p>}
+            <Button size="sm" loading={profileMutation.isPending} onClick={() => { const value = name.trim(); if (!value || value.length > 120) { const message = "Name is required and must be 120 characters or fewer."; setProfileError(message); reportValidation(message, { form: "settings-profile", field: "name" }); return; } setProfileError(""); profileMutation.mutate(); }}>Save profile</Button>
           </CardContent>
         </Card>
 
@@ -101,13 +106,14 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="settings-current">Current password</Label>
-              <Input id="settings-current" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+              <PasswordInput id="settings-current" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="settings-new">New password</Label>
-              <Input id="settings-new" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <PasswordInput id="settings-new" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
-            <Button size="sm" variant="secondary" loading={passwordMutation.isPending} onClick={() => passwordMutation.mutate()}>Change password</Button>
+            {passwordError && <p className="text-xs text-brick" role="alert">{passwordError}</p>}
+            <Button size="sm" variant="secondary" loading={passwordMutation.isPending} onClick={() => { const issue = !currentPassword.trim() ? "Enter your current password." : passwordIssue(newPassword); if (issue) { setPasswordError(issue); reportValidation(issue, { form: "settings-password" }); return; } setPasswordError(""); passwordMutation.mutate(); }}>Change password</Button>
 
             <Separator />
 

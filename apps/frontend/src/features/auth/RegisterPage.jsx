@@ -9,6 +9,7 @@ import GoogleAuthButton from "./components/GoogleAuthButton.jsx";
 import RolePicker from "./components/RolePicker.jsx";
 import TermsCheckbox from "./components/TermsCheckbox.jsx";
 import Input from "../../components/ui/Input.jsx";
+import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
 import Select from "../../components/ui/Select.jsx";
 import { listUniversities } from "../../services/api/universities.api.js";
@@ -287,7 +288,7 @@ export default function RegisterPage() {
                 autoComplete="email"
               />
 
-              <Input
+              <PasswordInput
                 label="Password"
                 required
                 type="password"
@@ -298,7 +299,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
               />
 
-              <Input
+              <PasswordInput
                 label="Confirm password"
                 required
                 type="password"
