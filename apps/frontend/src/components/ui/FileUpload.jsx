@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import Button from "./Button.jsx";
 import ProgressBar from "./ProgressBar.jsx";
 import { cn } from "../../lib/cn.js";
+import { reportValidation } from "../../lib/validation.js";
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -15,6 +16,7 @@ export default function FileUpload({
   accept,
   multiple = false,
   maxSizeMb = 10,
+  maxFiles,
   files = [],
   progress,
   onFilesSelected,
@@ -28,10 +30,23 @@ export default function FileUpload({
 
   function validate(list) {
     const accepted = [];
+    if (maxFiles && list.length > maxFiles) {
+      const message = `You can select up to ${maxFiles} file${maxFiles === 1 ? "" : "s"}.`;
+      setError(message); reportValidation(message, { input: "file-upload" });
+      return [];
+    }
     for (const file of list) {
+      if (!file.size) { const message = `${file.name} is empty.`; setError(message); reportValidation(message, { input: "file-upload", file: file.name }); continue; }
       if (file.size > maxSizeMb * 1024 * 1024) {
-        setError(`${file.name} is larger than ${maxSizeMb} MB.`);
+        const message = `${file.name} is larger than ${maxSizeMb} MB.`;
+        setError(message); reportValidation(message, { input: "file-upload", file: file.name });
         continue;
+      }
+      if (accept && accept !== "*/*") {
+        const rules = accept.split(",").map((item) => item.trim().toLowerCase());
+        const name = file.name.toLowerCase();
+        const allowed = rules.some((rule) => rule.startsWith(".") ? name.endsWith(rule) : rule.endsWith("/*") ? file.type.startsWith(rule.slice(0, -1)) : file.type === rule);
+        if (!allowed) { const message = `${file.name} is not an accepted file type.`; setError(message); reportValidation(message, { input: "file-upload", file: file.name }); continue; }
       }
       accepted.push(file);
     }

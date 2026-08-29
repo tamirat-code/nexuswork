@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
+import { reportValidation } from "../../lib/validation.js";
 import {
   Card,
   Button,
@@ -177,13 +178,13 @@ export default function WalletsPage() {
               <p className="text-xs text-escrow">Ready: {wallet.chapa_account_name} · bank {wallet.chapa_bank_code} · ending {wallet.chapa_account_number_last4}</p>
             )}
             <div className="grid gap-3 md:grid-cols-3">
-              <Input label="Bank code" value={chapaDetails.bank_code} onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value }))} placeholder="656" />
-              <Input label="Account name" value={chapaDetails.account_name} onChange={(e) => setChapaDetails((v) => ({ ...v, account_name: e.target.value }))} placeholder="Full account name" />
-              <Input label="Account number" inputMode="numeric" value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank account number" />
+              <Input label="Bank code" maxLength={20} value={chapaDetails.bank_code} onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value.replace(/\D/g, "") }))} placeholder="656" />
+              <Input label="Account name" maxLength={150} value={chapaDetails.account_name} onChange={(e) => setChapaDetails((v) => ({ ...v, account_name: e.target.value }))} placeholder="Full account name" />
+              <Input label="Account number" inputMode="numeric" maxLength={30} value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank account number" />
             </div>
             <Button
               size="sm"
-              onClick={() => chapaPayout.mutate()}
+              onClick={() => { if (!/^\d{3,20}$/.test(chapaDetails.bank_code) || chapaDetails.account_name.trim().length < 2 || chapaDetails.account_name.trim().length > 150 || !/^\d{5,30}$/.test(chapaDetails.account_number)) { const message = "Enter a valid bank code, account name, and account number."; toast.error(message); reportValidation(message, { form: "chapa-payout" }); return; } chapaPayout.mutate(); }}
               loading={chapaPayout.isPending}
               disabled={!chapaDetails.bank_code || !chapaDetails.account_name || chapaDetails.account_number.length < 5}
             >
@@ -222,8 +223,9 @@ export default function WalletsPage() {
                   size="sm"
                   onClick={() => {
                     const value = Number(amount);
-                    if (!value || value <= 0) {
-                      toast.error("Enter a valid withdrawal amount.");
+                    if (!Number.isFinite(value) || value <= 0 || value > Number(wallet?.available || 0)) {
+                      const message = "Enter a withdrawal amount greater than zero and no more than your available balance.";
+                      toast.error(message); reportValidation(message, { form: "withdrawal" });
                       return;
                     }
                     withdraw.mutate();

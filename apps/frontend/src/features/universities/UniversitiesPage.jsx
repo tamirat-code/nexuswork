@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from "../../components/ui/shadcn/dialog.jsx";
 import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
+import { reportValidation } from "../../lib/validation.js";
 
 async function openPrivateFile(file, token) {
   try {
@@ -46,7 +47,8 @@ function RejectDialog({ open, onOpenChange, onConfirm, loading }) {
             Let the student know why, so they can fix it and resubmit.
           </DialogDescription>
         </DialogHeader>
-        <Textarea
+          <Textarea
+          maxLength={500}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="e.g. Uploaded document doesn't match the name on file"
@@ -59,7 +61,9 @@ function RejectDialog({ open, onOpenChange, onConfirm, loading }) {
           <Button
             variant="danger"
             loading={loading}
+            disabled={!reason.trim() || reason.trim().length < 3}
             onClick={() => {
+              if (reason.trim().length < 3) { const message = "Give the student a rejection reason of at least 3 characters."; toast.error(message); reportValidation(message, { form: "verification-rejection" }); return; }
               onConfirm(reason.trim());
               setReason("");
             }}

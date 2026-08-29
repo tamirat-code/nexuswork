@@ -34,20 +34,34 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/shadcn/select.jsx";
+import { reportValidation } from "../../lib/validation.js";
 
 function CreateUniversityDialog({ token }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
+  const [errors, setErrors] = useState({});
+
+  function validate() {
+    const next = {};
+    if (!name.trim()) next.name = "Enter the university name.";
+    else if (name.trim().length > 200) next.name = "University name must be 200 characters or fewer.";
+    if (!domain.trim()) next.domain = "Enter an email domain.";
+    else if (domain.trim().length > 200 || !/^(?=.{1,200}$)(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(domain.trim())) {
+      next.domain = "Enter a valid domain such as aau.edu.et (without https://).";
+    }
+    setErrors(next);
+    if (Object.keys(next).length) { reportValidation("University form contains invalid fields", { form: "create-university", fields: Object.keys(next) }); return false; }
+    return true;
+  }
 
   const create = useMutation({
     mutationFn: () => createUniversity({ name: name.trim(), domain: domain.trim() }, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["universities"] });
       toast.success("University created");
-      setName("");
-      setDomain("");
+      setName(""); setDomain(""); setErrors({});
       setOpen(false);
     },
     onError: (err) => toast.error(err.message || "Could not create university"),
@@ -70,18 +84,20 @@ function CreateUniversityDialog({ token }) {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="uni-name">Name</Label>
-            <Input id="uni-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Addis Ababa University" />
+            <Input id="uni-name" value={name} maxLength={200} aria-invalid={Boolean(errors.name)} onChange={(e) => { setName(e.target.value); setErrors((v) => ({ ...v, name: undefined })); }} placeholder="Addis Ababa University" />
+            {errors.name && <p className="text-xs text-brick" role="alert">{errors.name}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="uni-domain">Email domain</Label>
-            <Input id="uni-domain" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="aau.edu.et" />
+            <Input id="uni-domain" value={domain} maxLength={200} aria-invalid={Boolean(errors.domain)} onChange={(e) => { setDomain(e.target.value.toLowerCase()); setErrors((v) => ({ ...v, domain: undefined })); }} placeholder="aau.edu.et" />
+            {errors.domain && <p className="text-xs text-brick" role="alert">{errors.domain}</p>}
           </div>
         </div>
         <DialogFooter>
           <Button
             loading={create.isPending}
-            disabled={!name.trim() || !domain.trim()}
-            onClick={() => create.mutate()}
+            disabled={create.isPending}
+            onClick={() => validate() && create.mutate()}
           >
             Create university
           </Button>

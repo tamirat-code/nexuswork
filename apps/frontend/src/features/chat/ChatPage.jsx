@@ -238,12 +238,14 @@ export default function ChatPage() {
                 <Paperclip className="h-4 w-4" />
               </Button>
               <Input
+                maxLength={5000}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Type a message…"
                 className="flex-1"
                 wrapperClassName="flex-1"
               />
+              <span className="sr-only">{draft.length}/5000 characters</span>
               <Button
                 type="submit"
                 size="sm"

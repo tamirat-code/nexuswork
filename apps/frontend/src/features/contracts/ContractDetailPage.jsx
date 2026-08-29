@@ -59,6 +59,7 @@ import {
 } from "../../components/ui/shadcn/dialog.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 import { MILESTONE_STATUS } from "../../constants/payment.constants.js";
+import { reportValidation } from "../../lib/validation.js";
 
 const REVIEWABLE_STATUSES = [MILESTONE_STATUS.SUBMITTED, MILESTONE_STATUS.DELIVERED];
 const DISPUTABLE_STATUSES = [
@@ -68,6 +69,12 @@ const DISPUTABLE_STATUSES = [
   MILESTONE_STATUS.DELIVERED,
   MILESTONE_STATUS.REVISION_REQUESTED,
 ];
+
+function validContractFile(file) {
+  if (!file?.size) return "The selected file is empty.";
+  if (file.size > 10 * 1024 * 1024) return "Files must be 10 MB or smaller.";
+  return "";
+}
 
 function MeetingCreateDialog({ contractId, token, onCreated }) {
   const [open, setOpen] = useState(false);
@@ -276,7 +283,8 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
       toast.error("You can attach up to 10 files per submission.");
       return;
     }
-    setFiles((current) => [...current, ...selected]);
+    const valid = selected.filter((file) => { const message = validContractFile(file); if (message) { toast.error(`${file.name}: ${message}`); reportValidation(message, { form: "deliverable-upload", file: file.name }); return false; } return true; });
+    setFiles((current) => [...current, ...valid]);
     event.target.value = "";
   };
 
@@ -315,6 +323,7 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={6}
+              maxLength={5000}
               className="mt-1"
               placeholder="Explain what you completed, what files contain, and how the client can verify the result…"
             />
@@ -743,13 +752,14 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
                     <DialogTitle>Raise a dispute</DialogTitle>
                     <DialogDescription>Describe the issue with this milestone. Both parties and NexusWork will review it.</DialogDescription>
                   </DialogHeader>
-                  <Textarea id={`dispute-reason-${milestone._id}`} placeholder="What went wrong? Be specific so we can help resolve it…" rows={6} />
+                  <Textarea id={`dispute-reason-${milestone._id}`} maxLength={2000} placeholder="What went wrong? Be specific so we can help resolve it…" rows={6} />
                   <DialogFooter>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => {
-                        const reason = document.getElementById(`dispute-reason-${milestone._id}`)?.value || "";
+                        const reason = document.getElementById(`dispute-reason-${milestone._id}`)?.value.trim() || "";
+                        if (reason.length < 10 || reason.length > 2000) { const message = "Dispute reason must be between 10 and 2,000 characters."; toast.error(message); reportValidation(message, { form: "dispute" }); return; }
                         onAction("dispute", milestone, { reason });
                       }}
                     >
@@ -1168,7 +1178,7 @@ export default function ContractDetailPage() {
             <CardHeader><CardTitle className="text-lg">File exchange</CardTitle></CardHeader>
             <CardContent>
               <div className="flex flex-wrap items-center gap-2">
-                <input ref={fileExchangeInputRef} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) shareFileMutation.mutate(file); event.target.value = ""; }} />
+                <input ref={fileExchangeInputRef} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; const message = validContractFile(file); if (file && !message) shareFileMutation.mutate(file); else if (message) { toast.error(message); reportValidation(message, { form: "file-exchange" }); } event.target.value = ""; }} />
                 <Button variant="secondary" size="sm" disabled={shareFileMutation.isPending} onClick={() => fileExchangeInputRef.current?.click()}>
                   <Paperclip className="h-4 w-4" /> {shareFileMutation.isPending ? "Uploading…" : "Upload files"}
                 </Button>

@@ -11,6 +11,8 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/shadcn/dialog.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
 import { Label } from "../../components/ui/shadcn/label.jsx";
+import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
+import { reportValidation, validHttpUrl } from "../../lib/validation.js";
 
 export default function PortfoliosPage() {
   const { token } = useAuth();
@@ -18,13 +20,26 @@ export default function PortfoliosPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
+  const [errors, setErrors] = useState({});
+  const [removeTarget, setRemoveTarget] = useState(null);
+
+  function validate() {
+    const next = {};
+    if (!title.trim()) next.title = "Enter a portfolio title.";
+    else if (title.trim().length > 200) next.title = "Title must be 200 characters or fewer.";
+    if (description.trim().length > 2000) next.description = "Description must be 2,000 characters or fewer.";
+    if (url.trim() && (url.trim().length > 500 || !validHttpUrl(url))) next.url = "Enter a valid http:// or https:// URL.";
+    setErrors(next);
+    if (Object.keys(next).length) { reportValidation("Portfolio form contains invalid fields", { form: "portfolio-entry", fields: Object.keys(next) }); return false; }
+    return true;
+  }
 
   const { data, isLoading } = useQuery({ queryKey: ["portfolio"], queryFn: () => getMyPortfolio(token), enabled: !!token });
   const entries = data?.data ?? [];
 
   const create = useMutation({
     mutationFn: () => createPortfolioEntry({ title, description, url }, token),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["portfolio"] }); setTitle(""); setDescription(""); setUrl(""); toast.success("Added to portfolio"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["portfolio"] }); setTitle(""); setDescription(""); setUrl(""); setErrors({}); toast.success("Added to portfolio"); },
     onError: (err) => toast.error(err.message || "Could not add entry"),
   });
   const remove = useMutation({
@@ -48,11 +63,11 @@ export default function PortfoliosPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>Add portfolio entry</DialogTitle><DialogDescription>Share a completed milestone, certificate, or project.</DialogDescription></DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-1.5"><Label htmlFor="pf-title">Title</Label><Input id="pf-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="E.g. Campus club website" /></div>
-              <div className="space-y-1.5"><Label htmlFor="pf-desc">Description</Label><Input id="pf-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What you built and the impact" /></div>
-              <div className="space-y-1.5"><Label htmlFor="pf-url">Project URL</Label><Input id="pf-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" /></div>
+              <div className="space-y-1.5"><Label htmlFor="pf-title">Title</Label><Input id="pf-title" maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="E.g. Campus club website" />{errors.title && <p className="text-xs text-brick" role="alert">{errors.title}</p>}</div>
+              <div className="space-y-1.5"><Label htmlFor="pf-desc">Description</Label><Input id="pf-desc" maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What you built and the impact" />{errors.description && <p className="text-xs text-brick" role="alert">{errors.description}</p>}</div>
+              <div className="space-y-1.5"><Label htmlFor="pf-url">Project URL</Label><Input id="pf-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />{errors.url && <p className="text-xs text-brick" role="alert">{errors.url}</p>}</div>
             </div>
-            <DialogFooter><Button size="sm" loading={create.isPending} onClick={() => create.mutate()}>Add to portfolio</Button></DialogFooter>
+            <DialogFooter><Button size="sm" loading={create.isPending} onClick={() => validate() && create.mutate()}>Add to portfolio</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </header>
@@ -71,7 +86,7 @@ export default function PortfoliosPage() {
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <FolderOpen className="h-8 w-8 text-brass" />
-                <Button variant="ghost" size="sm" className="h-8 w-8 text-brick opacity-0 transition-opacity group-hover:opacity-100" onClick={() => remove.mutate(e._id)} aria-label="Remove entry"><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="sm" className="h-8 w-8 text-brick opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setRemoveTarget(e)} aria-label="Remove entry"><Trash2 className="h-4 w-4" /></Button>
               </div>
               <h3 className="mt-3 font-display text-base text-slate">{e.title}</h3>
               <p className="mt-1 line-clamp-3 text-sm text-slate-300">{e.description}</p>
@@ -86,6 +101,7 @@ export default function PortfoliosPage() {
           </Card>
         ))}
       </div>
+      <ConfirmDialog open={Boolean(removeTarget)} title="Remove portfolio entry?" description="This entry will be permanently removed from your portfolio." confirmLabel="Remove" tone="danger" loading={remove.isPending} onCancel={() => setRemoveTarget(null)} onConfirm={() => { remove.mutate(removeTarget._id); setRemoveTarget(null); }} />
     </div>
   );
 }

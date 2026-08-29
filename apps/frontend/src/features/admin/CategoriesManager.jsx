@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/shadcn/dialog.jsx";
+import { reportValidation } from "../../lib/validation.js";
 
 function slugify(value) {
   return value
@@ -51,6 +52,16 @@ function CategoryFormDialog({ token, category, trigger }) {
       : EMPTY_FORM
   );
   const [slugTouched, setSlugTouched] = useState(isEdit);
+  const [error, setError] = useState("");
+
+  function validate() {
+    const price = Number(form.proposal_price_floor || 0);
+    const sort = Number(form.sort_order);
+    const message = !form.name.trim() ? "Enter a category name." : !form.slug.trim() ? "Enter a category slug." : form.name.trim().length > 100 ? "Category name must be 100 characters or fewer." : form.description.length > 1000 ? "Description must be 1,000 characters or fewer." : !Number.isInteger(sort) || sort < 0 ? "Sort order must be a non-negative whole number." : !Number.isFinite(price) || price < 0 ? "Price floor must be a non-negative number." : "";
+    setError(message);
+    if (message) { reportValidation(message, { form: "category" }); return false; }
+    return true;
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -153,11 +164,12 @@ function CategoryFormDialog({ token, category, trigger }) {
         <DialogFooter>
           <Button
             loading={save.isPending}
-            disabled={!form.name.trim() || !form.slug.trim()}
-            onClick={() => save.mutate()}
+            disabled={save.isPending}
+            onClick={() => validate() && save.mutate()}
           >
             {isEdit ? "Save changes" : "Create category"}
           </Button>
+          {error && <p className="text-xs text-brick" role="alert">{error}</p>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -208,7 +220,7 @@ function SkillFloorsManager() {
               </div>
               {["beginner", "intermediate", "advanced", "expert"].map((level) => (
                 <label key={level} className="text-xs capitalize text-slate-300">
-                  {level}
+              {level}
                   <Input
                     type="number"
                     min="0"
@@ -218,7 +230,7 @@ function SkillFloorsManager() {
                   />
                 </label>
               ))}
-              <Button size="sm" loading={save.isPending} onClick={() => save.mutate({ id: skill._id, floors })}>Save</Button>
+              <Button size="sm" loading={save.isPending} onClick={() => { const invalid = Object.values(floors).some((value) => value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)); if (invalid) { const message = "Skill floors must be non-negative numbers."; toast.error(message); reportValidation(message, { form: "skill-floor", skillId: skill._id }); return; } save.mutate({ id: skill._id, floors }); }}>Save</Button>
             </div>
           );
         })}

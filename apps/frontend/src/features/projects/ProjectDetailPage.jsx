@@ -7,7 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
 import { getProject } from "../../services/api/projects.api.js";
-import { submitProposal, listProjectProposals, acceptProposal, getCommissionPreview } from "../../services/api/proposals.api.js";
+import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
 import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -24,7 +24,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/shadcn/dialog.jsx";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/shadcn/form.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
-import { uploadFile } from "../../services/api/files.api.js";
+import { uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
+import { reportValidation } from "../../lib/validation.js";
 
 const proposalSchema = z.object({
   price: z.coerce.number().min(1, "Enter a price").max(1000000),
@@ -55,7 +56,7 @@ function VerificationRequiredNotice() {
 function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", projectStatus = "open" }) {
   const queryClient = useQueryClient();
   const [cvFile, setCvFile] = useState(null);
-  const cvUpload = useMutation({ mutationFn: (file) => uploadFile(file, { relatedType: "cv", token }), onSuccess: (response) => setCvFile(response.data) });
+  const cvUpload = useMutation({ mutationFn: (file) => uploadFile(file, { relatedType: "cv", token }), onSuccess: (response) => setCvFile(response.data), onError: (error) => toast.error(error.message || "Could not upload your CV") });
   const form = useForm({
     resolver: zodResolver(proposalSchema),
     defaultValues: { price: "", delivery_time_days: 7, cover_note: "" },
@@ -128,6 +129,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
 
 function ClientProposalList({ projectId, token, currency = "USD" }) {
   const queryClient = useQueryClient();
+  const [cvViewed, setCvViewed] = useState({});
   const { data, isLoading } = useQuery({
     queryKey: ["project-proposals", projectId],
     queryFn: () => listProjectProposals(projectId, token),
@@ -144,6 +146,18 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
   });
 
   const proposals = data?.data ?? [];
+  async function viewCv(proposal) {
+    const file = proposal.cv_file_id;
+    if (!file?._id) { const message = "This proposal has no CV attached and cannot be approved."; toast.error(message); reportValidation(message, { form: "proposal-approval", proposalId: proposal._id }); return; }
+    try {
+      const blob = await fetchFileBlob(file._id, token);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await markProposalCvViewed(proposal._id, token);
+      setCvViewed((current) => ({ ...current, [proposal._id]: true }));
+    } catch (error) { toast.error(error.message || "Could not open CV"); }
+  }
 
   return (
     <div className="space-y-3">
@@ -183,9 +197,12 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
               <StatusBadge kind="proposal" status={p.status} showDot />
               <div className="flex gap-2">
                 {p.status === "pending" && (
-                  <Button size="sm" loading={acceptMutation.isPending} onClick={() => acceptMutation.mutate(p._id)}>
-                    Accept &amp; create contract
-                  </Button>
+                  <>
+                    {p.cv_file_id && <Button size="sm" variant="outline" onClick={() => viewCv(p)}>View CV</Button>}
+                    <Button size="sm" loading={acceptMutation.isPending} disabled={!cvViewed[p._id]} title={!cvViewed[p._id] ? "View the CV before approving" : undefined} onClick={() => acceptMutation.mutate(p._id)}>
+                      Accept &amp; create contract
+                    </Button>
+                  </>
                 )}
               </div>
             </div>

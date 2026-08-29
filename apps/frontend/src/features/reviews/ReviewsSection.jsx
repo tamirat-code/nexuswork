@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { reportValidation } from "../../lib/validation.js";
 import { Star } from "lucide-react";
 import { submitReview, getUserReviews } from "../../services/api/reviews.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -55,9 +56,10 @@ function ReviewForm({ contractId, revieweeId, onDone }) {
       </div>
       <div className="space-y-1.5">
         <label htmlFor="review-comment" className="text-sm font-semibold text-slate">Written review</label>
-        <Textarea id="review-comment" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="How was the collaboration? Timeliness, quality, communication…" />
+        <Textarea id="review-comment" maxLength={2000} rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="How was the collaboration? Timeliness, quality, communication…" />
+        <p className="text-xs text-slate-300">{text.length}/2000 characters</p>
       </div>
-      <Button className="w-full" disabled={rating === 0} loading={mutation.isPending} onClick={() => mutation.mutate()}>
+      <Button className="w-full" disabled={rating === 0 || text.length > 2000} loading={mutation.isPending} onClick={() => { if (!rating) { const message = "Choose a rating before submitting."; reportValidation(message, { form: "review" }); return; } mutation.mutate(); }}>
         Submit review
       </Button>
     </div>
