@@ -18,7 +18,14 @@ const client = new S3Client({
         }
       : undefined,
 });
-
+console.log("[S3 CONFIG]", {
+  region,
+  endpoint,
+  forcePathStyle,
+  hasAccessKey: Boolean(storageConfig.accessKey),
+  hasSecretKey: Boolean(storageConfig.secretKey),
+  bucket: storageConfig.bucket,
+});
 export async function uploadToS3({ bucket, key, body, contentType }) {
   const cmd = new PutObjectCommand({
     Bucket: bucket,
