@@ -889,6 +889,14 @@ export default function ContractDetailPage() {
   const isStudent = Boolean(contract && currentUserId && String(studentId) === String(currentUserId));
   const role = isClient ? ROLES.CLIENT : isStudent ? ROLES.STUDENT : user?.role;
   const meetings = meetingsQuery.data?.data ?? [];
+  const myReview = isClient ? contract?.client_review : contract?.student_review;
+  const myReviewIsCurrent = Boolean(
+    myReview?.reviewed_at &&
+    myReview.contract_version === contract?.version &&
+    myReview.terms_fingerprint === contract?.terms_fingerprint
+  );
+  const mySignature = isClient ? contract?.client_signature : contract?.student_signature;
+  const hasSigned = Boolean(mySignature?.signed_at);
 
   const milestoneProgress = useMemo(() => {
     if (!milestones.length) return 0;
@@ -1052,11 +1060,11 @@ export default function ContractDetailPage() {
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-brass" />
               <div>
-                <p className="font-semibold text-slate">Contract ready for review</p>
-                <p className="text-sm text-slate-300">Review the agreed terms before signing and starting work.</p>
+                <p className="font-semibold text-slate">{myReviewIsCurrent ? "Review recorded" : "Contract ready for review"}</p>
+                <p className="text-sm text-slate-300">{myReviewIsCurrent ? "Waiting for the other party to review the agreed terms." : "Review the agreed terms before signing and starting work."}</p>
               </div>
             </div>
-            <Button onClick={() => setReviewDialogOpen(true)}>Review &amp; agree</Button>
+            {!myReviewIsCurrent && <Button onClick={() => setReviewDialogOpen(true)}>Review &amp; agree</Button>}
           </CardContent>
         </Card>
       )}
@@ -1072,10 +1080,12 @@ export default function ContractDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setReviewDialogOpen(true)}>
-                Review current terms
-              </Button>
-              <Button onClick={() => setSignDialogOpen(true)}>Sign contract</Button>
+              {!myReviewIsCurrent && (
+                <Button variant="secondary" onClick={() => setReviewDialogOpen(true)}>
+                  Review current terms
+                </Button>
+              )}
+              {hasSigned ? <Button disabled>Signature recorded</Button> : <Button onClick={() => setSignDialogOpen(true)}>Sign contract</Button>}
             </div>
           </CardContent>
         </Card>

@@ -12,6 +12,7 @@ import { listProjects } from "../../services/api/projects.api.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 
 import Button from "../../components/ui/Button.jsx";
+import LandingOnboarding from "./LandingOnboarding.jsx";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 16 },
@@ -443,6 +444,7 @@ function HeroVideoBackground() {
 export default function LandingPage() {
   return (
     <div className="bg-canvas">
+      <LandingOnboarding />
       <section className="relative overflow-hidden border-b border-border-subtle bg-canvas" aria-label="Hero">
         <HeroVideoBackground />
 

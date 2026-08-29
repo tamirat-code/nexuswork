@@ -174,6 +174,22 @@ export async function reviewContract(
 
   ensureFingerprint(contract);
 
+  const currentReview = party.client
+    ? contract.client_review
+    : contract.student_review;
+
+  // Retries caused by double-clicks, network timeouts, or notification
+  // reopens must not rewrite the review or send another notification.
+  if (
+    currentReview?.reviewed_at &&
+    currentReview.contract_version === contract.version &&
+    currentReview.terms_fingerprint === contract.terms_fingerprint
+  ) {
+    return normalizeContract(contract);
+  }
+
+  const previousState = contract.status;
+
   const review = {
     reviewed_at: new Date(),
     contract_version:
@@ -208,7 +224,6 @@ export async function reviewContract(
       "pending_signature";
   }
 
-  const previousState = contract.status;
   await contract.save();
 
   await recordEvent({
