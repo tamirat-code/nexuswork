@@ -1,48 +1,49 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute, GuestOnlyRoute } from "./guards.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 
 import LandingPage from "../../features/landing/LandingPage.jsx";
-import LoginPage from "../../features/auth/LoginPage.jsx";
-import RegisterPage from "../../features/auth/RegisterPage.jsx";
-import ForgotPasswordPage from "../../features/auth/ForgotPasswordPage.jsx";
-import ResetPasswordPage from "../../features/auth/ResetPasswordPage.jsx";
-import VerifyEmailPage from "../../features/auth/VerifyEmailPage.jsx";
-import MfaSetupPage from "../../features/auth/MfaSetupPage.jsx";
-import MfaVerifyPage from "../../features/auth/MfaVerifyPage.jsx";
-import ProjectListPage from "../../features/projects/ProjectListPage.jsx";
-import ProjectDetailPage from "../../features/projects/ProjectDetailPage.jsx";
-import PostProjectPage from "../../features/projects/PostProjectPage.jsx";
-import DashboardPage from "../../features/workspace/DashboardPage.jsx";
-import ContractsPage from "../../features/contracts/ContractsPage.jsx";
-import ContractDetailPage from "../../features/contracts/ContractDetailPage.jsx";
-import WalletsPage from "../../features/wallets/WalletsPage.jsx";
-import PaymentsPage from "../../features/payments/PaymentsPage.jsx";
-import PaymentCompletePage from "../../features/payments/PaymentCompletePage.jsx";
-import InvoicesPage from "../../features/invoices/InvoicesPage.jsx";
-import ProposalsPage from "../../features/proposals/ProposalsPage.jsx";
-import DisputesPage from "../../features/disputes/DisputesPage.jsx";
-import NotificationsPage from "../../features/notifications/NotificationsPage.jsx";
-import ChatPage from "../../features/chat/ChatPage.jsx";
-import SettingsPage from "../../features/settings/SettingsPage.jsx";
-import ProfilePage from "../../features/profile/ProfilePage.jsx";
-import PortfoliosPage from "../../features/portfolios/PortfoliosPage.jsx";
-import SkillsPage from "../../features/skills/SkillsPage.jsx";
-import LearningPage from "../../features/learning/LearningPage.jsx";
-import StudentsPage from "../../features/students/StudentsPage.jsx";
-import StudentProfilePage from "../../features/students/ProfilePage.jsx";
-import ClientsPage from "../../features/clients/ClientsPage.jsx";
-import UniversitiesPage from "../../features/universities/UniversitiesPage.jsx";
-import CredentialVerifyPage from "../../features/verifications/CredentialVerifyPage.jsx";
-import AnalyticsPage from "../../features/analytics/AnalyticsPage.jsx";
-import RecommendationPage from "../../features/recommendation/RecommendationPage.jsx";
-import SearchPage from "../../features/search/SearchPage.jsx";
-import AdminPage from "../../features/admin/AdminPage.jsx";
-import TermsPage from "../../features/legal/TermsPage.jsx";
-import PrivacyPage from "../../features/legal/PrivacyPage.jsx";
-import NotFoundPage from "../../features/misc/NotFoundPage.jsx";
-import MeetingPage from "../../features/meetings/MeetingPage.jsx";
-import MeetingsListPage from "../../features/meetings/MeetingsListPage.jsx";
+const LoginPage = lazy(() => import("../../features/auth/LoginPage.jsx"));
+const RegisterPage = lazy(() => import("../../features/auth/RegisterPage.jsx"));
+const ForgotPasswordPage = lazy(() => import("../../features/auth/ForgotPasswordPage.jsx"));
+const ResetPasswordPage = lazy(() => import("../../features/auth/ResetPasswordPage.jsx"));
+const VerifyEmailPage = lazy(() => import("../../features/auth/VerifyEmailPage.jsx"));
+const MfaSetupPage = lazy(() => import("../../features/auth/MfaSetupPage.jsx"));
+const MfaVerifyPage = lazy(() => import("../../features/auth/MfaVerifyPage.jsx"));
+const ProjectListPage = lazy(() => import("../../features/projects/ProjectListPage.jsx"));
+const ProjectDetailPage = lazy(() => import("../../features/projects/ProjectDetailPage.jsx"));
+const PostProjectPage = lazy(() => import("../../features/projects/PostProjectPage.jsx"));
+const DashboardPage = lazy(() => import("../../features/workspace/DashboardPage.jsx"));
+const ContractsPage = lazy(() => import("../../features/contracts/ContractsPage.jsx"));
+const ContractDetailPage = lazy(() => import("../../features/contracts/ContractDetailPage.jsx"));
+const WalletsPage = lazy(() => import("../../features/wallets/WalletsPage.jsx"));
+const PaymentsPage = lazy(() => import("../../features/payments/PaymentsPage.jsx"));
+const PaymentCompletePage = lazy(() => import("../../features/payments/PaymentCompletePage.jsx"));
+const InvoicesPage = lazy(() => import("../../features/invoices/InvoicesPage.jsx"));
+const ProposalsPage = lazy(() => import("../../features/proposals/ProposalsPage.jsx"));
+const DisputesPage = lazy(() => import("../../features/disputes/DisputesPage.jsx"));
+const NotificationsPage = lazy(() => import("../../features/notifications/NotificationsPage.jsx"));
+const ChatPage = lazy(() => import("../../features/chat/ChatPage.jsx"));
+const SettingsPage = lazy(() => import("../../features/settings/SettingsPage.jsx"));
+const ProfilePage = lazy(() => import("../../features/profile/ProfilePage.jsx"));
+const PortfoliosPage = lazy(() => import("../../features/portfolios/PortfoliosPage.jsx"));
+const SkillsPage = lazy(() => import("../../features/skills/SkillsPage.jsx"));
+const LearningPage = lazy(() => import("../../features/learning/LearningPage.jsx"));
+const StudentsPage = lazy(() => import("../../features/students/StudentsPage.jsx"));
+const StudentProfilePage = lazy(() => import("../../features/students/ProfilePage.jsx"));
+const ClientsPage = lazy(() => import("../../features/clients/ClientsPage.jsx"));
+const UniversitiesPage = lazy(() => import("../../features/universities/UniversitiesPage.jsx"));
+const CredentialVerifyPage = lazy(() => import("../../features/verifications/CredentialVerifyPage.jsx"));
+const AnalyticsPage = lazy(() => import("../../features/analytics/AnalyticsPage.jsx"));
+const RecommendationPage = lazy(() => import("../../features/recommendation/RecommendationPage.jsx"));
+const SearchPage = lazy(() => import("../../features/search/SearchPage.jsx"));
+const AdminPage = lazy(() => import("../../features/admin/AdminPage.jsx"));
+const TermsPage = lazy(() => import("../../features/legal/TermsPage.jsx"));
+const PrivacyPage = lazy(() => import("../../features/legal/PrivacyPage.jsx"));
+const NotFoundPage = lazy(() => import("../../features/misc/NotFoundPage.jsx"));
+const MeetingPage = lazy(() => import("../../features/meetings/MeetingPage.jsx"));
+const MeetingsListPage = lazy(() => import("../../features/meetings/MeetingsListPage.jsx"));
 
 const protect = (element, allowedRoles) => (
   <ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>
@@ -50,9 +51,14 @@ const protect = (element, allowedRoles) => (
 
 const guestOnly = (element) => <GuestOnlyRoute>{element}</GuestOnlyRoute>;
 
+function RouteLoading() {
+  return <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-300" role="status">Loading page…</div>;
+}
+
 export default function AppRouter() {
   return (
-    <Routes>
+    <Suspense fallback={<RouteLoading />}>
+      <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={guestOnly(<LoginPage />)} />
@@ -102,6 +108,7 @@ export default function AppRouter() {
       <Route path="/meetings" element={protect(<MeetingsListPage />)} />
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

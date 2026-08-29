@@ -2,8 +2,10 @@
 import Meeting from "../modules/meetings/meetings.model.js";
 import { createNotification } from "../modules/notifications/notifications.service.js";
 import { expireMeetings } from "../modules/meetings/meetings.service.js";
+import { reconcilePendingReleases } from "../modules/payments/payments.service.js";
 
 export function registerJobs() {
+  let reconciliationInProgress = false;
   const timer = setInterval(async () => {
     try {
       const now = new Date();
@@ -20,5 +22,28 @@ export function registerJobs() {
     }
   }, 60 * 1000);
   timer.unref?.();
-  return () => clearInterval(timer);
+
+  // Provider calls can take longer than one scheduler interval. The guard
+  // prevents two payout reconciliation passes from processing the same
+  // pending release concurrently.
+  const reconciliationTimer = setInterval(async () => {
+    if (reconciliationInProgress) return;
+    reconciliationInProgress = true;
+    try {
+      const result = await reconcilePendingReleases({ limit: 100 });
+      if (result.checked) {
+        console.log(`[jobs] payout reconciliation checked=${result.checked} succeeded=${result.succeeded} failed=${result.failed}`);
+      }
+    } catch (error) {
+      console.error("[jobs] payout reconciliation failed:", error.message);
+    } finally {
+      reconciliationInProgress = false;
+    }
+  }, 5 * 60 * 1000);
+  reconciliationTimer.unref?.();
+
+  return () => {
+    clearInterval(timer);
+    clearInterval(reconciliationTimer);
+  };
 }

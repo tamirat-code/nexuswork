@@ -3,6 +3,7 @@ import { env } from "./env.js";
 const SUPPORTED_AI_PROVIDERS = new Set(["none", "groq", "anthropic"]);
 const SUPPORTED_PAYMENT_PROVIDERS = new Set(["none", "stripe", "chapa"]);
 const SUPPORTED_STORAGE_DRIVERS = new Set(["local", "s3"]);
+const SUPPORTED_FILE_SCAN_PROVIDERS = new Set(["none", "opswat"]);
 
 function requireValue(missing, value, name) {
   if (!value) missing.push(name);
@@ -56,6 +57,13 @@ export function validateEnv(config = env) {
   if (!SUPPORTED_STORAGE_DRIVERS.has(config.storageDriver)) {
     throw new Error(`Unsupported STORAGE_DRIVER: ${config.storageDriver}. Use local or s3.`);
   }
+  if (!SUPPORTED_FILE_SCAN_PROVIDERS.has(config.fileScanProvider)) {
+    throw new Error(`Unsupported FILE_SCAN_PROVIDER: ${config.fileScanProvider}. Use none or opswat.`);
+  }
+  if (config.fileScanProvider !== "none") {
+    requireValue(missing, config.opswatApiKey, "OPSWAT_API_KEY");
+    requireUrl(missing, config.opswatApiBaseUrl, "OPSWAT_API_BASE_URL");
+  }
 
   if (config.isProduction) {
     requireUrl(missing, config.clientUrl, "CLIENT_URL");
@@ -68,6 +76,9 @@ export function validateEnv(config = env) {
       requireValue(missing, config.s3Bucket, "S3_BUCKET");
       requireValue(missing, config.s3AccessKey, "S3_ACCESS_KEY");
       requireValue(missing, config.s3SecretKey, "S3_SECRET_KEY");
+    }
+    if (config.fileScanProvider !== "opswat" || !config.opswatPrivateScan) {
+      missing.push("FILE_SCAN_PROVIDER (production uploads require hosted malware scanning)");
     }
     requireValue(missing, config.resendApiKey, "RESEND_API_KEY");
     requireValue(missing, config.recaptchaSecretKey, "RECAPTCHA_SECRET_KEY");

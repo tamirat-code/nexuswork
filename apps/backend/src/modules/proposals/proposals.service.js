@@ -19,6 +19,7 @@ import {
   ValidationError,
 } from "../../shared/exceptions/AppError.js";
 import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
+import { withMongoTransaction } from "../../config/database.config.js";
 
 import {
   createNotification,
@@ -462,150 +463,76 @@ export async function acceptProposal(
   requestingUser,
   auditContext = {}
 ) {
-
-  const proposal =
-    await Proposal.findById(
-      proposalId
-    )
+  const result = await withMongoTransaction(async (session) => {
+    const proposalQuery = Proposal.findById(proposalId)
       .populate("project_id")
-      .populate(
-        "student_id",
-        "name email"
-      );
+      .populate("student_id", "name email");
+    if (session) proposalQuery.session(session);
+    const proposal = await proposalQuery;
 
+    if (!proposal) throw new NotFoundError("Proposal not found");
 
-  if (!proposal) {
-    throw new NotFoundError(
-      "Proposal not found"
-    );
-  }
+    await assertCanManageProposal(proposal, requestingUser);
 
-
-  await assertCanManageProposal(
-    proposal,
-    requestingUser
-  );
-
-  if (!proposal.cv_file_id || String(proposal.cv_viewed_by) !== String(requestingUser._id)) {
-    throw new ValidationError("You must view the student's CV before accepting this proposal", "CV_REVIEW_REQUIRED");
-  }
-
-
-  if (
-    proposal.status !== "pending"
-  ) {
-
-    throw new ValidationError(
-      `Cannot accept a proposal with status "${proposal.status}"`
-    );
-
-  }
-
-
-  const project =
-    proposal.project_id;
-
-  await assertProposalPriceFloor(project, proposal.student_id._id, proposal.price);
-
-
-  if (
-    project.status !== "open"
-  ) {
-
-    throw new ValidationError(
-      "This project is no longer accepting proposals"
-    );
-
-  }
-
-
-  
-  const existingContract =
-    await Contract.findOne({
-      proposal_id:
-        proposal._id,
-    });
-
-
-  if (existingContract) {
-
-    throw new ValidationError(
-      "A contract already exists for this proposal"
-    );
-
-  }
-
-
-  proposal.status =
-    "accepted";
-
-  await proposal.save();
-
-
-  project.status =
-    "in_progress";
-
-  await project.save();
-
-
-  const competingProposals =
-    await Proposal.find({
-      project_id:
-        project._id,
-
-      _id: {
-        $ne:
-          proposal._id,
-      },
-
-      status:
-        "pending",
-    })
-      .select(
-        "_id student_id"
-      )
-      .lean();
-
-
-  await Proposal.updateMany(
-
-    {
-      project_id:
-        project._id,
-
-      _id: {
-        $ne:
-          proposal._id,
-      },
-
-      status:
-        "pending",
-    },
-
-    {
-      status:
-        "rejected",
+    if (!proposal.cv_file_id || String(proposal.cv_viewed_by) !== String(requestingUser._id)) {
+      throw new ValidationError("You must view the student's CV before accepting this proposal", "CV_REVIEW_REQUIRED");
     }
 
-  );
+    if (proposal.status !== "pending") {
+      throw new ValidationError(`Cannot accept a proposal with status "${proposal.status}"`);
+    }
 
+    const project = proposal.project_id;
+    await assertProposalPriceFloor(project, proposal.student_id._id, proposal.price);
 
- 
-  const { terms, terms_fingerprint } = buildContractTerms({
-    project,
-    proposal,
+    if (project.status !== "open") {
+      throw new ValidationError("This project is no longer accepting proposals");
+    }
+
+    const contractQuery = Contract.findOne({ proposal_id: proposal._id });
+    if (session) contractQuery.session(session);
+    if (await contractQuery) {
+      throw new ValidationError("A contract already exists for this proposal");
+    }
+
+    proposal.status = "accepted";
+    await proposal.save(session ? { session } : undefined);
+
+    project.status = "in_progress";
+    await project.save(session ? { session } : undefined);
+
+    const competingQuery = Proposal.find({
+      project_id: project._id,
+      _id: { $ne: proposal._id },
+      status: "pending",
+    }).select("_id student_id");
+    if (session) competingQuery.session(session);
+    const competingProposals = await competingQuery.lean();
+
+    await Proposal.updateMany(
+      { project_id: project._id, _id: { $ne: proposal._id }, status: "pending" },
+      { status: "rejected" },
+      session ? { session } : undefined
+    );
+
+    const { terms, terms_fingerprint } = buildContractTerms({ project, proposal });
+    const contract = new Contract({
+      proposal_id: proposal._id,
+      project_id: project._id,
+      client_id: project.client_id,
+      student_id: proposal.student_id._id,
+      status: "pending_review",
+      version: 1,
+      terms,
+      terms_fingerprint,
+    });
+    await contract.save(session ? { session } : undefined);
+
+    return { proposal, project, contract, competingProposals };
   });
 
-  const contract = await Contract.create({
-    proposal_id: proposal._id,
-    project_id: project._id,
-    client_id: project.client_id,
-    student_id: proposal.student_id._id,
-    status: "pending_review",
-    version: 1,
-    terms,
-    terms_fingerprint,
-  });
+  const { proposal, project, contract, competingProposals } = result;
+  const correlationId = auditContext.correlationId || crypto.randomUUID();
 
   await recordEvent({
     actor: requestingUser,
@@ -615,95 +542,27 @@ export async function acceptProposal(
     entityId: contract._id,
     previousState: null,
     newState: contract.status,
-    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    correlationId,
     metadata: { proposalId: proposal._id, projectId: project._id },
   });
 
-
- 
   await createNotification({
-
-    userId:
-      proposal.student_id._id,
-
-    type:
-      "proposal_accepted",
-
-    title:
-      "Your proposal was accepted",
-
-    body:
-      `Your proposal for "${project.title}" ` +
-      `was accepted. A contract is ready for review. Both parties must review and sign it before work can begin.`,
-
-    data: {
-
-      proposal_id:
-        proposal._id,
-
-      project_id:
-        project._id,
-
-      contract_id:
-        contract._id,
-
-      action:
-        "view_contract",
-
-    },
-
+    userId: proposal.student_id._id,
+    type: "proposal_accepted",
+    title: "Your proposal was accepted",
+    body: `Your proposal for "${project.title}" was accepted. A contract is ready for review. Both parties must review and sign it before work can begin.`,
+    data: { proposal_id: proposal._id, project_id: project._id, contract_id: contract._id, action: "view_contract" },
   });
 
+  await Promise.all(competingProposals.map((item) => createNotification({
+    userId: item.student_id,
+    type: "proposal_rejected",
+    title: "Proposal not selected",
+    body: `The client selected another proposal for "${project.title}".`,
+    data: { proposal_id: item._id, project_id: project._id, action: "view_proposal" },
+  })));
 
-
-  await Promise.all(
-
-    competingProposals.map(
-      (item) =>
-        createNotification({
-
-          userId:
-            item.student_id,
-
-          type:
-            "proposal_rejected",
-
-          title:
-            "Proposal not selected",
-
-          body:
-            `The client selected another proposal ` +
-            `for "${project.title}".`,
-
-          data: {
-
-            proposal_id:
-              item._id,
-
-            project_id:
-              project._id,
-
-            action:
-              "view_proposal",
-
-          },
-
-        })
-    )
-
-  );
-
-
-  return {
-
-    proposal,
-
-    contract,
-
-    rejected_count:
-      competingProposals.length,
-
-  };
+  return { proposal, contract, rejected_count: competingProposals.length };
 }
 
 export async function rejectProposal(

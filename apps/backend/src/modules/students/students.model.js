@@ -37,4 +37,15 @@ const studentProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// A student number is unique within a university, while profiles that have
+// not supplied one yet remain valid and do not collide with each other.
+studentProfileSchema.index(
+  { university_id: 1, student_id_number: 1 },
+  {
+    unique: true,
+    name: "student_profiles_university_student_id_unique",
+    partialFilterExpression: { student_id_number: { $type: "string", $gt: "" } },
+  }
+);
+
 export default mongoose.model("StudentProfile", studentProfileSchema);

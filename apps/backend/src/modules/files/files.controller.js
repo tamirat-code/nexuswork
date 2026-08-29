@@ -1,9 +1,11 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import fs from "fs";
 import { ValidationError, NotFoundError } from "../../shared/exceptions/AppError.js";
 import * as filesService from "./files.service.js";
 import { validateUploadedFile } from "./files.upload.js";
 import { assertFileAccess, assertFileUploadAccess } from "../../shared/authorization/resource-authorization.js";
 import User from "../users/users.model.js";
+import { scanUploadedFile } from "./file-scanner.js";
 
 const VALID_RELATED_TYPES = new Set([
   "project_attachment",
@@ -23,6 +25,17 @@ export const uploadFile = asyncHandler(async (req, res) => {
   }
 
   const content = await validateUploadedFile(req.file);
+
+  try {
+    await scanUploadedFile({
+      buffer: content.buffer,
+      originalName: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
+  } catch (error) {
+    if (req.file.path) await fs.promises.unlink(req.file.path).catch(() => {});
+    throw error;
+  }
 
   const relatedType = req.body.related_type || "other";
   const relatedId = req.body.related_id;

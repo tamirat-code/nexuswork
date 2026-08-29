@@ -1,10 +1,12 @@
 import Withdrawal from "../modules/wallets/withdrawal.model.js";
 import Payment from "../modules/payments/payments.model.js";
+import StudentProfile from "../modules/students/students.model.js";
 
 export const LEGACY_WITHDRAWAL_IDEMPOTENCY_INDEX = "idempotency_key_1";
 export const WITHDRAWAL_IDEMPOTENCY_INDEX = "withdrawals_user_id_idempotency_key_unique";
 export const PAYMENT_PROVIDER_PAYMENT_INDEX = "provider_1_provider_payment_id_1";
 export const PAYMENT_PROVIDER_EVENT_INDEX = "provider_1_provider_event_id_1";
+export const STUDENT_IDENTITY_INDEX = "student_profiles_university_student_id_unique";
 
 function legacyIdempotencyKey(withdrawalId) {
   return `legacy-withdrawal-${withdrawalId}`;
@@ -56,11 +58,44 @@ export async function ensurePaymentIndexes() {
   return { changed: paymentId.changed || eventId.changed, indexes: [paymentId.name, eventId.name] };
 }
 
-/**
- * Upgrade the withdrawal idempotency constraint without changing withdrawal
- * data. The duplicate check happens before any obsolete index is removed; if
- * bad legacy data is found, startup fails safely and the old constraint stays.
- */
+export async function ensureStudentProfileIndexes() {
+  const duplicate = await StudentProfile.aggregate([
+    { $match: { student_id_number: { $type: "string", $gt: "" } } },
+    { $group: { _id: { university_id: "$university_id", student_id_number: "$student_id_number" }, ids: { $push: "$_id" }, count: { $sum: 1 } } },
+    { $match: { count: { $gt: 1 } } },
+    { $limit: 1 },
+  ]);
+  if (duplicate.length) {
+    throw new Error(
+      "Cannot create student identity index: duplicate student_id_number values exist within a university"
+    );
+  }
+
+  const indexes = await StudentProfile.collection.listIndexes().toArray().catch(async (error) => {
+    if (error.codeName !== "NamespaceNotFound") throw error;
+    await StudentProfile.createIndexes();
+    return StudentProfile.collection.listIndexes().toArray();
+  });
+  const existing = indexes.find((index) => index.name === STUDENT_IDENTITY_INDEX && index.unique);
+  if (existing) return { changed: false, name: STUDENT_IDENTITY_INDEX };
+
+  const conflicting = indexes.find((index) =>
+    index.unique && JSON.stringify(index.key) === JSON.stringify({ university_id: 1, student_id_number: 1 })
+  );
+  if (conflicting) await StudentProfile.collection.dropIndex(conflicting.name);
+
+  await StudentProfile.collection.createIndex(
+    { university_id: 1, student_id_number: 1 },
+    {
+      unique: true,
+      name: STUDENT_IDENTITY_INDEX,
+      partialFilterExpression: { student_id_number: { $type: "string", $gt: "" } },
+    }
+  );
+  return { changed: true, name: STUDENT_IDENTITY_INDEX };
+}
+
+
 export async function ensureWithdrawalIndexes() {
   let indexes;
   try {
