@@ -24,14 +24,14 @@ export default function AppLayout({ children }) {
   useEffect(() => setNavOpen(false), [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-ink">
-      <div className="flex w-full">
+    <div className="flex min-h-[100dvh] flex-col bg-ink">
+      <div className="flex min-h-0 flex-1 w-full">
         {/* ── Desktop sidebar ── */}
         <aside className="sticky top-0 hidden h-screen w-[220px] shrink-0 border-r border-ink-300 bg-ink-900/40 lg:flex lg:flex-col">
           <Sidebar role={user?.role} showBrand />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {/* ── Top header bar ── */}
           <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-ink-300 bg-ink/95 px-4 backdrop-blur-md sm:px-5 lg:px-6">
             {/* Mobile menu button */}

@@ -29,9 +29,9 @@ const columns = [
 export default function Footer() {
   return (
     <footer className="border-t border-ink-300 bg-ink">
-      <div className="grid w-full gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4 sm:px-10 lg:px-16">
+      <div className="mx-auto grid w-full max-w-7xl justify-items-center gap-10 px-6 py-14 text-center sm:grid-cols-2 sm:justify-items-stretch sm:text-left lg:grid-cols-4 sm:px-10 lg:px-16">
         <div>
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center justify-center gap-2.5 sm:justify-start">
             <img src="/logo.svg" alt="NexusWork" className="h-9 w-9 object-contain" />
             <span className="font-display text-lg font-extrabold tracking-tight text-slate">NexusWork</span>
           </Link>
