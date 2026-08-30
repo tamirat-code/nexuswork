@@ -1,6 +1,6 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { trackEvent, getPlatformMetrics, getUserMetrics, getUniversityMetrics } from "./analytics.service.js";
+import { trackEvent, getPlatformMetrics, getUserMetrics, getUniversityMetrics, getMyUniversityMetrics } from "./analytics.service.js";
 
 export const postEvent = asyncHandler(async (req, res) => {
   requireFields(req.body, ["event_type"]);
@@ -26,5 +26,10 @@ export const getMine = asyncHandler(async (req, res) => {
 
 export const getUniversity = asyncHandler(async (req, res) => {
   const metrics = await getUniversityMetrics(req.params.universityId, req.user);
+  res.json({ success: true, data: metrics });
+});
+
+export const getMyUniversity = asyncHandler(async (req, res) => {
+  const metrics = await getMyUniversityMetrics(req.user);
   res.json({ success: true, data: metrics });
 });

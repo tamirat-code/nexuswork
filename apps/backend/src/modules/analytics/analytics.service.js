@@ -244,3 +244,12 @@ export async function getUniversityMetrics(universityId, requestingUser) {
     on_time_rate: onTimeRate,
   };
 }
+
+// Resolve the institution from the authenticated staff account on the server.
+// This keeps the university dashboard scoped to its own institution and avoids
+// trusting a university id supplied by the browser.
+export async function getMyUniversityMetrics(requestingUser) {
+  const university = await University.findOne({ contact_staff: requestingUser._id }).select("_id").lean();
+  if (!university) throw new NotFoundError("No university is linked to this account");
+  return getUniversityMetrics(university._id, requestingUser);
+}

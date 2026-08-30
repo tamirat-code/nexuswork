@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, TrendingUp, Users, Briefcase } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { getPlatformAnalytics, getUniversityAnalytics } from "../../services/api/analytics.api.js";
+import { getPlatformAnalytics, getMyUniversityAnalytics } from "../../services/api/analytics.api.js";
 import { listAdminStats } from "../../services/api/admin.api.js";
-import { getMyUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { chartColors, chartTooltipStyle } from "../../lib/chartStyles.js";
@@ -15,24 +14,17 @@ export default function AnalyticsPage() {
   const { token, user } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
 
-  const { data: universityData, isLoading: universityLoading } = useQuery({
-    queryKey: ["my-university"],
-    queryFn: () => getMyUniversity(token),
-    enabled: !!token && !isAdmin,
-  });
-  const universityId = universityData?.data?._id;
-
   const { data, isLoading: analyticsLoading } = useQuery({
-    queryKey: isAdmin ? ["analytics", "platform"] : ["analytics", "university", universityId],
-    queryFn: () => (isAdmin ? getPlatformAnalytics(token) : getUniversityAnalytics(universityId, token)),
-    enabled: !!token && (isAdmin || !!universityId),
+    queryKey: isAdmin ? ["analytics", "platform"] : ["analytics", "university", "mine"],
+    queryFn: () => (isAdmin ? getPlatformAnalytics(token) : getMyUniversityAnalytics(token)),
+    enabled: !!token,
   });
   const { data: adminDashboardRes, isLoading: adminDashboardLoading } = useQuery({
     queryKey: ["analytics-admin-dashboard"],
     queryFn: () => listAdminStats(token),
     enabled: !!token && isAdmin,
   });
-  const isLoading = isAdmin ? analyticsLoading || adminDashboardLoading : universityLoading || analyticsLoading;
+  const isLoading = analyticsLoading || (isAdmin && adminDashboardLoading);
   const a = data?.data ?? {};
   const adminDashboard = adminDashboardRes?.data ?? {};
   const universitySuppressed = !isAdmin && a.privacy_suppressed;
