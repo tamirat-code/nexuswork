@@ -35,7 +35,15 @@ export default function MeetingPage() {
         socket.on("connect", () => { setError(""); setStatus((current) => current === "active" ? current : "connected"); socket.emit("meeting:join", { room_id: join.data.room_id }); if (String(join.data?.role) === "host") window.setTimeout(renegotiate, 500); }); socket.on("disconnect", (reason) => { logger.warn("Meeting socket disconnected", { meetingId, reason }); setStatus("reconnecting"); }); socket.on("connect_error", (connectError) => { logger.error("Meeting socket reconnect failed", connectError, { meetingId }); setStatus("reconnecting"); setError("Meeting signaling is reconnecting. Please keep this tab open."); });
         restoreAfterVisibility = () => {
           if (document.visibilityState !== "visible") return;
-          if (localRef.current && streamRef.current && localRef.current.srcObject !== streamRef.current) localRef.current.srcObject = streamRef.current;
+          const localVideo = localRef.current;
+          if (localVideo && streamRef.current) {
+            localVideo.srcObject = streamRef.current;
+            localVideo.muted = true;
+            const resumeLocalPreview = () => localVideo.play().catch(() => {});
+            localVideo.onloadedmetadata = resumeLocalPreview;
+            resumeLocalPreview();
+            window.setTimeout(resumeLocalPreview, 250);
+          }
           if (remoteRef.current && remoteStreamRef.current && remoteRef.current.srcObject !== remoteStreamRef.current) remoteRef.current.srcObject = remoteStreamRef.current;
           if (remoteRef.current && !remoteAudioEnabledRef.current) { remoteRef.current.defaultMuted = true; remoteRef.current.muted = true; }
           localRef.current?.play().catch(() => {});
