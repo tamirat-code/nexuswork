@@ -337,6 +337,14 @@ export default function AdminPage() {
   const stats = statsData?.data ?? {};
   const revenue = stats.revenue ?? {};
   const currency = revenue.currency?.toUpperCase() || "USD";
+  const formatMultiCurrency = (values, fallback = 0) => {
+    const entries = Object.entries(values || {});
+    if (!entries.length) return formatCurrency(fallback, currency);
+    return entries
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([code, value]) => formatCurrency(value, code.toUpperCase()))
+      .join(" · ");
+  };
 
   const users = Array.isArray(usersData?.data)
     ? usersData.data
@@ -360,18 +368,18 @@ export default function AdminPage() {
   const revenueCards = [
     {
       label: "Platform commission (all-time)",
-      value: formatCurrency(revenue.commission_total ?? 0, currency),
+      value: formatMultiCurrency(revenue.commission_by_currency, revenue.commission_total ?? 0),
       icon: ShieldCheck,
       highlight: true,
     },
     {
       label: "Commission (last 30 days)",
-      value: formatCurrency(revenue.commission_30d ?? 0, currency),
+      value: formatMultiCurrency(revenue.commission_30d_by_currency, revenue.commission_30d ?? 0),
       icon: TrendingUp,
     },
     {
       label: "Total paid out to students",
-      value: formatCurrency(revenue.total_withdrawn ?? 0, currency),
+      value: formatMultiCurrency(revenue.withdrawn_by_currency, revenue.total_withdrawn ?? 0),
       icon: Wallet,
     },
   ];

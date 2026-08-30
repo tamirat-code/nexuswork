@@ -234,7 +234,7 @@ export async function getDashboardStats() {
     Dispute.countDocuments({ status: "resolved", resolved_at: { $gte: thirtyDaysAgo } }),
     Payment.aggregate([
       { $match: { direction: "commission", status: "succeeded" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
+      { $group: { _id: "$currency", total: { $sum: "$amount" } } },
     ]),
     Payment.aggregate([
       {
@@ -244,11 +244,11 @@ export async function getDashboardStats() {
           createdAt: { $gte: thirtyDaysAgo },
         },
       },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
+      { $group: { _id: "$currency", total: { $sum: "$amount" } } },
     ]),
     Withdrawal.aggregate([
       { $match: { status: "paid" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
+      { $group: { _id: "$currency", total: { $sum: "$amount" } } },
     ]),
     Payment.aggregate([
       {
@@ -260,7 +260,7 @@ export async function getDashboardStats() {
       },
       {
         $group: {
-          _id: { y: { $year: "$createdAt" }, m: { $month: "$createdAt" } },
+          _id: { y: { $year: "$createdAt" }, m: { $month: "$createdAt" }, currency: "$currency" },
           total: { $sum: "$amount" },
         },
       },
@@ -273,18 +273,26 @@ export async function getDashboardStats() {
     { $sort: { _id: 1 } },
   ]);
 
-  const commission_total = Number(commissionTotalAgg[0]?.total || 0);
-  const commission_30d = Number(commission30dAgg[0]?.total || 0);
-  const total_withdrawn = Number(withdrawnTotalAgg[0]?.total || 0);
+  const byCurrency = (rows) => Object.fromEntries(
+    rows.filter((row) => row._id).map((row) => [String(row._id).toLowerCase(), Number(row.total || 0)])
+  );
+  const commission_by_currency = byCurrency(commissionTotalAgg);
+  const commission_30d_by_currency = byCurrency(commission30dAgg);
+  const withdrawn_by_currency = byCurrency(withdrawnTotalAgg);
+  const commission_total = commission_by_currency[paymentConfig.currency] || 0;
+  const commission_30d = commission_30d_by_currency[paymentConfig.currency] || 0;
+  const total_withdrawn = withdrawn_by_currency[paymentConfig.currency] || 0;
 
   const monthNames = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
-  const monthly_commission = monthlyCommissionAgg.map((row) => ({
-    label: `${monthNames[row._id.m - 1]} ${String(row._id.y).slice(2)}`,
+  const monthly_commission = monthlyCommissionAgg
+    .filter((row) => String(row._id.currency).toLowerCase() === String(paymentConfig.currency).toLowerCase())
+    .map((row) => ({
+    label: `${monthNames[row._id.m - 1]} ${String(row._id.y).slice(2)} (${String(row._id.currency).toUpperCase()})`,
     total: Number(row.total || 0),
-  }));
+    }));
 
   return {
     users: {
@@ -304,6 +312,9 @@ export async function getDashboardStats() {
       commission_30d,
       total_withdrawn,
       currency: paymentConfig.currency,
+      commission_by_currency,
+      commission_30d_by_currency,
+      withdrawn_by_currency,
       monthly: monthly_commission,
     },
   };
