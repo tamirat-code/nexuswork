@@ -636,12 +636,20 @@ function MilestoneCard({ milestone, role, token, onAction, fundingMilestoneId, o
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-brick" />
               <div>
                 <p className="text-sm font-semibold text-brick">Payout could not be released</p>
-                <p className="mt-1 text-sm text-slate-300">
-                  {milestone.payout_failure_reason ||
-                    "The escrow funds were approved but the transfer to the student's payout account failed."}
-                </p>
+                {role === ROLES.CLIENT ? (
+                  <p className="mt-1 text-sm text-slate-300">
+                    {milestone.payout_failure_reason ||
+                      "The escrow funds were approved but the transfer to the student's payout account failed."}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-slate-300">
+                    Your work was approved, but the payout is still being processed. You have not been charged or paid twice.
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-slate-300">
-                  The client's approval was recorded, but the student has not been paid yet.
+                  {role === ROLES.CLIENT
+                    ? "The client's approval was recorded, but the student has not been paid yet."
+                    : "The client’s approval was recorded. The payout will appear in your wallet after it succeeds."}
                 </p>
               </div>
             </div>

@@ -169,10 +169,6 @@ export async function getBalance(userId) {
               direction: "release",
               status: "succeeded",
               currency: walletCurrency,
-              $or: [
-                { stripe_transfer_id: { $exists: false } },
-                { stripe_transfer_id: null },
-              ],
             },
           },
           { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -385,18 +381,14 @@ export async function requestWithdrawal(userId, amount, { actor, correlationId, 
     const [releaseTotals, withdrawalTotals] = await Promise.all([
       milestoneIds.length
         ? Payment.aggregate([
-            {
-              $match: {
-                milestone_id: { $in: milestoneIds },
-                direction: "release",
-                status: "succeeded",
-                currency: walletCurrency,
-                $or: [
-                  { stripe_transfer_id: { $exists: false } },
-                  { stripe_transfer_id: null },
-                ],
+              {
+                $match: {
+                  milestone_id: { $in: milestoneIds },
+                  direction: "release",
+                  status: "succeeded",
+                  currency: walletCurrency,
+                },
               },
-            },
             {
               $group: {
                 _id: null,
