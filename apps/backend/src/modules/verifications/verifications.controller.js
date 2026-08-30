@@ -9,8 +9,11 @@ import {
   listVerifications,
   getVerificationStats,
   reviewVerification,
-  certifyStudentSkill,
   exportVerifiedCredential,
+  submitSkillCertificationRequest,
+  getMySkillCertificationRequests,
+  listSkillCertificationRequests,
+  reviewSkillCertificationRequest,
 } from "./verifications.service.js";
 
 export const requestVerification = asyncHandler(async (req, res) => {
@@ -111,13 +114,41 @@ export const review = asyncHandler(async (req, res) => {
   res.json({ success: true, data: verification });
 });
 
-export const certifySkill = asyncHandler(async (req, res) => {
-  requireFields(req.body, ["skill_name"]);
-  const profile = await certifyStudentSkill({
-    studentUserId: req.params.userId,
+export const requestSkillCertification = asyncHandler(async (req, res) => {
+  const request = await submitSkillCertificationRequest({
+    studentId: req.user._id,
     skillName: req.body.skill_name,
-    staffUserId: req.user._id,
-    staffRole: req.user.role,
+    evidenceFileId: req.body.evidence_file_id,
+    assessmentMethod: req.body.assessment_method,
+    studentNotes: req.body.student_notes,
   });
-  res.json({ success: true, data: profile });
+  res.status(201).json({ success: true, data: request });
+});
+
+export const getMySkillRequests = asyncHandler(async (req, res) => {
+  const requests = await getMySkillCertificationRequests(req.user._id);
+  res.json({ success: true, data: requests });
+});
+
+export const getSkillRequestQueue = asyncHandler(async (req, res) => {
+  const requests = await listSkillCertificationRequests({
+    requesterId: req.user._id,
+    requesterRole: req.user.role,
+    status: req.query.status,
+    limit: req.query.limit,
+    skip: req.query.skip,
+  });
+  res.json({ success: true, data: requests });
+});
+
+export const reviewSkillRequest = asyncHandler(async (req, res) => {
+  const request = await reviewSkillCertificationRequest({
+    requestId: req.params.id,
+    reviewerId: req.user._id,
+    reviewerRole: req.user.role,
+    decision: req.body.decision,
+    assessmentScore: req.body.assessment_score,
+    reviewNotes: req.body.review_notes,
+  });
+  res.json({ success: true, data: request });
 });

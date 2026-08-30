@@ -163,7 +163,7 @@ export async function assertFileAccess({ fileId, user, req } = {}) {
     const proposal = await Proposal.findOne({ cv_file_id: file._id }).populate("project_id", "client_id");
     if (proposal?.project_id && sameId(proposal.project_id.client_id, authenticated._id)) return file;
     throw new ForbiddenError("You do not have access to this CV");
-  } else if (["verification_document", "staff_verification_document", "portfolio"].includes(file.related_type)) {
+  } else if (["verification_document", "staff_verification_document", "skill_certification_evidence", "portfolio"].includes(file.related_type)) {
     // The module service retains the detailed owner/staff/publication checks.
     return file;
   } else if (authenticated.role === ROLES.ADMIN) {

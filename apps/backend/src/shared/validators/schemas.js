@@ -326,8 +326,17 @@ export const openDisputeSchema = z.object({
   reason: z.string().trim().min(10, "Reason must be at least 10 characters").max(2000),
 });
 
-export const certifySkillSchema = z.object({
-  skill_name: z.string().trim().min(1, "Skill name is required").max(100),
+export const submitSkillCertificationRequestSchema = z.object({
+  skill_name: z.string().trim().min(1).max(100),
+  evidence_file_id: objectId,
+  assessment_method: z.enum(["practical_assessment", "portfolio_review", "coursework_linkage"]),
+  student_notes: z.string().trim().min(20, "Explain what the evidence demonstrates in at least 20 characters").max(2000),
+});
+
+export const reviewSkillCertificationRequestSchema = z.object({
+  decision: z.enum(["approved", "rejected"]),
+  assessment_score: z.coerce.number().min(0).max(100).optional(),
+  review_notes: z.string().trim().min(10, "Review notes must be at least 10 characters").max(2000),
 });
 
 export const resolveDisputeSchema = z.object({

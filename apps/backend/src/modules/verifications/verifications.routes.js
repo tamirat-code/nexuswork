@@ -11,10 +11,13 @@ import {
   getAll,
   stats,
   review,
-  certifySkill,
+  requestSkillCertification,
+  getMySkillRequests,
+  getSkillRequestQueue,
+  reviewSkillRequest,
 } from "./verifications.controller.js";
 import { validateBody } from "../../shared/validators/ZodValidator.js";
-import { submitVerificationSchema, reviewVerificationSchema, certifySkillSchema } from "../../shared/validators/schemas.js";
+import { submitVerificationSchema, reviewVerificationSchema, submitSkillCertificationRequestSchema, reviewSkillCertificationRequestSchema } from "../../shared/validators/schemas.js";
 
 const router = Router();
 
@@ -23,16 +26,12 @@ router.post("/", requireAuth, validateBody(submitVerificationSchema), requestVer
 router.get("/mine", requireAuth, getMine);
 router.get("/mine/:id/credential/card", requireAuth, exportCredentialCard);
 router.get("/mine/:id/credential", requireAuth, exportCredential);
+router.post("/skill-requests", requireAuth, requireRole(ROLES.STUDENT), validateBody(submitSkillCertificationRequestSchema), requestSkillCertification);
+router.get("/skill-requests/mine", requireAuth, requireRole(ROLES.STUDENT), getMySkillRequests);
+router.get("/skill-requests/queue", requireAuth, requireRole(ROLES.UNIVERSITY_STAFF, ROLES.ADMIN), getSkillRequestQueue);
+router.patch("/skill-requests/:id/review", requireAuth, requireRole(ROLES.UNIVERSITY_STAFF, ROLES.ADMIN), validateBody(reviewSkillCertificationRequestSchema), reviewSkillRequest);
 router.get("/stats", requireAuth, requireRole(ROLES.ADMIN, ROLES.UNIVERSITY_STAFF), stats);
 router.get("/", requireAuth, requireRole(ROLES.ADMIN, ROLES.UNIVERSITY_STAFF), getAll);
 router.patch("/:id/review", requireAuth, validateBody(reviewVerificationSchema), review);
-
-router.post(
-  "/students/:userId/skills/certify",
-  requireAuth,
-  requireRole(ROLES.UNIVERSITY_STAFF, ROLES.ADMIN),
-  validateBody(certifySkillSchema),
-  certifySkill
-);
 
 export default router;

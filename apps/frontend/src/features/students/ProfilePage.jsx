@@ -291,7 +291,10 @@ export default function ProfilePage() {
                           {skill.name}
                           {skill.level && <span className="text-slate-500">· {skill.level}</span>}
                           {skill.verification_method && skill.verification_method !== "self_declared" && (
-                            <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" aria-label={skill.verification_method} />
+                            <span className="inline-flex items-center gap-1 text-cyan-400" title={skill.verification_method === "university_certified" ? "University certified" : "Assessment evidence provided"}>
+                              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                              <span className="text-[10px] font-semibold uppercase">{skill.verification_method === "university_certified" ? "University certified" : "Assessed"}</span>
+                            </span>
                           )}
                         </span>
                       ))}

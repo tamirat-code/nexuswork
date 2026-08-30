@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BadgeCheck, GraduationCap, ShieldCheck, XCircle, FileText } from "lucide-react";
-import { getVerifications, getVerificationStats, reviewVerification } from "../../services/api/verifications.api.js";
+import { getVerifications, getVerificationStats, reviewVerification, getSkillCertificationQueue, reviewSkillCertificationRequest } from "../../services/api/verifications.api.js";
 import { fetchFileBlob } from "../../services/api/files.api.js";
 import { listUniversities, getMyUniversity } from "../../services/api/universities.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -186,6 +186,27 @@ function VerificationQueue({ token }) {
   );
 }
 
+function SkillCertificationQueue({ token }) {
+  const qc = useQueryClient();
+  const { data, isLoading, error } = useQuery({ queryKey: ["skill-certification-queue"], queryFn: () => getSkillCertificationQueue("?status=pending", token), enabled: !!token });
+  const review = useMutation({
+    mutationFn: ({ id, decision, review_notes, score }) => reviewSkillCertificationRequest(id, { decision, review_notes, ...(decision === "approved" && score !== undefined ? { assessment_score: score } : {}) }, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["skill-certification-queue"] }); toast.success("Skill certification decision saved"); },
+    onError: (err) => toast.error(err.message || "Could not save the decision"),
+  });
+  const [active, setActive] = useState(null);
+  const [notes, setNotes] = useState("");
+  const [score, setScore] = useState("");
+  if (isLoading) return <Skeleton className="h-40 w-full" />;
+  if (error) return <p className="text-sm text-brick">{error.message}</p>;
+  const requests = data?.data || [];
+  if (!requests.length) return <Card className="p-10 text-center"><BadgeCheck className="mx-auto h-10 w-10 text-escrow" /><h3 className="mt-4 font-display text-lg text-slate">No skill requests pending</h3><p className="mt-2 text-sm text-slate-300">Students submit evidence from their profile after university enrollment is verified.</p></Card>;
+  return <div className="space-y-4">
+    {requests.map((request) => <Card key={request._id}><CardContent className="p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-slate">{request.skill_name}</p><p className="text-sm text-slate-300">{request.student_id?.name} · {request.student_id?.email}</p></div><Badge variant="warning">Pending review</Badge></div><div className="mt-4 space-y-2 rounded-control border border-ink-300 bg-ink-700 p-3 text-sm text-slate-300"><p><span className="font-semibold text-slate">Method:</span> {request.assessment_method.replaceAll("_", " ")}</p><p><span className="font-semibold text-slate">Student explanation:</span> {request.student_notes}</p>{request.evidence_file_id && <button type="button" className="font-semibold text-brass underline-offset-2 hover:underline" onClick={async () => { try { const blob = await fetchFileBlob(request.evidence_file_id._id, token); const url = URL.createObjectURL(blob); window.open(url, "_blank", "noopener,noreferrer"); window.setTimeout(() => URL.revokeObjectURL(url), 60000); } catch (err) { toast.error(err.message); } }}>Open evidence: {request.evidence_file_id.original_name}</button>}</div><div className="mt-4 flex gap-2"><Button size="sm" onClick={() => { setActive({ ...request, decision: "approved" }); setNotes(""); setScore(""); }}>Approve</Button><Button size="sm" variant="danger" onClick={() => { setActive({ ...request, decision: "rejected" }); setNotes(""); setScore(""); }}>Reject</Button></div></CardContent></Card>)}
+    <Dialog open={!!active} onOpenChange={(open) => !open && setActive(null)}><DialogContent><DialogHeader><DialogTitle>{active?.decision === "approved" ? "Approve skill certification" : "Reject skill certification"}</DialogTitle><DialogDescription>Record an accountable review decision for {active?.skill_name}.</DialogDescription></DialogHeader>{active?.decision === "approved" && active.assessment_method === "practical_assessment" && <label className="block text-sm font-semibold text-slate">Assessment score (0–100)<input type="number" min="0" max="100" value={score} onChange={(event) => setScore(event.target.value)} className="mt-2 h-10 w-full rounded-control border border-ink-300 bg-ink-50 px-3 text-sm text-slate" /></label>}<Textarea label="Review notes" rows={4} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Explain what you checked and why the decision is supported (at least 10 characters)." /><DialogFooter><Button variant="secondary" onClick={() => setActive(null)}>Cancel</Button><Button variant={active?.decision === "rejected" ? "danger" : "default"} loading={review.isPending} disabled={notes.trim().length < 10 || (active?.decision === "approved" && active.assessment_method === "practical_assessment" && score === "")} onClick={() => review.mutate({ id: active._id, decision: active.decision, review_notes: notes.trim(), score: score === "" ? undefined : Number(score) })}>{active?.decision === "approved" ? "Approve certification" : "Reject request"}</Button></DialogFooter></DialogContent></Dialog>
+  </div>;
+}
+
 export default function UniversitiesPage() {
   const { token, user } = useAuth();
   const isStaff = user?.role === "university_staff";
@@ -230,10 +251,7 @@ export default function UniversitiesPage() {
             {isStaff ? <VerificationQueue token={token} /> : <p className="text-sm text-slate-300">Sign in as university staff to manage verifications.</p>}
           </TabsContent>
           <TabsContent value="skills">
-            <Card className="p-6">
-              <p className="text-sm text-slate-300">Certify a student's skill by inviting them to submit evidence, then approve here.</p>
-              <Button className="mt-4" variant="secondary">Certify a skill</Button>
-            </Card>
+            {isStaff ? <SkillCertificationQueue token={token} /> : <p className="text-sm text-slate-300">Sign in as university staff to review skill requests.</p>}
           </TabsContent>
         </Tabs>
 

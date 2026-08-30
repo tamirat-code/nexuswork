@@ -14,6 +14,20 @@ export const exportMyCredential = (verificationId, token) =>
   apiRequest(`/verifications/mine/${verificationId}/credential`, { token });
 export const verifyCredential = (credential) =>
   apiRequest("/verifications/credentials/verify", { method: "POST", body: { credential } });
+export const certifyStudentSkill = (studentUserId, payload, token) =>
+  apiRequest(`/verifications/students/${studentUserId}/skills/certify`, {
+    method: "POST",
+    body: payload,
+    token,
+  });
+export const submitSkillCertificationRequest = (payload, token) =>
+  apiRequest("/verifications/skill-requests", { method: "POST", body: payload, token });
+export const getMySkillCertificationRequests = (token) =>
+  apiRequest("/verifications/skill-requests/mine", { token });
+export const getSkillCertificationQueue = (query = "?status=pending", token) =>
+  apiRequest(`/verifications/skill-requests/queue${query}`, { token });
+export const reviewSkillCertificationRequest = (id, payload, token) =>
+  apiRequest(`/verifications/skill-requests/${id}/review`, { method: "PATCH", body: payload, token });
 
 export async function downloadCredentialCardPdf(verificationId, token) {
   const res = await fetch(`${API_BASE_URL}/verifications/mine/${verificationId}/credential/card`, {

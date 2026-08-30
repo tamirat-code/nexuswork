@@ -28,6 +28,13 @@ const studentProfileSchema = new mongoose.Schema(
           enum: ["self_declared", "assessment", "university_certified"],
           default: "self_declared",
         },
+        evidence_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+        assessment_method: {
+          type: String,
+          enum: ["practical_assessment", "portfolio_review", "coursework_linkage"],
+        },
+        assessment_score: { type: Number, min: 0, max: 100 },
+        assessment_notes: { type: String, trim: true, maxlength: 2000 },
         
         certified_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         certified_at: { type: Date },

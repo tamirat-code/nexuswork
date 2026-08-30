@@ -28,6 +28,8 @@ import {
   exportMyCredential,
   getMyVerifications,
   requestVerification,
+  getMySkillCertificationRequests,
+  submitSkillCertificationRequest,
 } from "../../services/api/verifications.api.js";
 import { getMyStaffVerifications, requestStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
@@ -377,7 +379,16 @@ export default function ProfilePage() {
           {/* TAB 2: Verification */}
           {activeTab === "verification" && (
             <>
-              {user?.role === "student" && <UniversityVerificationCard user={user} token={token} />}
+              {user?.role === "student" && (
+                <>
+                  <UniversityVerificationCard user={user} token={token} />
+                  <SkillCertificationCard
+                    token={token}
+                    profile={studentProfileQuery.data?.data}
+                    universityVerified={Boolean(user?.universityVerified || studentProfileQuery.data?.data?.verification_status === "verified")}
+                  />
+                </>
+              )}
               {user?.role === "university_staff" && <StaffVerificationCard user={user} token={token} />}
               {user?.role !== "student" && user?.role !== "university_staff" && (
                 <Card as="section">
@@ -510,6 +521,79 @@ function CredentialCardPreview({ verification, user }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SkillCertificationCard({ token, profile, universityVerified }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [skillName, setSkillName] = useState("");
+  const [method, setMethod] = useState("practical_assessment");
+  const [notes, setNotes] = useState("");
+  const [evidence, setEvidence] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-skill-certification-requests"],
+    queryFn: () => getMySkillCertificationRequests(token),
+    enabled: !!token,
+  });
+  const requests = data?.data || [];
+  const skills = (profile?.skills || []).filter((skill) => skill.verification_method !== "university_certified");
+
+  const submit = useMutation({
+    mutationFn: () => submitSkillCertificationRequest({
+      skill_name: skillName,
+      assessment_method: method,
+      student_notes: notes.trim(),
+      evidence_file_id: evidence._id,
+    }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-skill-certification-requests"] });
+      setSkillName(""); setNotes(""); setEvidence(null); setMethod("practical_assessment");
+      toast.show("Skill certification request submitted to your university.");
+    },
+    onError: (error) => toast.show(error?.message || "Could not submit skill certification request.", { variant: "error" }),
+  });
+
+  async function uploadEvidence(file) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const response = await uploadFile(file, { relatedType: "skill_certification_evidence", token });
+      setEvidence(response.data);
+      toast.show("Evidence uploaded. Submit the request to send it for review.");
+    } catch (error) {
+      toast.show(error?.message || "Could not upload evidence.", { variant: "error" });
+    } finally { setUploading(false); }
+  }
+
+  return (
+    <Card as="section">
+      <CardHeader title="Skill certification" description="Submit evidence for a university reviewer. A badge is issued only after a reviewer checks your work." />
+      {!universityVerified ? (
+        <Alert variant="warning" title="Verify your university first">University skill certification is available after your enrollment verification is approved.</Alert>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <Select label="Skill to certify" value={skillName} onChange={(event) => setSkillName(event.target.value)} options={[{ value: "", label: skills.length ? "Select a profile skill" : "Add a skill in General Profile first" }, ...skills.map((skill) => ({ value: skill.name, label: skill.name }))]} disabled={!skills.length} />
+            <Select label="Evidence type" value={method} onChange={(event) => setMethod(event.target.value)} options={[{ value: "practical_assessment", label: "Practical assessment" }, { value: "portfolio_review", label: "Portfolio review" }, { value: "coursework_linkage", label: "Coursework linkage" }]} />
+          </div>
+          <Textarea className="mt-4" label="What should the reviewer verify?" value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} maxLength={2000} placeholder="Describe the work, course, or assessment and what it demonstrates (at least 20 characters)." />
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-slate">Evidence file
+              <input className="mt-2 block w-full text-sm text-slate-300" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.txt,application/pdf,image/*,application/zip,text/plain" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; uploadEvidence(file); }} />
+            </label>
+            {evidence && <p className="mt-1 text-xs text-escrow">Attached: {evidence.original_name}</p>}
+          </div>
+          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!skillName || !evidence || notes.trim().length < 20} onClick={() => submit.mutate()}>Request certification</Button>
+        </>
+      )}
+      <CardDivider className="my-5" />
+      <h3 className="font-semibold text-slate">Request history</h3>
+      {isLoading ? <p className="mt-2 text-sm text-slate-300">Loading requests…</p> : requests.length === 0 ? <p className="mt-2 text-sm text-slate-300">No certification requests yet.</p> : (
+        <div className="mt-3 space-y-2">{requests.map((request) => <div key={request._id} className="rounded-control border border-ink-300 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate">{request.skill_name}</span><Badge tone={request.status === "approved" ? "success" : request.status === "rejected" ? "danger" : "warning"}>{request.status}</Badge></div>{request.review_notes && <p className="mt-1 text-slate-300">{request.review_notes}</p>}</div>)}</div>
+      )}
+    </Card>
   );
 }
 

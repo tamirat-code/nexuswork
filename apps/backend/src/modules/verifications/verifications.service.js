@@ -1,4 +1,5 @@
 import Verification from "./verifications.model.js";
+import SkillCertificationRequest from "./skill-certification-request.model.js";
 import University from "../universities/universities.model.js";
 import StudentProfile from "../students/students.model.js";
 import User from "../users/users.model.js";
@@ -20,6 +21,8 @@ export function buildStudentCredential({ verification, university, user, profile
       category: skill.category,
       level: skill.level,
       verificationMethod: skill.verification_method,
+      assessmentMethod: skill.assessment_method,
+      assessmentScore: skill.assessment_score,
       certifiedAt: skill.certified_at,
     }));
 
@@ -260,28 +263,146 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
 }
 
 
-export async function certifyStudentSkill({ studentUserId, skillName, staffUserId, staffRole }) {
-  const profile = await StudentProfile.findOne({ user_id: studentUserId });
-  if (!profile) throw new NotFoundError("Student profile not found");
+function normalizeSkillKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
-  if (staffRole !== "admin") {
-    if (!profile.university_id) {
-      throw new ForbiddenError("Student has no associated university to certify a skill against");
-    }
-    const university = await University.findById(profile.university_id);
-    const isContactStaff = university?.contact_staff?.some((id) => String(id) === String(staffUserId));
-    if (!isContactStaff) {
-      throw new ForbiddenError("Only staff at the student's own university, or an admin, can certify this skill");
-    }
+async function assertUniversityReviewer({ universityId, reviewerId, reviewerRole }) {
+  if (reviewerRole === "admin") return;
+  const university = await University.findOne({ _id: universityId, contact_staff: reviewerId }).select("name contact_staff");
+  if (!university) throw new ForbiddenError("Only staff at the student's university can review this request");
+  return university;
+}
+
+export async function submitSkillCertificationRequest({ studentId, skillName, evidenceFileId, assessmentMethod, studentNotes }) {
+  const profile = await StudentProfile.findOne({ user_id: studentId });
+  if (!profile) throw new NotFoundError("Student profile not found");
+  if (profile.verification_status !== "verified" || !profile.university_id) {
+    throw new ValidationError("Complete university enrollment verification before requesting a certified skill");
   }
 
-  const skill = profile.skills.find((s) => String(s.name).toLowerCase() === String(skillName).toLowerCase());
-  if (!skill) throw new NotFoundError(`Student does not have a skill named "${skillName}" on their profile`);
+  const skill = profile.skills.find((item) => normalizeSkillKey(item.name) === normalizeSkillKey(skillName));
+  if (!skill) throw new ValidationError("Only a skill already listed on your profile can be submitted");
+  if (skill.verification_method === "university_certified") {
+    throw new ValidationError("This skill is already university certified");
+  }
 
-  skill.verification_method = "university_certified";
-  skill.certified_by = staffUserId;
-  skill.certified_at = new Date();
+  const file = await File.findOne({ _id: evidenceFileId, owner_id: studentId });
+  if (!file) throw new ValidationError("Upload your own evidence file before submitting");
+  if (file.related_type !== "skill_certification_evidence") {
+    await File.findByIdAndUpdate(evidenceFileId, { related_type: "skill_certification_evidence" });
+  }
 
-  await profile.save();
-  return profile;
+  const existing = await SkillCertificationRequest.findOne({
+    student_id: studentId,
+    skill_key: normalizeSkillKey(skill.name),
+    status: "pending",
+  });
+  if (existing) throw new ValidationError("A certification request for this skill is already pending");
+
+  const request = await SkillCertificationRequest.create({
+    student_id: studentId,
+    university_id: profile.university_id,
+    skill_name: skill.name,
+    skill_key: normalizeSkillKey(skill.name),
+    evidence_file_id: evidenceFileId,
+    assessment_method: assessmentMethod,
+    student_notes: studentNotes.trim(),
+  });
+  await File.findByIdAndUpdate(evidenceFileId, { related_id: request._id });
+
+  const university = await University.findById(profile.university_id).select("name contact_staff");
+  try {
+    await Promise.all((university?.contact_staff || []).map((staffId) => createNotification({
+      userId: staffId,
+      type: "system",
+      title: "New skill certification request",
+      body: `${skill.name} evidence from a student is ready for review at ${university.name}.`,
+      data: { skill_certification_request_id: request._id },
+    })));
+  } catch (error) {
+    console.error("[verifications] failed to notify skill reviewers:", error.message);
+  }
+
+  return SkillCertificationRequest.findById(request._id)
+    .populate("university_id", "name domain")
+    .populate("evidence_file_id", "url original_name mimetype size")
+    .lean();
+}
+
+export async function getMySkillCertificationRequests(studentId) {
+  return SkillCertificationRequest.find({ student_id: studentId })
+    .populate("university_id", "name domain")
+    .populate("evidence_file_id", "url original_name mimetype size")
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
+export async function listSkillCertificationRequests({ requesterId, requesterRole, status = "pending", limit = 50, skip = 0 }) {
+  const query = {};
+  if (status !== "all") query.status = status;
+  if (requesterRole !== "admin") {
+    const university = await University.findOne({ contact_staff: requesterId }).select("_id");
+    query.university_id = university?._id || null;
+  }
+  return SkillCertificationRequest.find(query)
+    .populate("student_id", "name email avatarUrl")
+    .populate("university_id", "name domain")
+    .populate("evidence_file_id", "url original_name mimetype size")
+    .sort({ createdAt: -1 })
+    .skip(Number(skip))
+    .limit(Math.min(Number(limit) || 50, 100))
+    .lean();
+}
+
+export async function reviewSkillCertificationRequest({ requestId, reviewerId, reviewerRole, decision, assessmentScore, reviewNotes }) {
+  const request = await SkillCertificationRequest.findById(requestId);
+  if (!request) throw new NotFoundError("Skill certification request not found");
+  if (request.status !== "pending") throw new ValidationError("This certification request has already been reviewed");
+  await assertUniversityReviewer({ universityId: request.university_id, reviewerId, reviewerRole });
+  if (request.assessment_method === "practical_assessment" && assessmentScore === undefined) {
+    throw new ValidationError("A practical assessment requires a score from 0 to 100");
+  }
+
+  const profile = await StudentProfile.findOne({ user_id: request.student_id });
+  const skill = profile?.skills?.find((item) => normalizeSkillKey(item.name) === request.skill_key);
+  if (!skill) throw new ValidationError("The requested skill is no longer listed on the student's profile");
+
+  request.status = decision;
+  request.reviewed_by = reviewerId;
+  request.reviewed_at = new Date();
+  request.assessment_score = assessmentScore;
+  request.review_notes = reviewNotes.trim();
+
+  if (decision === "approved") {
+    skill.verification_method = "university_certified";
+    skill.certified_by = reviewerId;
+    skill.certified_at = request.reviewed_at;
+    skill.evidence_file_id = request.evidence_file_id;
+    skill.assessment_method = request.assessment_method;
+    skill.assessment_score = assessmentScore;
+    skill.assessment_notes = request.review_notes;
+    await profile.save();
+  }
+  await request.save();
+
+  try {
+    await createNotification({
+      userId: request.student_id,
+      type: "system",
+      title: decision === "approved" ? "Skill certification approved" : "Skill certification needs changes",
+      body: decision === "approved"
+        ? `${request.skill_name} is now university certified.`
+        : `${request.skill_name} was not certified yet: ${request.review_notes}`,
+      data: { skill_certification_request_id: request._id, decision },
+    });
+  } catch (error) {
+    console.error("[verifications] failed to notify student:", error.message);
+  }
+
+  return SkillCertificationRequest.findById(request._id)
+    .populate("student_id", "name email avatarUrl")
+    .populate("university_id", "name domain")
+    .populate("evidence_file_id", "url original_name mimetype size")
+    .lean();
 }

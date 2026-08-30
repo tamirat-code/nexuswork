@@ -130,6 +130,10 @@ export async function updateProfile(userId, updates) {
           verification_method: prior.verification_method,
           certified_by: prior.certified_by,
           certified_at: prior.certified_at,
+          evidence_file_id: prior.evidence_file_id,
+          assessment_method: prior.assessment_method,
+          assessment_score: prior.assessment_score,
+          assessment_notes: prior.assessment_notes,
         };
       }
       return { ...skill, verification_method: "self_declared", certified_by: undefined, certified_at: undefined };

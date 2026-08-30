@@ -6,6 +6,7 @@ import Contract from "../contracts/contracts.model.js";
 import Project from "../projects/projects.model.js";
 import PortfolioItem from "../portfolios/portfolios.model.js";
 import Message from "../messaging/messaging.model.js";
+import University from "../universities/universities.model.js";
 import { storageConfig } from "../../config/storage.config.js";
 import { putPrivateObject, getPrivateObject, deletePrivateObject } from "../../shared/utils/private-storage.client.js";
 import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
@@ -130,6 +131,10 @@ export async function getById(id, requestingUser) {
     await assertCanViewStaffVerificationDocument(file, requestingUser);
   }
 
+  if (file.related_type === "skill_certification_evidence") {
+    await assertCanViewSkillCertificationEvidence(file, requestingUser);
+  }
+
   if (file.related_type === "contract") {
     await assertContractParty(file.related_id, requestingUser?._id);
   }
@@ -188,6 +193,17 @@ async function assertCanViewStaffVerificationDocument(file, requestingUser) {
   if (requestingUser.role === "admin") return;
 
   throw new ForbiddenError("You don't have access to this document");
+}
+
+async function assertCanViewSkillCertificationEvidence(file, requestingUser) {
+  if (!requestingUser) throw new ForbiddenError("You don't have access to this evidence");
+  if (String(file.owner_id) === String(requestingUser._id) || requestingUser.role === "admin") return;
+  const SkillCertificationRequest = (await import("../verifications/skill-certification-request.model.js")).default;
+  const request = await SkillCertificationRequest.findOne({ evidence_file_id: file._id }).select("university_id");
+  if (!request) throw new NotFoundError("Skill certification request not found");
+  const university = await University.findById(request.university_id).select("contact_staff");
+  if (university?.contact_staff?.some((staffId) => String(staffId) === String(requestingUser._id))) return;
+  throw new ForbiddenError("You don't have access to this evidence");
 }
 
 export async function getPrivateContent(file) {

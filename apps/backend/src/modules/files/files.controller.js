@@ -15,6 +15,7 @@ const VALID_RELATED_TYPES = new Set([
   "contract",
   "verification_document",
   "staff_verification_document",
+  "skill_certification_evidence",
   "cv",
   "other",
 ]);
