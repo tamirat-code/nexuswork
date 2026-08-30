@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { jest } from "@jest/globals";
 
 // Database-backed integration setup includes connection and index migrations;
 // GitHub Actions can legitimately need more than Jest's 5-second hook default
