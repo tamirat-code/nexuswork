@@ -4,7 +4,7 @@ import { createStripeMock } from "../helpers/stripeMock.js";
 // Must be registered before any module that transitively imports stripe.client.js
 // is imported (native ESM mocking — see jest docs on unstable_mockModule).
 const stripeMock = createStripeMock();
-jest.unstable_mockModule("../../src/modules/payments/stripe.client.js", () => ({
+jest.unstable_mockModule("./src/modules/payments/stripe.client.js", () => ({
   stripe: stripeMock,
 }));
 

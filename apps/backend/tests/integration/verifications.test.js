@@ -66,9 +66,9 @@ describe("Verifications module", () => {
     expect(res.body.success).toBe(false);
   });
 
-  it("requires auth to certify a student's skill", async () => {
+  it("requires auth to submit a skill certification request", async () => {
     const res = await request(app)
-      .post("/v1/verifications/students/000000000000000000000002/skills/certify")
+      .post("/v1/verifications/skill-requests")
       .send({ skill_name: "React" });
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);

@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import { createStripeMock } from "../helpers/stripeMock.js";
 
 const stripeMock = createStripeMock();
-jest.unstable_mockModule("../../src/modules/payments/stripe.client.js", () => ({
+jest.unstable_mockModule("./src/modules/payments/stripe.client.js", () => ({
   stripe: stripeMock,
 }));
 

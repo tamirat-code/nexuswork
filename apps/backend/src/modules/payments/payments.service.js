@@ -286,10 +286,20 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
   if (depositPayment && !depositPayment.stripe_charge_id) {
     const paymentIntentId = depositPayment.provider_payment_id || depositPayment.stripe_payment_intent_id;
     if (paymentIntentId) {
-      const depositIntent = await provider.getPaymentIntent(paymentIntentId);
-      if (depositIntent.latestChargeId) {
-        depositPayment.stripe_charge_id = depositIntent.latestChargeId;
-        await depositPayment.save();
+      // A charge ID lets Stripe use the original charge as the transfer
+      // source, but it is not required when the platform has available
+      // balance. Do not block a release if the provider cannot look up an
+      // optional legacy payment reference; the transfer call below remains
+      // authoritative and idempotent.
+      try {
+        const depositIntent = await provider.getPaymentIntent(paymentIntentId);
+        if (depositIntent?.latestChargeId) {
+          depositPayment.stripe_charge_id = depositIntent.latestChargeId;
+          await depositPayment.save();
+        }
+      } catch {
+        // Continue without source_transaction. This also supports deposits
+        // created by older integrations that have no retrievable intent.
       }
     }
   }

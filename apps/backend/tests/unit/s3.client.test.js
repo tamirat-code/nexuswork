@@ -26,7 +26,7 @@ jest.unstable_mockModule("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl,
 }));
 
-jest.unstable_mockModule("../../src/config/storage.config.js", () => ({
+jest.unstable_mockModule("./src/config/storage.config.js", () => ({
   storageConfig: {
     region: "us-east-005",
     endpoint: "https://s3.us-east-005.backblazeb2.com",

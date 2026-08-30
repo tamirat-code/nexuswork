@@ -3,13 +3,13 @@ import { jest } from "@jest/globals";
 const contractFind = jest.fn();
 const milestoneCount = jest.fn();
 
-jest.unstable_mockModule("../../src/modules/contracts/contracts.model.js", () => ({
+jest.unstable_mockModule("./src/modules/contracts/contracts.model.js", () => ({
   default: { find: contractFind },
 }));
-jest.unstable_mockModule("../../src/modules/milestones/milestones.model.js", () => ({
+jest.unstable_mockModule("./src/modules/milestones/milestones.model.js", () => ({
   default: { countDocuments: milestoneCount },
 }));
-jest.unstable_mockModule("../../src/config/payment.config.js", () => ({
+jest.unstable_mockModule("./src/config/payment.config.js", () => ({
   paymentConfig: {
     commissionRateBps: 1000,
     commissionWaiverMilestoneThreshold: 3,
