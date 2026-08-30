@@ -17,7 +17,18 @@ export function registerMeetingNamespace(io) {
       if (!valid(room_id)) return socket.emit("meeting:error", { code: "INVALID_ROOM" });
       const meeting = await Meeting.findOne({ room_id });
       if (!meeting || !canAccessMeeting(meeting, socket.userId)) return socket.emit("meeting:error", { code: "MEETING_NOT_AUTHORIZED" });
-      socket.join(room(room_id)); socket.data.meeting = meeting._id; socket.to(room(room_id)).emit("meeting:participant-joined", { userId: socket.userId });
+      const meetingRoom = room(room_id);
+      const existingParticipants = [...nsp.sockets.values()]
+        .filter((candidate) => candidate.id !== socket.id && candidate.rooms.has(meetingRoom))
+        .map((candidate) => candidate.userId)
+        .filter(Boolean);
+      socket.join(meetingRoom);
+      socket.data.meeting = meeting._id;
+      // Notify both sides. This handles the race where a participant joins
+      // before the host's Socket.IO room is ready, and also lets a reconnecting
+      // socket restart negotiation with everyone already in the room.
+      existingParticipants.forEach((userId) => socket.emit("meeting:participant-joined", { userId }));
+      socket.to(meetingRoom).emit("meeting:participant-joined", { userId: socket.userId });
     });
     safe("meeting:leave", async () => { const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting); if (!meeting) return; socket.to(room(meeting.room_id)).emit("meeting:participant-left", { userId: socket.userId }); socket.leave(room(meeting.room_id)); socket.data.meeting = null; });
     for (const event of ["webrtc:offer", "webrtc:answer", "webrtc:ice-candidate"]) safe(event, async (payload = {}) => {
