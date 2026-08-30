@@ -48,6 +48,17 @@ export default function CredentialVerifyPage() {
   async function handleFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // The downloadable credential card is a human-readable PDF. It does not
+    // contain the signed JSON-LD payload needed for cryptographic verification.
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      setRawCredential("");
+      verifyMutation.reset();
+      setParseError('This is the human-readable credential card PDF. Upload the student\'s separate “Signed VC” (.vc.jsonld) download to verify its signature.');
+      event.target.value = "";
+      return;
+    }
+
     const text = await file.text();
     setRawCredential(text);
     try {
@@ -89,12 +100,12 @@ export default function CredentialVerifyPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold text-slate">Credential input</h2>
-              <p className="mt-1 text-sm text-slate-300">Use the signed `.vc.jsonld` credential export.</p>
+              <p className="mt-1 text-sm text-slate-300">Upload the signed `.vc.jsonld` export. The PDF card is for viewing only.</p>
             </div>
             <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-control border border-ink-300 bg-ink-50 px-4 text-sm font-semibold text-slate transition hover:border-brass/40 hover:bg-ink-700">
               <FileUp className="h-4 w-4" aria-hidden="true" />
               Upload file
-              <input type="file" accept=".json,.jsonld,.vc,application/json,application/ld+json" className="sr-only" onChange={handleFile} />
+              <input type="file" accept=".json,.jsonld,.vc,.pdf,application/json,application/ld+json,application/pdf" className="sr-only" onChange={handleFile} />
             </label>
           </div>
 
