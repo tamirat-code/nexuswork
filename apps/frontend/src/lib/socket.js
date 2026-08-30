@@ -18,8 +18,12 @@ export function createNotificationSocket(token) {
   });
 }
 export function createMeetingSocket(token) {
+  // AuthProvider stores `true` as a session marker because authentication is
+  // cookie-based. Only send Socket.IO auth when a real JWT string is present;
+  // otherwise socketAuth will authenticate from the HttpOnly cookie.
+  const socketAuth = typeof token === "string" && token.trim() ? { token } : undefined;
   return io(`${SOCKET_URL}/meetings`, {
-    auth: token ? { token } : undefined,
+    auth: socketAuth,
     withCredentials: true,
     autoConnect: false,
     reconnection: true,
