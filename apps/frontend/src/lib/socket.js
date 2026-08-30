@@ -26,6 +26,11 @@ export function createMeetingSocket(token) {
     auth: socketAuth,
     withCredentials: true,
     autoConnect: false,
+    // Render/Cloudflare is closing the polling-to-WebSocket upgrade before
+    // the namespace finishes joining. Signaling messages are tiny, so keep
+    // the authenticated polling transport stable; media still uses WebRTC.
+    transports: ["polling"],
+    upgrade: false,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
