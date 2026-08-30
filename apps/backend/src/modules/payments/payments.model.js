@@ -14,6 +14,7 @@ const paymentSchema = new mongoose.Schema(
       default: "pending",
     },
     stripe_payment_intent_id: { type: String },
+    stripe_charge_id: { type: String },
     stripe_transfer_id: { type: String },
     stripe_refund_id: { type: String },
     provider_operation_key: { type: String },

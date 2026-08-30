@@ -59,7 +59,7 @@ export const stripeProvider = {
   },
 
   async getPaymentIntent(id) {
-    const intent = await call(() => stripe.paymentIntents.retrieve(id));
+    const intent = await call(() => stripe.paymentIntents.retrieve(id, { expand: ["latest_charge"] }));
     return {
       id: intent.id || id,
       clientSecret: intent.client_secret,
@@ -68,12 +68,19 @@ export const stripeProvider = {
       amountMinor: intent.amount_received || intent.amount,
       currency: intent.currency,
       metadata: intent.metadata,
+      latestChargeId: typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id,
     };
   },
 
-  async createTransfer({ amountMinor, currency, destination, metadata, idempotencyKey }) {
+  async createTransfer({ amountMinor, currency, destination, metadata, idempotencyKey, sourceTransaction }) {
     const transfer = await call(() => stripe.transfers.create(
-      { amount: amountMinor, currency, destination, metadata },
+      {
+        amount: amountMinor,
+        currency,
+        destination,
+        metadata,
+        ...(sourceTransaction ? { source_transaction: sourceTransaction } : {}),
+      },
       { idempotencyKey }
     ));
     return { id: transfer.id, status: "succeeded", providerStatus: "succeeded" };

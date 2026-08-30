@@ -200,6 +200,7 @@ export async function markDepositSucceeded(paymentIntentId, auditContext = {}) {
       const ledgerIdempotencyKey = payment.ledger_idempotency_key || `payment-funded:${payment._id}`;
       payment.ledger_idempotency_key = ledgerIdempotencyKey;
       payment.provider_event_id = auditContext.providerEventId || payment.provider_event_id || payment.provider_reference || providerPaymentId;
+      if (intent.latestChargeId) payment.stripe_charge_id = intent.latestChargeId;
       payment.failure_message = undefined;
       await payment.save(session ? { session } : undefined);
 
@@ -290,6 +291,19 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
     : moneyFromLegacyMajorUnits(amount, currency || paymentConfig.currency, "release.amount");
   const providerName = releaseMoney.currency === "etb" ? "chapa" : "stripe";
   const provider = getPaymentProvider(providerName);
+  const depositPayment = providerName === "stripe"
+    ? await Payment.findOne({ milestone_id: milestoneId, direction: "deposit", status: "succeeded" }).select("provider_payment_id stripe_payment_intent_id stripe_charge_id")
+    : null;
+  if (depositPayment && !depositPayment.stripe_charge_id) {
+    const paymentIntentId = depositPayment.provider_payment_id || depositPayment.stripe_payment_intent_id;
+    if (paymentIntentId) {
+      const depositIntent = await provider.getPaymentIntent(paymentIntentId);
+      if (depositIntent.latestChargeId) {
+        depositPayment.stripe_charge_id = depositIntent.latestChargeId;
+        await depositPayment.save();
+      }
+    }
+  }
 
   let payment = await Payment.findOne({
     milestone_id: milestoneId,
@@ -394,6 +408,7 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
         destination: providerName === "stripe" ? stripeAccountId : chapaPayoutDestination,
         metadata: { milestone_id: String(milestoneId) },
         idempotencyKey: operationKey,
+        sourceTransaction: depositPayment?.stripe_charge_id,
       });
     } catch (err) {
       await failReleasePayment(payment, milestoneId, err, auditContext);
