@@ -105,6 +105,9 @@ export function validateEnv(config = env) {
   if (config.webrtcTurnUrl && (!config.webrtcTurnUsername || !config.webrtcTurnCredential)) {
     missing.push("WEBRTC_TURN_USERNAME and WEBRTC_TURN_CREDENTIAL (required with WEBRTC_TURN_URL)");
   }
+  if (config.isProduction && (!config.webrtcTurnUrl || !config.webrtcTurnUsername || !config.webrtcTurnCredential)) {
+    missing.push("WEBRTC_TURN_URL, WEBRTC_TURN_USERNAME, and WEBRTC_TURN_CREDENTIAL (required for production meetings)");
+  }
 
   if (missing.length > 0) {
     throw new Error(`Missing or invalid required environment variables: ${missing.join(", ")}`);

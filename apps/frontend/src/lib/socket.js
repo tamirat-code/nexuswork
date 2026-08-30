@@ -18,5 +18,13 @@ export function createNotificationSocket(token) {
   });
 }
 export function createMeetingSocket(token) {
-  return io(`${SOCKET_URL}/meetings`, { withCredentials: true, autoConnect: false, reconnection: true });
+  return io(`${SOCKET_URL}/meetings`, {
+    auth: token ? { token } : undefined,
+    withCredentials: true,
+    autoConnect: false,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 10000,
+  });
 }
