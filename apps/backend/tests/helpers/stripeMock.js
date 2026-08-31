@@ -13,6 +13,7 @@ export function createStripeMock() {
     },
     refunds: {
       create: jest.fn(),
+      retrieve: jest.fn(),
     },
     accounts: {
       retrieve: jest.fn(),

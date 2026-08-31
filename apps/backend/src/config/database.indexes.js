@@ -6,6 +6,7 @@ export const LEGACY_WITHDRAWAL_IDEMPOTENCY_INDEX = "idempotency_key_1";
 export const WITHDRAWAL_IDEMPOTENCY_INDEX = "withdrawals_user_id_idempotency_key_unique";
 export const PAYMENT_PROVIDER_PAYMENT_INDEX = "provider_1_provider_payment_id_1";
 export const PAYMENT_PROVIDER_EVENT_INDEX = "provider_1_provider_event_id_1";
+export const PAYMENT_PROVIDER_REFUND_INDEX = "provider_1_provider_refund_id_1";
 export const STUDENT_IDENTITY_INDEX = "student_profiles_university_student_id_unique";
 
 function legacyIdempotencyKey(withdrawalId) {
@@ -55,7 +56,8 @@ async function ensurePartialUniquePaymentIndex(field, name) {
 export async function ensurePaymentIndexes() {
   const paymentId = await ensurePartialUniquePaymentIndex("provider_payment_id", PAYMENT_PROVIDER_PAYMENT_INDEX);
   const eventId = await ensurePartialUniquePaymentIndex("provider_event_id", PAYMENT_PROVIDER_EVENT_INDEX);
-  return { changed: paymentId.changed || eventId.changed, indexes: [paymentId.name, eventId.name] };
+  const refundId = await ensurePartialUniquePaymentIndex("provider_refund_id", PAYMENT_PROVIDER_REFUND_INDEX);
+  return { changed: paymentId.changed || eventId.changed || refundId.changed, indexes: [paymentId.name, eventId.name, refundId.name] };
 }
 
 export async function ensureStudentProfileIndexes() {

@@ -80,7 +80,7 @@ describe("Disputes module", () => {
     it("refunds the client and marks the milestone not_funded on refund_client outcome", async () => {
       const { adminToken, milestone, disputeId } = await openFundedDisputeAsClient();
 
-      stripeMock.refunds.create.mockResolvedValue({ id: "re_test_1" });
+      stripeMock.refunds.create.mockResolvedValue({ id: "re_test_1", status: "succeeded" });
 
       const res = await request(app)
         .post(`/v1/disputes/${disputeId}/resolve`)

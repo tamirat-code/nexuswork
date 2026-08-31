@@ -37,7 +37,10 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ stripe_payment_intent_id: 1 });
 paymentSchema.index({ stripe_transfer_id: 1 }, { unique: true, sparse: true });
 paymentSchema.index({ stripe_refund_id: 1 }, { unique: true, sparse: true });
-paymentSchema.index({ provider: 1, provider_refund_id: 1 }, { unique: true, sparse: true });
+paymentSchema.index(
+  { provider: 1, provider_refund_id: 1 },
+  { unique: true, partialFilterExpression: { provider_refund_id: { $type: "string" } } }
+);
 // Legacy Stripe records do not have provider_payment_id. A sparse index still
 // indexes explicit null values, so use a partial index to enforce uniqueness
 // only for real provider identifiers.
