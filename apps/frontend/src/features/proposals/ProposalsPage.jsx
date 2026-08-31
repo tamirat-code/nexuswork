@@ -122,7 +122,7 @@ function ProposalReviewDialog({
   const openCv = async () => {
     // Top-level navigation uses the HttpOnly session cookie and avoids
     // requiring JavaScript to expose a large cross-origin response to fetch.
-    const cvWindow = window.open(getFileContentUrl(proposal.cv_file_id._id), "_blank", "noopener,noreferrer");
+    const cvWindow = window.open(getFileContentUrl(proposal.cv_file_id._id, { direct: true }), "_blank", "noopener,noreferrer");
     if (!cvWindow) {
       toast.error("Please allow pop-ups to open the student's CV");
       return;

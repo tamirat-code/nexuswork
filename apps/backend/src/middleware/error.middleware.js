@@ -6,6 +6,7 @@ export function notFound(req, res, next) {
 
 export function errorHandler(err, req, res, next) {
   logger.error(err.message, err.stack);
+  if (res.headersSent) return next(err);
   const isProviderError = err.name === "PaymentProviderError";
   const status = err.status || (err.name === "MulterError" ? 400 : isProviderError ? 502 : 500);
   const isSafeApplicationError = status < 500 && Boolean(err.status);

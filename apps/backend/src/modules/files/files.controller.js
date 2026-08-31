@@ -90,6 +90,15 @@ export const getOne = asyncHandler(async (req, res) => {
 export const content = asyncHandler(async (req, res) => {
   await assertFileAccess({ fileId: req.params.id, req });
   const file = await filesService.getById(req.params.id, req.user);
+
+  // Do not proxy large private objects through Render. The authorization
+  // check above still happens here, but S3 serves the bytes directly through
+  // a short-lived signed URL, avoiding proxy timeouts and premature closes.
+  const privateUrl = await filesService.getPrivateContentUrl(file);
+  if (privateUrl && ["1", "true"].includes(String(req.query.direct).toLowerCase())) {
+    return res.redirect(302, privateUrl);
+  }
+
   const object = await filesService.getPrivateContent(file);
 
   res.setHeader("Content-Type", file.mimetype);
@@ -105,7 +114,14 @@ export const content = asyncHandler(async (req, res) => {
   const disposition = ["1", "true"].includes(String(req.query.download).toLowerCase()) ? "attachment" : "inline";
   res.setHeader("Content-Disposition", `${disposition}; filename="${String(file.original_name).replace(/[\"\r\n]/g, "_")}"`);
   res.setHeader("X-Content-Type-Options", "nosniff");
-  await pipeline(object.Body, res);
+  try {
+    await pipeline(object.Body, res);
+  } catch (error) {
+    // The client/proxy can disconnect after the response starts. There is no
+    // second response to send in that case, so let the connection close.
+    if (error.code === "ERR_STREAM_PREMATURE_CLOSE" || res.headersSent || res.destroyed) return;
+    throw error;
+  }
 });
 
 export const remove = asyncHandler(async (req, res) => {

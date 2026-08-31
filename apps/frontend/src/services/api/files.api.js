@@ -3,7 +3,8 @@ import { logger } from "../../lib/logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
 
-export const getFileContentUrl = (id) => `${API_BASE_URL}/files/content/${encodeURIComponent(id)}`;
+export const getFileContentUrl = (id, { direct = false } = {}) =>
+  `${API_BASE_URL}/files/content/${encodeURIComponent(id)}${direct ? "?direct=1" : ""}`;
 
 export const uploadFile = (file, { relatedType, relatedId, token } = {}) => {
   const form = new FormData();

@@ -8,7 +8,7 @@ import PortfolioItem from "../portfolios/portfolios.model.js";
 import Message from "../messaging/messaging.model.js";
 import University from "../universities/universities.model.js";
 import { storageConfig } from "../../config/storage.config.js";
-import { putPrivateObject, getPrivateObject, deletePrivateObject } from "../../shared/utils/private-storage.client.js";
+import { putPrivateObject, getPrivateObject, getPrivateObjectUrl, deletePrivateObject } from "../../shared/utils/private-storage.client.js";
 import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
@@ -216,6 +216,11 @@ export async function getPrivateContent(file) {
   }
   if (!fs.existsSync(diskPath)) throw new NotFoundError("File content not found");
   return { Body: fs.createReadStream(diskPath) };
+}
+
+export async function getPrivateContentUrl(file, expiresIn = 300) {
+  if (storageConfig.driver !== "s3") return null;
+  return getPrivateObjectUrl(file.filename, expiresIn);
 }
 
 export async function deleteFile(id, requestingUserId, auditContext = {}) {
