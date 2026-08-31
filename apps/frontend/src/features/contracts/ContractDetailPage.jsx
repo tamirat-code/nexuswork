@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  ExternalLink,
   FileText,
   Flag,
   History,
@@ -34,7 +35,7 @@ import { listMilestoneSubmissions } from "../../services/api/submissions.api.js"
 import FundMilestoneDialog from "./FundMilestoneDialog.jsx";
 import { openDispute } from "../../services/api/disputes.api.js";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
-import { deleteFile, uploadFile, fetchFileBlob, downloadFile } from "../../services/api/files.api.js";
+import { deleteFile, uploadFile, fetchFileBlob, downloadFile, getFileContentUrl } from "../../services/api/files.api.js";
 import { getMilestonePortfolioConsent, respondToMilestonePortfolioConsent } from "../../services/api/portfolios.api.js";
 import { createMeeting, listContractMeetings } from "../../services/api/meetings.api.js";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
@@ -189,13 +190,36 @@ function MilestoneStatusDot({ status }) {
   return <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${color[status] || "bg-slate-400"}`} />;
 }
 
-function SubmissionFiles({ submission, token }) {
-  const files = submission?.file_ids || [];
+function SubmissionFiles({ submission, token, filesOverride }) {
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
+  const files = filesOverride || submission?.file_ids || [];
   const legacyUrls = submission?.file_urls || (submission?.file_url ? [submission.file_url] : []);
+
+  const resolveLegacyUrl = (value) => {
+    try {
+      const parsed = new URL(value, window.location.origin);
+      const match = parsed.pathname.match(/^\/v1\/files\/content\/([^/]+)$/);
+      if (match) return getFileContentUrl(match[1], { direct: true });
+    } catch {
+      // Keep non-NexusWork legacy URLs unchanged.
+    }
+    return value;
+  };
 
   if (!files.length && !legacyUrls.length) {
     return <p className="text-xs text-slate-300">No files attached to this submission.</p>;
   }
+
+  const openPreview = (file) => {
+    const mimetype = String(file.mimetype || "").toLowerCase();
+    if (mimetype.includes("zip") || mimetype.includes("compressed") || mimetype.includes("x-7z") || mimetype.includes("rar")) {
+      toast.info("This archive can be downloaded but cannot be previewed in the browser.");
+      return;
+    }
+    setPreviewFile(file);
+    setPreviewUrl(getFileContentUrl(file._id, { direct: true }));
+  };
 
   return (
     <div className="space-y-2">
@@ -207,16 +231,15 @@ function SubmissionFiles({ submission, token }) {
           <FileText className="h-4 w-4 shrink-0 text-brass" />
           <span className="min-w-0 flex-1 truncate text-sm text-slate">{file.original_name}</span>
           <span className="shrink-0 text-xs text-slate-300">{formatBytes(file.size)}</span>
-          <button type="button" onClick={async () => {
+          <button type="button" onClick={() => {
             try {
-              const blob = await fetchFileBlob(file._id, token);
-              const url = URL.createObjectURL(blob);
-              window.open(url, "_blank", "noopener,noreferrer");
-              window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+              openPreview(file);
             } catch (error) {
               toast.error(error.message || "Could not preview file");
             }
-          }} className="shrink-0 text-xs font-semibold text-brass hover:underline">Preview</button>
+          }} className="shrink-0 text-xs font-semibold text-brass hover:underline">
+            {String(file.mimetype || "").startsWith("video/") ? "Watch" : "Preview"}
+          </button>
           <button type="button" onClick={async () => {
             try {
               await downloadFile(file._id, token, file.original_name);
@@ -229,7 +252,7 @@ function SubmissionFiles({ submission, token }) {
       {legacyUrls.map((url, index) => (
         <a
           key={`${url}-${index}`}
-          href={url}
+          href={resolveLegacyUrl(url)}
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-2 text-sm text-brass hover:underline"
@@ -237,6 +260,17 @@ function SubmissionFiles({ submission, token }) {
           <Paperclip className="h-4 w-4" /> Legacy deliverable {index + 1}
         </a>
       ))}
+      {previewUrl && (
+        <div className="overflow-hidden rounded-card border border-ink-300 bg-white">
+          {String(previewFile?.mimetype || "").startsWith("video/") ? (
+            <video title="Milestone video deliverable" src={previewUrl} controls playsInline className="max-h-[min(65vh,720px)] w-full" />
+          ) : String(previewFile?.mimetype || "").startsWith("image/") ? (
+            <img alt={previewFile?.original_name || "Milestone deliverable"} src={previewUrl} className="max-h-[min(65vh,720px)] w-full object-contain" />
+          ) : (
+            <iframe title="Milestone deliverable preview" src={previewUrl} className="h-[min(65vh,720px)] w-full" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -244,16 +278,26 @@ function SubmissionFiles({ submission, token }) {
 function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [files, setFiles] = useState([]);
+  const requirements = milestone.deliverables || [];
+  const [filesByKey, setFilesByKey] = useState({ general: [] });
+  const [linksByKey, setLinksByKey] = useState({});
+  const [linkDraftsByKey, setLinkDraftsByKey] = useState({});
+  const [activeDeliverable, setActiveDeliverable] = useState("general");
   const inputRef = useRef(null);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       const uploaded = [];
       try {
-        for (const file of files) {
-          const response = await uploadFile(file, { relatedType: "other", token });
-          uploaded.push(response.data);
+        const deliverableItems = [];
+        for (const [key, selectedFiles] of Object.entries(filesByKey)) {
+          const itemFiles = [];
+          for (const file of selectedFiles) {
+            const response = await uploadFile(file, { relatedType: "other", token });
+            uploaded.push(response.data);
+            itemFiles.push(response.data._id);
+          }
+          if (key !== "general") deliverableItems.push({ key, file_ids: itemFiles, links: linksByKey[key] || [] });
         }
 
         return submitMilestoneWork(
@@ -261,6 +305,7 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
           {
             note: note.trim(),
             file_ids: uploaded.map((file) => file._id),
+            deliverable_items: deliverableItems,
           },
           token
         );
@@ -272,7 +317,9 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
     onSuccess: () => {
       setOpen(false);
       setNote("");
-      setFiles([]);
+      setFilesByKey({ general: [] });
+      setLinksByKey({});
+      setLinkDraftsByKey({});
       onSubmitted();
       toast.success(isRevision ? "Revision submitted — waiting for client review." : "Work submitted — waiting for client review.");
     },
@@ -281,20 +328,47 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
 
   const addFiles = (event) => {
     const selected = Array.from(event.target.files || []);
-    if (files.length + selected.length > 10) {
+    const selectedCount = Object.values(filesByKey).reduce((total, items) => total + items.length, 0);
+    if (selectedCount + selected.length > 10) {
       toast.error("You can attach up to 10 files per submission.");
       return;
     }
     const valid = selected.filter((file) => { const message = validContractFile(file); if (message) { toast.error(`${file.name}: ${message}`); reportValidation(message, { form: "deliverable-upload", file: file.name }); return false; } return true; });
-    setFiles((current) => [...current, ...valid]);
+    setFilesByKey((current) => ({ ...current, [activeDeliverable]: [...(current[activeDeliverable] || []), ...valid] }));
     event.target.value = "";
   };
 
-  const removeFile = (index) => setFiles((current) => current.filter((_, i) => i !== index));
+  const removeFile = (key, index) => setFilesByKey((current) => ({
+    ...current,
+    [key]: (current[key] || []).filter((_, i) => i !== index),
+  }));
+
+  const addLink = (key) => {
+    const value = String(linkDraftsByKey[key] || "").trim();
+    try {
+      const parsed = new URL(value);
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Only HTTP and HTTPS links are allowed");
+      if ((linksByKey[key] || []).length >= 5) throw new Error("Up to 5 links are allowed per deliverable");
+      setLinksByKey((current) => ({ ...current, [key]: [...(current[key] || []), value] }));
+      setLinkDraftsByKey((current) => ({ ...current, [key]: "" }));
+    } catch (error) {
+      toast.error(error.message || "Enter a valid web URL");
+    }
+  };
+
+  const removeLink = (key, index) => setLinksByKey((current) => ({
+    ...current,
+    [key]: (current[key] || []).filter((_, i) => i !== index),
+  }));
 
   const submit = () => {
     if (note.trim().length < 10) {
       toast.error("Please describe what you delivered in at least 10 characters.");
+      return;
+    }
+    const missing = requirements.find((requirement) => requirement.required && !(filesByKey[requirement.key] || []).length && !(linksByKey[requirement.key] || []).length);
+    if (missing) {
+      toast.error(`Attach evidence for required deliverable: ${missing.title}`);
       return;
     }
     submitMutation.mutate();
@@ -336,7 +410,7 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-slate">Deliverables</p>
-                <p className="text-xs text-slate-300">Up to 10 files. Executable files are blocked by the server.</p>
+              <p className="text-xs text-slate-300">Attach evidence to each required deliverable. Up to 10 files total.</p>
               </div>
               <input ref={inputRef} type="file" multiple className="hidden" onChange={addFiles} />
               <Button type="button" size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>
@@ -345,22 +419,45 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
             </div>
 
             <div className="mt-3 space-y-2">
-              {files.map((file, index) => (
-                <div key={`${file.name}-${index}`} className="flex items-center gap-3 rounded-control border border-ink-300 bg-ink-50 p-3">
-                  <FileText className="h-4 w-4 shrink-0 text-brass" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate">{file.name}</p>
-                    <p className="text-xs text-slate-300">{formatBytes(file.size)}</p>
+              {(requirements.length ? requirements : [{ key: "general", title: "Project files", description: "Attach the completed project files." }]).map((requirement) => (
+                <div key={requirement.key} className="rounded-control border border-ink-300 bg-ink-50 p-3">
+                  <div className="flex items-start gap-3">
+                    <FileText className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate">{requirement.title} {requirement.required !== false && <span className="text-brass">*</span>}</p>
+                      <p className="text-xs text-slate-300">{requirement.description}</p>
+                    </div>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => { setActiveDeliverable(requirement.key); inputRef.current?.click(); }}>Attach</Button>
                   </div>
-                  <button type="button" onClick={() => removeFile(index)} className="text-slate-300 hover:text-slate" aria-label={`Remove ${file.name}`}>
-                    <X className="h-4 w-4" />
-                  </button>
+                  {(filesByKey[requirement.key] || []).map((file, index) => (
+                    <div key={`${file.name}-${index}`} className="mt-2 flex items-center gap-3 rounded-control border border-ink-300 bg-white p-2">
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate">{file.name}</span>
+                      <span className="text-xs text-slate-300">{formatBytes(file.size)}</span>
+                      <button type="button" onClick={() => removeFile(requirement.key, index)} className="text-slate-300 hover:text-slate" aria-label={`Remove ${file.name}`}><X className="h-4 w-4" /></button>
+                    </div>
+                  ))}
+                  <div className="mt-3 flex gap-2">
+                    <Input
+                      aria-label={`${requirement.title} live URL`}
+                      value={linkDraftsByKey[requirement.key] || ""}
+                      onChange={(event) => setLinkDraftsByKey((current) => ({ ...current, [requirement.key]: event.target.value }))}
+                      placeholder="https://… (live demo, prototype, or hosted result)"
+                    />
+                    <Button type="button" size="sm" variant="secondary" onClick={() => addLink(requirement.key)}>Add URL</Button>
+                  </div>
+                  {(linksByKey[requirement.key] || []).map((link, index) => (
+                    <div key={`${link}-${index}`} className="mt-2 flex items-center gap-2 rounded-control border border-ink-300 bg-white p-2">
+                      <ExternalLink className="h-4 w-4 shrink-0 text-brass" />
+                      <a href={link} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-xs text-brass hover:underline">{link}</a>
+                      <button type="button" onClick={() => removeLink(requirement.key, index)} className="text-slate-300 hover:text-slate" aria-label={`Remove ${link}`}><X className="h-4 w-4" /></button>
+                    </div>
+                  ))}
                 </div>
               ))}
-              {!files.length && (
+              {!Object.values(filesByKey).some((items) => items.length) && (
                 <div className="rounded-card border border-dashed border-ink-300 p-6 text-center">
                   <Paperclip className="mx-auto h-6 w-6 text-slate-300" />
-                  <p className="mt-2 text-sm text-slate-300">No files selected. You can still submit notes.</p>
+                  <p className="mt-2 text-sm text-slate-300">No files selected yet.</p>
                 </div>
               )}
             </div>
@@ -439,6 +536,15 @@ function RequestRevisionDialog({ milestone, submission, token, onRequested }) {
 function SubmissionReviewDialog({ milestone, submissions, token, onChanged }) {
   const [open, setOpen] = useState(false);
   const latest = submissions.at(-1);
+  const hasStructuredItems = Boolean(latest?.deliverable_items?.length);
+  const missingRequirements = hasStructuredItems
+    ? (milestone.deliverables || []).filter((requirement) => {
+        if (!requirement.required) return false;
+        const delivered = latest.deliverable_items.find((item) => item.key === requirement.key);
+        return !delivered || (!delivered.file_ids?.length && !delivered.note);
+      })
+    : [];
+  const assignedFileIds = new Set((latest?.deliverable_items || []).flatMap((item) => (item.file_ids || []).map((file) => String(file._id || file))));
   const canReview = latest && ["pending_review"].includes(latest.review_status);
 
   const approveMutation = useMutation({
@@ -494,7 +600,41 @@ function SubmissionReviewDialog({ milestone, submissions, token, onChanged }) {
 
             <div>
               <p className="mb-2 text-sm font-semibold text-slate">Deliverables</p>
-              <SubmissionFiles submission={latest} token={token} />
+              {missingRequirements.length > 0 && (
+                <div className="mb-3 flex items-start gap-2 rounded-control border border-brick/40 bg-brick/5 p-3 text-sm text-slate">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-brick" />
+                  <span>Approval is blocked until the student provides: {missingRequirements.map((item) => item.title).join(", ")}.</span>
+                </div>
+              )}
+              {milestone.deliverables?.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  {milestone.deliverables.map((requirement) => {
+                    const delivered = latest.deliverable_items?.find((item) => item.key === requirement.key);
+                    const complete = Boolean(delivered?.file_ids?.length || delivered?.links?.length || delivered?.note);
+                    return (
+                      <div key={requirement.key} className="rounded-control border border-ink-300 bg-ink-50 p-3">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${complete ? "text-escrow" : "text-slate-300"}`} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate">{requirement.title}{requirement.required && <span className="text-brass"> *</span>}</p>
+                            <p className="text-xs text-slate-300">{complete ? `${delivered?.file_ids?.length || 0} file(s), ${delivered?.links?.length || 0} link(s)` : "Not provided"}</p>
+                            {delivered?.links?.map((link) => <a key={link} href={link} target="_blank" rel="noreferrer" className="mt-1 flex items-center gap-1 truncate text-xs text-brass hover:underline"><ExternalLink className="h-3 w-3 shrink-0" />{link}</a>)}
+                            {delivered?.note && <p className="mt-1 whitespace-pre-wrap text-xs text-slate-300">{delivered.note}</p>}
+                            <div className="mt-2">
+                              <SubmissionFiles submission={{ ...latest, file_ids: delivered?.file_ids || [], file_urls: [] }} token={token} filesOverride={delivered?.file_ids || []} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <SubmissionFiles
+                submission={latest}
+                token={token}
+                filesOverride={(latest.file_ids || []).filter((file) => !assignedFileIds.has(String(file._id || file)))}
+              />
             </div>
 
             {latest.revision_reason && (
@@ -529,7 +669,7 @@ function SubmissionReviewDialog({ milestone, submissions, token, onChanged }) {
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
           {canReview && (
-            <Button loading={approveMutation.isPending} onClick={() => approveMutation.mutate()}>
+            <Button disabled={missingRequirements.length > 0} loading={approveMutation.isPending} onClick={() => approveMutation.mutate()}>
               <CheckCircle2 className="h-4 w-4" /> Approve &amp; release
             </Button>
           )}

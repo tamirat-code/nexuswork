@@ -292,12 +292,24 @@ export const createMilestoneSchema = z.object({
   due_date: z.coerce.date("Invalid due date"),
   description: z.string().trim().max(2000).optional().default(""),
   max_revisions: z.coerce.number().int().min(0).max(20).optional().default(3),
+  deliverables: z.array(z.object({
+    key: z.string().trim().min(1).max(80),
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(1000).optional().default(""),
+    required: z.coerce.boolean().optional().default(true),
+  })).max(20).optional(),
 });
 
 export const submitWorkSchema = z.object({
   file_url: url.optional(),
   file_ids: z.array(objectId).max(10, "A submission can contain at most 10 files").optional().default([]),
   note: z.string().trim().max(5000).optional().default(""),
+  deliverable_items: z.array(z.object({
+    key: z.string().trim().min(1).max(80),
+    file_ids: z.array(objectId).max(10).optional().default([]),
+    links: z.array(z.string().trim().url("Invalid deliverable URL").refine((value) => /^https?:\/\//i.test(value), "Only HTTP and HTTPS links are allowed")).max(5).optional().default([]),
+    note: z.string().trim().max(2000).optional().default(""),
+  })).max(20).optional().default([]),
 });
 
 export const meetingCreateSchema = z.object({

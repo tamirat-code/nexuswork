@@ -5,6 +5,12 @@ const milestoneSchema = new mongoose.Schema(
     contract_id: { type: mongoose.Schema.Types.ObjectId, ref: "Contract", required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "", trim: true },
+    deliverables: [{
+      key: { type: String, required: true, trim: true, lowercase: true },
+      title: { type: String, required: true, trim: true },
+      description: { type: String, default: "", trim: true },
+      required: { type: Boolean, default: true },
+    }],
     amount: { type: Number, required: true, min: 0 },
     amount_minor: { type: Number, min: 0 },
     currency: { type: String, default: "usd", lowercase: true, trim: true },

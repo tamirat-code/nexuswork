@@ -6,6 +6,7 @@ import { isOrgMember } from "../clients/clients.service.js";
 import { eventBus } from "../../events/index.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { getDeliverableTemplate } from "../milestones/deliverable-templates.js";
 
 async function getMilestoneContext(milestoneId) {
   const milestone = await Milestone.findById(milestoneId);
@@ -26,7 +27,7 @@ async function assertContractParty(contract, userId, allowAdmin = false) {
   if (!allowed) throw new ForbiddenError("You are not a party to this contract");
 }
 
-export async function addSubmission(milestoneId, studentId, { file_ids = [], file_url, note } = {}, auditContext = {}) {
+export async function addSubmission(milestoneId, studentId, { file_ids = [], file_url, note, deliverable_items = [] } = {}, auditContext = {}) {
   const { milestone, contract } = await getMilestoneContext(milestoneId);
 
   if (String(contract.student_id) !== String(studentId)) {
@@ -37,10 +38,41 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
     throw new ValidationError(`Milestone must be funded or awaiting revision before work can be submitted (current: ${milestone.status})`);
   }
 
-  const normalizedFileIds = [...new Set((file_ids || []).map(String).filter(Boolean))];
+  const project = await Contract.findById(contract._id).select("project_id").populate("project_id", "category").lean();
+  const requirements = milestone.deliverables?.length
+    ? milestone.deliverables
+    : getDeliverableTemplate(project?.project_id?.category);
+  const hasStructuredItems = Array.isArray(deliverable_items) && deliverable_items.length > 0;
+  const normalizedItems = deliverable_items.map((item) => ({
+    key: String(item.key).trim().toLowerCase(),
+    file_ids: [...new Set((item.file_ids || []).map(String).filter(Boolean))],
+    links: [...new Set((item.links || []).map((link) => String(link).trim()).filter(Boolean))],
+    note: String(item.note || "").trim(),
+  }));
+  const requirementKeys = new Set(requirements.map((item) => String(item.key)));
+  if (hasStructuredItems && normalizedItems.some((item) => !requirementKeys.has(item.key))) {
+    throw new ValidationError("Submission contains an unknown deliverable");
+  }
+  if (hasStructuredItems && new Set(normalizedItems.map((item) => item.key)).size !== normalizedItems.length) {
+    throw new ValidationError("Submission contains a duplicate deliverable");
+  }
+  const itemByKey = new Map(normalizedItems.map((item) => [item.key, item]));
+  const normalizedFileIds = [...new Set([
+    ...(file_ids || []).map(String).filter(Boolean),
+    ...normalizedItems.flatMap((item) => item.file_ids),
+  ])];
+  const normalizedLinks = [...new Set(normalizedItems.flatMap((item) => item.links))];
+  if (hasStructuredItems) {
+    for (const requirement of requirements.filter((item) => item.required)) {
+      const item = itemByKey.get(String(requirement.key));
+      if (!item || (!item.file_ids.length && !item.links.length && !item.note)) {
+        throw new ValidationError(`Required deliverable missing: ${requirement.title}`);
+      }
+    }
+  }
   const normalizedNote = String(note || "").trim();
 
-  if (!normalizedNote && normalizedFileIds.length === 0 && !file_url) {
+  if (!normalizedNote && normalizedFileIds.length === 0 && normalizedLinks.length === 0 && !file_url) {
     throw new ValidationError("Add a delivery note or at least one deliverable file");
   }
 
@@ -74,6 +106,16 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
     file_ids: normalizedFileIds,
     file_url,
     file_urls: files.map((file) => file.url).concat(file_url ? [file_url] : []),
+    deliverable_items: requirements.map((requirement) => {
+      const item = itemByKey.get(String(requirement.key));
+      return {
+        key: requirement.key,
+        title: requirement.title,
+        file_ids: item?.file_ids || [],
+        links: item?.links || [],
+        note: item?.note || "",
+      };
+    }),
     note: normalizedNote,
     review_status: "pending_review",
     submitted_at: new Date(),
@@ -114,7 +156,7 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
     version: nextVersion,
   });
 
-  return Submission.findById(submission._id).populate("file_ids").lean();
+  return Submission.findById(submission._id).populate("file_ids").populate("deliverable_items.file_ids").lean();
 }
 
 export async function listForMilestone(milestoneId, requestingUserId, { allowAdmin = false } = {}) {
@@ -124,6 +166,7 @@ export async function listForMilestone(milestoneId, requestingUserId, { allowAdm
   return Submission.find({ milestone_id: milestoneId })
     .sort({ version: 1 })
     .populate("file_ids")
+    .populate("deliverable_items.file_ids")
     .populate("reviewer_id", "name email")
     .lean();
 }
@@ -217,6 +260,25 @@ export async function approveSubmission(milestoneId, requestingUserId, auditCont
   if (!latest) throw new ValidationError("No submission exists for this milestone");
   if (latest.review_status !== "pending_review") {
     throw new ValidationError("The latest submission is not awaiting review");
+  }
+
+  // New submissions carry one item per category-specific requirement. Keep
+  // legacy submissions approvable because they predate the checklist format.
+  if (latest.deliverable_items?.length) {
+    const project = await Contract.findById(contract._id).select("project_id").populate("project_id", "category").lean();
+    const requirements = milestone.deliverables?.length
+      ? milestone.deliverables
+      : getDeliverableTemplate(project?.project_id?.category);
+    const deliveredByKey = new Map(latest.deliverable_items.map((item) => [String(item.key), item]));
+    const missing = requirements
+      .filter((requirement) => requirement.required)
+      .filter((requirement) => {
+        const item = deliveredByKey.get(String(requirement.key));
+        return !item || (!item.file_ids?.length && !item.links?.length && !item.note);
+      });
+    if (missing.length) {
+      throw new ValidationError(`Cannot approve: required deliverables missing (${missing.map((item) => item.title).join(", ")})`);
+    }
   }
 
   latest.review_status = "approved";

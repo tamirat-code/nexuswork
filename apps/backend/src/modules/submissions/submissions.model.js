@@ -18,6 +18,14 @@ const submissionSchema = new mongoose.Schema(
     // Kept for backward compatibility with older submissions.
     file_url: { type: String },
     file_urls: [{ type: String }],
+    deliverable_items: [{
+      _id: false,
+      key: { type: String, required: true, trim: true, lowercase: true },
+      title: { type: String, required: true, trim: true },
+      file_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
+      links: [{ type: String, trim: true }],
+      note: { type: String, trim: true, maxlength: 2000, default: "" },
+    }],
     note: { type: String, trim: true, maxlength: 5000 },
     feedback: { type: String, trim: true, maxlength: 2000 },
     revision_reason: { type: String, trim: true, maxlength: 2000 },

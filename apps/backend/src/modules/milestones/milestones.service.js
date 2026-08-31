@@ -19,6 +19,7 @@ import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/exc
 import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
 import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
 import { getEffectiveCommissionRateBps } from "../payments/commission.service.js";
+import { getDeliverableTemplate } from "./deliverable-templates.js";
 
 async function auditMilestoneEvent({ actor, correlationId, ...event }) {
   return recordEvent({
@@ -237,6 +238,24 @@ export async function createMilestone(contractId, requestingUserId, data, auditC
 
   await assertClient(contract, requestingUserId);
 
+  const project = await Project.findById(contract.project_id).select("category").lean();
+  const customDeliverables = Array.isArray(data.deliverables) && data.deliverables.length
+    ? data.deliverables.map((item) => ({
+        key: String(item.key).trim().toLowerCase(),
+        title: String(item.title).trim(),
+        description: String(item.description || "").trim(),
+        required: item.required !== false,
+      }))
+    : getDeliverableTemplate(project?.category);
+  const deliverableKeys = new Set();
+  for (const deliverable of customDeliverables) {
+    if (deliverableKeys.has(deliverable.key)) {
+      throw new ValidationError(`Duplicate deliverable key: ${deliverable.key}`);
+    }
+    deliverableKeys.add(deliverable.key);
+  }
+  const deliverables = customDeliverables;
+
   const existing = await Milestone.aggregate([
     { $match: { contract_id: contract._id } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -266,6 +285,7 @@ export async function createMilestone(contractId, requestingUserId, data, auditC
     status: "not_funded",
     payout_status: "not_applicable",
     max_revisions: data.max_revisions ?? 3,
+    deliverables,
   });
 
   await auditMilestoneEvent({
@@ -283,7 +303,7 @@ export async function createMilestone(contractId, requestingUserId, data, auditC
 }
 
 export async function listForContract(contractId, requestingUserId, { limit = 100, skip = 0 } = {}) {
-  const contract = await Contract.findById(contractId).select("client_id student_id");
+  const contract = await Contract.findById(contractId).select("client_id student_id project_id");
   if (!contract) throw new NotFoundError("Contract not found");
   if (![String(contract.client_id), String(contract.student_id)].includes(String(requestingUserId))) {
     const allowed = await isOrgMember(contract.client_id, requestingUserId);
@@ -299,7 +319,17 @@ export async function listForContract(contractId, requestingUserId, { limit = 10
     Milestone.countDocuments({ contract_id: contractId }),
   ]);
 
-  return { milestones, total, limit: Number(limit), skip: Number(skip) };
+  const project = await Project.findById(contract.project_id).select("category").lean();
+  const defaultDeliverables = getDeliverableTemplate(project?.category);
+  return {
+    milestones: milestones.map((milestone) => ({
+      ...milestone,
+      deliverables: milestone.deliverables?.length ? milestone.deliverables : defaultDeliverables,
+    })),
+    total,
+    limit: Number(limit),
+    skip: Number(skip),
+  };
 }
 
 export async function getById(id, requestingUserId) {
