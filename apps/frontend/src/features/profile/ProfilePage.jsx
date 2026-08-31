@@ -557,9 +557,11 @@ function SkillCertificationCard({ token, user, profile, universityVerified }) {
   ];
   const skills = mergedSkills.filter((skill) => skill.verification_method !== "university_certified");
 
+  const finalSkillName = skillName.replace(/^__custom__:/, "").trim();
+
   const submit = useMutation({
     mutationFn: () => submitSkillCertificationRequest({
-      skill_name: skillName,
+      skill_name: finalSkillName,
       assessment_method: method,
       ...(method === "coursework_linkage" ? { course_name: courseName.trim(), course_code: courseCode.trim(), course_completed_at: courseCompletedAt || undefined } : {}),
       student_notes: notes.trim(),
@@ -593,7 +595,47 @@ function SkillCertificationCard({ token, user, profile, universityVerified }) {
       ) : (
         <>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <Select label={t("profile.skillToCertify", { defaultValue: "Skill to certify" })} value={skillName} onChange={(event) => setSkillName(event.target.value)} options={[{ value: "", label: skills.length ? t("profile.selectProfileSkill", { defaultValue: "Select a profile skill" }) : t("profile.addSkillFirst", { defaultValue: "Add a skill in General Profile first" }) }, ...skills.map((skill) => ({ value: skill.name, label: skill.name }))]} disabled={!skills.length} />
+            <div>
+              {skills.length > 0 && !skillName.startsWith("__custom__") ? (
+                <Select
+                  label={t("profile.skillToCertify", { defaultValue: "Skill to certify" })}
+                  value={skillName}
+                  onChange={(event) => {
+                    if (event.target.value === "__custom__") {
+                      setSkillName("__custom__:");
+                    } else {
+                      setSkillName(event.target.value);
+                    }
+                  }}
+                  options={[
+                    { value: "", label: t("profile.selectProfileSkill", { defaultValue: "Select a profile skill" }) },
+                    ...skills.map((skill) => ({ value: skill.name, label: skill.name })),
+                    { value: "__custom__", label: t("profile.enterOtherSkill", { defaultValue: "＋ Type a custom skill name…" }) }
+                  ]}
+                />
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-semibold text-slate">{t("profile.skillToCertify", { defaultValue: "Skill to certify" })}</label>
+                    {skills.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSkillName("")}
+                        className="text-xs font-medium text-brass hover:underline"
+                      >
+                        ← {t("profile.selectFromList", { defaultValue: "Select from profile list" })}
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    className="mt-1"
+                    value={skillName.replace(/^__custom__:/, "")}
+                    onChange={(event) => setSkillName(`__custom__:${event.target.value}`)}
+                    placeholder="e.g. React, Python, Web Development"
+                  />
+                </div>
+              )}
+            </div>
             <Select label={t("profile.evidenceType", { defaultValue: "Evidence type" })} value={method} onChange={(event) => setMethod(event.target.value)} options={[{ value: "practical_assessment", label: t("profile.practicalAssessment", { defaultValue: "Practical assessment" }) }, { value: "portfolio_review", label: t("profile.portfolioReview", { defaultValue: "Portfolio review" }) }, { value: "coursework_linkage", label: t("profile.courseworkLinkage", { defaultValue: "Coursework linkage" }) }]} />
           </div>
           {method === "coursework_linkage" && <div className="mt-4 grid gap-4 md:grid-cols-3"><Input label="Course name" value={courseName} onChange={(event) => setCourseName(event.target.value)} maxLength={200} placeholder="Advanced Web Development" /><Input label="Course code (optional)" value={courseCode} onChange={(event) => setCourseCode(event.target.value)} maxLength={50} placeholder="CS-401" /><Input label="Completion date (optional)" type="date" value={courseCompletedAt} onChange={(event) => setCourseCompletedAt(event.target.value)} /></div>}
@@ -604,7 +646,7 @@ function SkillCertificationCard({ token, user, profile, universityVerified }) {
             </label>
             {evidence && <p className="mt-1 text-xs text-escrow">Attached: {evidence.original_name}</p>}
           </div>
-          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!skillName || !evidence || notes.trim().length < 20 || (method === "coursework_linkage" && !courseName.trim())} onClick={() => submit.mutate()}>{t("profile.requestCertification", { defaultValue: "Request certification" })}</Button>
+          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!finalSkillName || !evidence || notes.trim().length < 20 || (method === "coursework_linkage" && !courseName.trim())} onClick={() => submit.mutate()}>{t("profile.requestCertification", { defaultValue: "Request certification" })}</Button>
         </>
       )}
       <CardDivider className="my-5" />
