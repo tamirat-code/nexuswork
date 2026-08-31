@@ -26,7 +26,10 @@ export const deleteFile = (id, token) =>
 export const fetchFileBlob = async (id, token) => {
   const res = await fetch(`${API_BASE_URL}/files/content/${id}`, {
     credentials: "include",
-    headers: { ...csrfHeaders() },
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...csrfHeaders(),
+    },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -42,7 +45,10 @@ export const fetchFileBlob = async (id, token) => {
 export const downloadFile = async (id, token, filename = "download") => {
   const res = await fetch(`${API_BASE_URL}/files/content/${id}?download=1`, {
     credentials: "include",
-    headers: { ...csrfHeaders() },
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...csrfHeaders(),
+    },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

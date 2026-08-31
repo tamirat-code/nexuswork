@@ -29,7 +29,7 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
     method,
     credentials: "include",
     headers: {
-      
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...csrfHeaders(),
     },

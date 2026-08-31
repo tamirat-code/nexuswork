@@ -160,8 +160,14 @@ export async function assertFileAccess({ fileId, user, req } = {}) {
   } else if (file.related_type === "cv") {
     if (sameId(file.owner_id, authenticated._id) || authenticated.role === ROLES.ADMIN) return file;
     const Proposal = (await import("../../modules/proposals/proposals.model.js")).default;
-    const proposal = await Proposal.findOne({ cv_file_id: file._id }).populate("project_id", "client_id");
-    if (proposal?.project_id && sameId(proposal.project_id.client_id, authenticated._id)) return file;
+    const proposals = await Proposal.find({ cv_file_id: file._id }).populate("project_id", "client_id");
+    for (const p of proposals) {
+      if (p.project_id) {
+        const clientId = p.project_id.client_id;
+        if (sameId(clientId, authenticated._id)) return file;
+        if (authenticated.role === ROLES.CLIENT && await isOrgMember(clientId, authenticated._id)) return file;
+      }
+    }
     throw new ForbiddenError("You do not have access to this CV");
   } else if (["verification_document", "staff_verification_document", "skill_certification_evidence", "portfolio"].includes(file.related_type)) {
     // The module service retains the detailed owner/staff/publication checks.
