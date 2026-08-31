@@ -12,4 +12,5 @@ export const aiConfig = {
   provider,
   apiKey: env.aiApiKey,
   model: env.aiModel || DEFAULT_MODEL_BY_PROVIDER[provider] || "claude-sonnet-4-6",
+  modelVersion: env.aiModelVersion,
 };

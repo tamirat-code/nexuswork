@@ -7,6 +7,9 @@ const recommendationCacheSchema = new mongoose.Schema(
     student_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
     project_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
     generated_at: { type: Date, default: Date.now },
+    model_provider: { type: String, default: "none" },
+    model_name: { type: String, default: "skill-overlap" },
+    model_version: { type: String, default: "v1" },
   },
   { timestamps: true }
 );

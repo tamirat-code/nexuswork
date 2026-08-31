@@ -111,7 +111,13 @@ export async function getRecommendationsForStudent(studentUserId) {
 
   await RecommendationCache.findOneAndUpdate(
     { student_id: studentUserId },
-    { project_ids: ranked.map((p) => p._id), generated_at: new Date() },
+    {
+      project_ids: ranked.map((p) => p._id),
+      generated_at: new Date(),
+      model_provider: aiConfig.provider,
+      model_name: aiConfig.model,
+      model_version: aiConfig.modelVersion,
+    },
     { upsert: true }
   );
 

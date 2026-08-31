@@ -56,6 +56,7 @@ export function buildEnv(source = process.env) {
     aiProvider: (source.AI_PROVIDER || "anthropic").toLowerCase(),
     aiApiKey: optional(source.AI_API_KEY),
     aiModel: optional(source.AI_MODEL),
+    aiModelVersion: optional(source.AI_MODEL_VERSION) || "v1",
 
     resendApiKey: optional(source.RESEND_API_KEY),
     mailFrom: source.MAIL_FROM || "NexusWork <no-reply@yourdomain.com>",
