@@ -29,6 +29,9 @@ const studentProfileSchema = new mongoose.Schema(
           default: "self_declared",
         },
         evidence_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+        course_name: { type: String, trim: true, maxlength: 200 },
+        course_code: { type: String, trim: true, maxlength: 50 },
+        course_completed_at: { type: Date },
         assessment_method: {
           type: String,
           enum: ["practical_assessment", "portfolio_review", "coursework_linkage"],

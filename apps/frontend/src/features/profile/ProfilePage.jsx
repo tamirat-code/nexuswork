@@ -529,6 +529,9 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
   const toast = useToast();
   const [skillName, setSkillName] = useState("");
   const [method, setMethod] = useState("practical_assessment");
+  const [courseName, setCourseName] = useState("");
+  const [courseCode, setCourseCode] = useState("");
+  const [courseCompletedAt, setCourseCompletedAt] = useState("");
   const [notes, setNotes] = useState("");
   const [evidence, setEvidence] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -544,12 +547,13 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
     mutationFn: () => submitSkillCertificationRequest({
       skill_name: skillName,
       assessment_method: method,
+      ...(method === "coursework_linkage" ? { course_name: courseName.trim(), course_code: courseCode.trim(), course_completed_at: courseCompletedAt || undefined } : {}),
       student_notes: notes.trim(),
       evidence_file_id: evidence._id,
     }, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-skill-certification-requests"] });
-      setSkillName(""); setNotes(""); setEvidence(null); setMethod("practical_assessment");
+      setSkillName(""); setNotes(""); setEvidence(null); setMethod("practical_assessment"); setCourseName(""); setCourseCode(""); setCourseCompletedAt("");
       toast.show("Skill certification request submitted to your university.");
     },
     onError: (error) => toast.show(error?.message || "Could not submit skill certification request.", { variant: "error" }),
@@ -578,6 +582,7 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
             <Select label="Skill to certify" value={skillName} onChange={(event) => setSkillName(event.target.value)} options={[{ value: "", label: skills.length ? "Select a profile skill" : "Add a skill in General Profile first" }, ...skills.map((skill) => ({ value: skill.name, label: skill.name }))]} disabled={!skills.length} />
             <Select label="Evidence type" value={method} onChange={(event) => setMethod(event.target.value)} options={[{ value: "practical_assessment", label: "Practical assessment" }, { value: "portfolio_review", label: "Portfolio review" }, { value: "coursework_linkage", label: "Coursework linkage" }]} />
           </div>
+          {method === "coursework_linkage" && <div className="mt-4 grid gap-4 md:grid-cols-3"><Input label="Course name" value={courseName} onChange={(event) => setCourseName(event.target.value)} maxLength={200} placeholder="Advanced Web Development" /><Input label="Course code (optional)" value={courseCode} onChange={(event) => setCourseCode(event.target.value)} maxLength={50} placeholder="CS-401" /><Input label="Completion date (optional)" type="date" value={courseCompletedAt} onChange={(event) => setCourseCompletedAt(event.target.value)} /></div>}
           <Textarea className="mt-4" label="What should the reviewer verify?" value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} maxLength={2000} placeholder="Describe the work, course, or assessment and what it demonstrates (at least 20 characters)." />
           <div className="mt-4">
             <label className="block text-sm font-semibold text-slate">Evidence file
@@ -585,7 +590,7 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
             </label>
             {evidence && <p className="mt-1 text-xs text-escrow">Attached: {evidence.original_name}</p>}
           </div>
-          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!skillName || !evidence || notes.trim().length < 20} onClick={() => submit.mutate()}>Request certification</Button>
+          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!skillName || !evidence || notes.trim().length < 20 || (method === "coursework_linkage" && !courseName.trim())} onClick={() => submit.mutate()}>Request certification</Button>
         </>
       )}
       <CardDivider className="my-5" />

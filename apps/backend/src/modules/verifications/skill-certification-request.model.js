@@ -7,6 +7,9 @@ const skillCertificationRequestSchema = new mongoose.Schema(
     skill_name: { type: String, required: true, trim: true, maxlength: 100 },
     skill_key: { type: String, required: true, trim: true, lowercase: true },
     evidence_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File", required: true },
+    course_name: { type: String, trim: true, maxlength: 200 },
+    course_code: { type: String, trim: true, maxlength: 50 },
+    course_completed_at: { type: Date },
     assessment_method: {
       type: String,
       enum: ["practical_assessment", "portfolio_review", "coursework_linkage"],

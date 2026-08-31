@@ -286,7 +286,7 @@ async function assertUniversityReviewer({ universityId, reviewerId, reviewerRole
   return university;
 }
 
-export async function submitSkillCertificationRequest({ studentId, skillName, evidenceFileId, assessmentMethod, studentNotes }) {
+export async function submitSkillCertificationRequest({ studentId, skillName, evidenceFileId, assessmentMethod, courseName, courseCode, courseCompletedAt, studentNotes }) {
   const profile = await StudentProfile.findOne({ user_id: studentId });
   if (!profile) throw new NotFoundError("Student profile not found");
   if (profile.verification_status !== "verified" || !profile.university_id) {
@@ -297,6 +297,9 @@ export async function submitSkillCertificationRequest({ studentId, skillName, ev
   if (!skill) throw new ValidationError("Only a skill already listed on your profile can be submitted");
   if (skill.verification_method === "university_certified") {
     throw new ValidationError("This skill is already university certified");
+  }
+  if (assessmentMethod === "coursework_linkage" && !courseName?.trim()) {
+    throw new ValidationError("Course name is required for coursework evidence");
   }
 
   const file = await File.findOne({ _id: evidenceFileId, owner_id: studentId });
@@ -319,6 +322,9 @@ export async function submitSkillCertificationRequest({ studentId, skillName, ev
     skill_key: normalizeSkillKey(skill.name),
     evidence_file_id: evidenceFileId,
     assessment_method: assessmentMethod,
+    course_name: courseName?.trim(),
+    course_code: courseCode?.trim(),
+    course_completed_at: courseCompletedAt,
     student_notes: studentNotes.trim(),
   });
   await File.findByIdAndUpdate(evidenceFileId, { related_id: request._id });
@@ -394,6 +400,9 @@ export async function reviewSkillCertificationRequest({ requestId, reviewerId, r
     skill.assessment_method = request.assessment_method;
     skill.assessment_score = assessmentScore;
     skill.assessment_notes = request.review_notes;
+    skill.course_name = request.course_name;
+    skill.course_code = request.course_code;
+    skill.course_completed_at = request.course_completed_at;
     await profile.save();
   }
   await request.save();

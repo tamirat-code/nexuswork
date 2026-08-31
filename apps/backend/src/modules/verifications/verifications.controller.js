@@ -145,6 +145,9 @@ export const requestSkillCertification = asyncHandler(async (req, res) => {
     skillName: req.body.skill_name,
     evidenceFileId: req.body.evidence_file_id,
     assessmentMethod: req.body.assessment_method,
+    courseName: req.body.course_name,
+    courseCode: req.body.course_code,
+    courseCompletedAt: req.body.course_completed_at,
     studentNotes: req.body.student_notes,
   });
   res.status(201).json({ success: true, data: request });
