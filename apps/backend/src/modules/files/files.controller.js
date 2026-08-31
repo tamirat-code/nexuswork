@@ -1,4 +1,5 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import { pipeline } from "node:stream/promises";
 import fs from "fs";
 import { ValidationError, NotFoundError } from "../../shared/exceptions/AppError.js";
 import * as filesService from "./files.service.js";
@@ -92,11 +93,19 @@ export const content = asyncHandler(async (req, res) => {
   const object = await filesService.getPrivateContent(file);
 
   res.setHeader("Content-Type", file.mimetype);
-  res.setHeader("Content-Length", String(file.size));
+  // Prefer the length reported by the storage provider. A stale database
+  // length makes Render/Cloudflare wait for bytes that will never arrive and
+  // can turn an otherwise successful download into HTTP 502.
+  const contentLength = Number(object.ContentLength);
+  if (Number.isSafeInteger(contentLength) && contentLength >= 0) {
+    res.setHeader("Content-Length", String(contentLength));
+  } else if (Number.isSafeInteger(file.size) && file.size >= 0) {
+    res.setHeader("Content-Length", String(file.size));
+  }
   const disposition = ["1", "true"].includes(String(req.query.download).toLowerCase()) ? "attachment" : "inline";
   res.setHeader("Content-Disposition", `${disposition}; filename="${String(file.original_name).replace(/[\"\r\n]/g, "_")}"`);
   res.setHeader("X-Content-Type-Options", "nosniff");
-  object.Body.pipe(res);
+  await pipeline(object.Body, res);
 });
 
 export const remove = asyncHandler(async (req, res) => {
