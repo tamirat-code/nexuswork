@@ -18,10 +18,16 @@ export function setCsrfCookie(res, token = crypto.randomBytes(32).toString("base
   return token;
 }
 
+// Options used only when clearing — must match the set options on all attributes
+// except maxAge/expires (Express sets that to epoch automatically on clearCookie).
+const clearCookieOptions = { httpOnly: cookieOptions.httpOnly, secure: cookieOptions.secure, sameSite: cookieOptions.sameSite, path: cookieOptions.path };
+const clearCsrfOptions  = { httpOnly: csrfOptions.httpOnly,   secure: csrfOptions.secure,   sameSite: csrfOptions.sameSite,   path: csrfOptions.path  };
+
 export function clearAuthCookies(res) {
-  res.clearCookie(AUTH_COOKIE, cookieOptions);
-  res.clearCookie(CSRF_COOKIE, csrfOptions);
+  res.clearCookie(AUTH_COOKIE, clearCookieOptions);
+  res.clearCookie(CSRF_COOKIE, clearCsrfOptions);
 }
+
 
 export function getCookie(req, name) {
   try {

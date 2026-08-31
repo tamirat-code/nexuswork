@@ -27,7 +27,7 @@ export const fetchFileBlob = async (id, token) => {
   const res = await fetch(`${API_BASE_URL}/files/content/${id}`, {
     credentials: "include",
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token && typeof token === "string" ? { Authorization: `Bearer ${token}` } : {}),
       ...csrfHeaders(),
     },
   });
@@ -46,7 +46,7 @@ export const downloadFile = async (id, token, filename = "download") => {
   const res = await fetch(`${API_BASE_URL}/files/content/${id}?download=1`, {
     credentials: "include",
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token && typeof token === "string" ? { Authorization: `Bearer ${token}` } : {}),
       ...csrfHeaders(),
     },
   });
