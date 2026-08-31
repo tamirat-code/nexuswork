@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { BadgeCheck, FileUp, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { verifyCredential, verifyPublicCredential } from "../../services/api/verifications.api.js";
@@ -162,6 +162,15 @@ export default function CredentialVerifyPage() {
               <Alert variant={result.valid ? "success" : "danger"} title={result.valid ? "Credential is authentic" : "Credential is not trusted"}>
                 {result.reason}
               </Alert>
+
+              {result.valid && result.studentId && (
+                <Link
+                  to={`/profile/${result.studentId}`}
+                  className="inline-flex items-center justify-center rounded-control bg-brass px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-brass-300"
+                >
+                  View student profile and portfolio
+                </Link>
+              )}
 
               <div className="grid gap-3 rounded-card border border-ink-300 bg-ink p-4 text-sm sm:grid-cols-2">
                 <div>

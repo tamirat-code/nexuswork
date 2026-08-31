@@ -57,11 +57,13 @@ export const verifyPublicCredential = asyncHandler(async (req, res) => {
   const result = verifyCredentialProof(credential);
   const subject = credential.credentialSubject ?? {};
   const achievement = subject.achievement ?? {};
+  const studentId = String(subject.id || "").split("/").pop() || null;
 
   res.json({
     success: true,
     data: {
       ...result,
+      studentId,
       issuer: credential.issuer?.name || null,
       subject: subject.name || null,
       credentialName: achievement.name || credential.name || null,
