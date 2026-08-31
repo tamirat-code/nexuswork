@@ -386,6 +386,7 @@ export default function ProfilePage() {
                   <UniversityVerificationCard user={user} token={token} />
                   <SkillCertificationCard
                     token={token}
+                    user={user}
                     profile={studentProfileQuery.data?.data}
                     universityVerified={Boolean(user?.universityVerified || studentProfileQuery.data?.data?.verification_status === "verified")}
                   />
@@ -527,7 +528,7 @@ function CredentialCardPreview({ verification, user }) {
   );
 }
 
-function SkillCertificationCard({ token, profile, universityVerified }) {
+function SkillCertificationCard({ token, user, profile, universityVerified }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
@@ -545,7 +546,16 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
     enabled: !!token,
   });
   const requests = data?.data || [];
-  const skills = (profile?.skills || []).filter((skill) => skill.verification_method !== "university_certified");
+  const profileSkills = profile?.skills || [];
+  const userSkillNames = (user?.skills || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const existingNames = new Set(profileSkills.map((s) => String(s.name).toLowerCase()));
+  const mergedSkills = [
+    ...profileSkills,
+    ...userSkillNames
+      .filter((name) => !existingNames.has(name.toLowerCase()))
+      .map((name) => ({ name, verification_method: "self_declared" })),
+  ];
+  const skills = mergedSkills.filter((skill) => skill.verification_method !== "university_certified");
 
   const submit = useMutation({
     mutationFn: () => submitSkillCertificationRequest({

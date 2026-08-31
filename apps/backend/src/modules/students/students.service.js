@@ -5,7 +5,26 @@ import Contract from "../contracts/contracts.model.js";
 import { NotFoundError } from "../../shared/exceptions/AppError.js";
 
 export async function getProfileByUserId(userId) {
-  return StudentProfile.findOne({ user_id: userId });
+  let profile = await StudentProfile.findOne({ user_id: userId });
+  if (!profile) {
+    profile = await StudentProfile.create({ user_id: userId });
+  }
+  const user = await User.findById(userId).select("skills").lean();
+  if (user?.skills) {
+    const userSkillNames = user.skills.split(",").map((s) => s.trim()).filter(Boolean);
+    const existingByName = new Map((profile.skills || []).map((s) => [String(s.name).toLowerCase(), s]));
+    let modified = false;
+    for (const name of userSkillNames) {
+      if (!existingByName.has(name.toLowerCase())) {
+        profile.skills.push({ name, verification_method: "self_declared" });
+        modified = true;
+      }
+    }
+    if (modified) {
+      await profile.save();
+    }
+  }
+  return profile;
 }
 
 

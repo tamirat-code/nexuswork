@@ -293,7 +293,16 @@ export async function submitSkillCertificationRequest({ studentId, skillName, ev
     throw new ValidationError("Complete university enrollment verification before requesting a certified skill");
   }
 
-  const skill = profile.skills.find((item) => normalizeSkillKey(item.name) === normalizeSkillKey(skillName));
+  let skill = profile.skills.find((item) => normalizeSkillKey(item.name) === normalizeSkillKey(skillName));
+  if (!skill) {
+    const user = await User.findById(studentId).select("skills").lean();
+    const userSkillNames = (user?.skills || "").split(",").map((s) => s.trim().toLowerCase());
+    if (userSkillNames.includes(normalizeSkillKey(skillName))) {
+      profile.skills.push({ name: skillName.trim(), verification_method: "self_declared" });
+      await profile.save();
+      skill = profile.skills.find((item) => normalizeSkillKey(item.name) === normalizeSkillKey(skillName));
+    }
+  }
   if (!skill) throw new ValidationError("Only a skill already listed on your profile can be submitted");
   if (skill.verification_method === "university_certified") {
     throw new ValidationError("This skill is already university certified");
