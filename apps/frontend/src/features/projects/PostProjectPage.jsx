@@ -24,23 +24,43 @@ import { Badge } from "../../components/ui/shadcn/badge.jsx";
 const CATEGORIES = ["Development", "Design", "Data & Research", "Writing", "Video & Motion", "Marketing"];
 const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced", "expert"];
 
+const parseOptionalNumber = (val) => (val === "" || val === null || val === undefined ? undefined : Number(val));
+
 const projectSchema = z.object({
   title: z.string().min(8, "Title must be at least 8 characters").max(120),
   description: z.string().min(40, "Describe the work in more detail (min 40 characters)").max(5000),
   category: z.string().min(1, "Choose a category"),
   experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]),
   budget_type: z.enum(["fixed", "range"]),
-  budget: z.coerce.number().min(10, "Budget must be at least $10").max(1000000, "Budget looks too high").optional(),
-  budget_min: z.coerce.number().min(10, "Minimum budget must be at least $10").max(1000000).optional(),
-  budget_max: z.coerce.number().min(10, "Maximum budget must be at least $10").max(1000000).optional(),
+  budget: z.preprocess(
+    parseOptionalNumber,
+    z.number({ invalid_type_error: "Budget must be a number" })
+      .min(10, "Budget must be at least $10")
+      .max(1000000, "Budget looks too high")
+      .optional()
+  ),
+  budget_min: z.preprocess(
+    parseOptionalNumber,
+    z.number({ invalid_type_error: "Minimum budget must be a number" })
+      .min(10, "Minimum budget must be at least $10")
+      .max(1000000)
+      .optional()
+  ),
+  budget_max: z.preprocess(
+    parseOptionalNumber,
+    z.number({ invalid_type_error: "Maximum budget must be a number" })
+      .min(10, "Maximum budget must be at least $10")
+      .max(1000000)
+      .optional()
+  ),
   currency: z.enum(["USD", "ETB"]),
   deadline: z.string().min(1, "Pick a deadline"),
 }).superRefine((value, context) => {
-  if (value.budget_type === "fixed" && value.budget === undefined) {
+  if (value.budget_type === "fixed" && (value.budget === undefined || isNaN(value.budget))) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget"], message: "Enter a budget" });
   }
   if (value.budget_type === "range") {
-    if (value.budget_min === undefined || value.budget_max === undefined) {
+    if (value.budget_min === undefined || isNaN(value.budget_min) || value.budget_max === undefined || isNaN(value.budget_max)) {
       context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget_min"], message: "Enter both budget values" });
     } else if (value.budget_min > value.budget_max) {
       context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget_max"], message: "Maximum must be at least minimum" });
@@ -147,6 +167,15 @@ export default function PostProjectPage() {
     onError: (err) => toast.error(err.message || t("projectsForm.postError")),
   });
 
+  function handleInvalid(errors) {
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0];
+      const firstError = errors[firstField]?.message || "Please check your project details.";
+      toast.error(firstError);
+    }
+  }
+
   async function handleSubmit(values) {
     mutation.mutate({
       ...values,
@@ -178,7 +207,7 @@ export default function PostProjectPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="mt-6">
+        <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>{step === 0 ? t("projectsForm.tellWork") : step === 1 ? t("projectsForm.setExpectations") : t("projectsForm.reviewPublish")}</CardTitle>
@@ -274,7 +303,12 @@ export default function PostProjectPage() {
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">{t("projectsForm.titleSummary")}</dt><dd className="font-semibold text-slate">{form.watch("title")}</dd></div>
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">{t("projectsForm.categorySummary")}</dt><dd className="font-semibold text-slate">{form.watch("category")}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className="text-slate-300">{t("projectsForm.budgetSummary")}</dt><dd className="font-mono text-brass">{form.watch("currency")} {form.watch("budget")}</dd></div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-slate-300">{t("projectsForm.budgetSummary")}</dt>
+                      <dd className="font-mono text-brass">
+                        {form.watch("currency")} {form.watch("budget_type") === "range" ? `${form.watch("budget_min")} - ${form.watch("budget_max")}` : form.watch("budget")}
+                      </dd>
+                    </div>
                     {skills.length > 0 && <div className="flex flex-wrap gap-1.5 pt-2">{skills.map((s) => <Badge key={s._id} variant="secondary">{s.name}</Badge>)}</div>}
                   </dl>
                 </div>
@@ -288,7 +322,12 @@ export default function PostProjectPage() {
             </Button>
             {step < 2 ? (
               <Button type="button" onClick={async () => {
-                const valid = await form.trigger(step === 0 ? ["title", "description", "category"] : ["experience_level", "budget", "currency", "deadline"]);
+                const fieldsToValidate = step === 0
+                  ? ["title", "description", "category"]
+                  : form.watch("budget_type") === "range"
+                  ? ["experience_level", "budget_type", "budget_min", "budget_max", "currency", "deadline"]
+                  : ["experience_level", "budget_type", "budget", "currency", "deadline"];
+                const valid = await form.trigger(fieldsToValidate);
                 if (valid) setStep((s) => Math.min(2, s + 1));
               }}>
                 {t("projectsForm.continue")} <ChevronRight className="h-4 w-4" />

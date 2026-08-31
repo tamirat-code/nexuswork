@@ -19,7 +19,7 @@ import {
 } from "../../components/ui/index.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
-import { ROLE_LABELS } from "../../constants/roles.constants.js";
+import { ROLES, ROLE_LABELS } from "../../constants/roles.constants.js";
 import { removeMyAvatar, updateMe, updateMyAvatar } from "../../services/api/users.api.js";
 import { getMyStudentProfile, updateMyStudentProfile } from "../../services/api/students.api.js";
 import { listUniversities } from "../../services/api/universities.api.js";
@@ -34,7 +34,7 @@ import {
 import { getMyStaffVerifications, requestStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
-import { PROFILE_LIMITS, profileCompleteness, validateProfile } from "./profile.utils.js";
+import { PROFILE_LIMITS, getCompletenessFields, profileCompleteness, validateProfile } from "./profile.utils.js";
 import { useTranslation } from "react-i18next";
 
 const EMPTY = {
@@ -73,7 +73,20 @@ export default function ProfilePage() {
   const [touched, setTouched] = useState({});
   const [summary, setSummary] = useState("");
 
-  const isStudent = user?.role === "student";
+  const role = user?.role || ROLES.STUDENT;
+  const isStudent = role === ROLES.STUDENT || role === "student";
+  const isClient = role === ROLES.CLIENT || role === "client";
+  const isStaff = role === ROLES.UNIVERSITY_STAFF || role === "university_staff";
+  const isAdmin = role === ROLES.ADMIN || role === "admin";
+
+  const activeFields = useMemo(() => getCompletenessFields(role).map((f) => f.key), [role]);
+  const showVerificationTab = isStudent || isStaff;
+
+  useEffect(() => {
+    if (!showVerificationTab && activeTab === "verification") {
+      setActiveTab("general");
+    }
+  }, [showVerificationTab, activeTab]);
 
   // Enrollment status lives on the separate StudentProfile record (not the
   // User document), and isn't collected at signup anymore — so it's fetched
@@ -92,23 +105,23 @@ export default function ProfilePage() {
 
   const dirty = useMemo(
     () =>
-      Object.keys(EMPTY).some((k) => (form[k] ?? "") !== (initial[k] ?? "")) ||
+      activeFields.some((k) => (form[k] ?? "") !== (initial[k] ?? "")) ||
       (isStudent && enrollmentStatus !== savedEnrollmentStatus),
-    [form, initial, isStudent, enrollmentStatus, savedEnrollmentStatus]
+    [form, initial, activeFields, isStudent, enrollmentStatus, savedEnrollmentStatus]
   );
-  const completeness = useMemo(() => profileCompleteness(form), [form]);
+  const completeness = useMemo(() => profileCompleteness(form, role), [form, role]);
 
   const set = (key) => (event) => {
     const value = event.target.value;
     setForm((prev) => ({ ...prev, [key]: value }));
     if (touched[key]) {
-      setErrors(validateProfile({ ...form, [key]: value }));
+      setErrors(validateProfile({ ...form, [key]: value }, role));
     }
   };
 
   const blur = (key) => () => {
     setTouched((prev) => ({ ...prev, [key]: true }));
-    setErrors(validateProfile(form));
+    setErrors(validateProfile(form, role));
   };
 
   const qc = useQueryClient();
@@ -165,9 +178,9 @@ export default function ProfilePage() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    const next = validateProfile(form);
+    const next = validateProfile(form, role);
     setErrors(next);
-    setTouched(Object.fromEntries(Object.keys(EMPTY).map((k) => [k, true])));
+    setTouched(Object.fromEntries(activeFields.map((k) => [k, true])));
 
     const count = Object.keys(next).length;
     if (count > 0) {
@@ -190,19 +203,29 @@ export default function ProfilePage() {
 
   const tabItems = [
     { value: "general", label: t("profile.generalIdentity", { defaultValue: "General & Identity" }) },
-    {
+    showVerificationTab && {
       value: "verification",
-      label: user?.universityVerified || user?.staffVerified ? t("profile.verification", { defaultValue: "Verification ✓" }) : t("profile.verificationRequest", { defaultValue: "Verification Request" }),
+      label: user?.universityVerified || user?.staffVerified
+        ? t("profile.verification", { defaultValue: "Verification ✓" })
+        : t("profile.verificationRequest", { defaultValue: "Verification Request" }),
     },
     { value: "strength", label: t("profile.strengthSecurity", { defaultValue: "Strength & Security" }) },
-  ];
+  ].filter(Boolean);
+
+  const headerDescription = useMemo(() => {
+    if (isStudent) return t("profile.description", { defaultValue: "Keep your profile up to date for client proposals and university verification." });
+    if (isClient) return t("profile.descriptionClient", { defaultValue: "Keep your company and contact profile up to date for student proposals." });
+    if (isStaff) return t("profile.descriptionStaff", { defaultValue: "Keep your staff profile up to date for university administration and verification management." });
+    if (isAdmin) return t("profile.descriptionAdmin", { defaultValue: "Keep your administrator account details up to date." });
+    return t("profile.description", { defaultValue: "Keep your profile up to date." });
+  }, [isStudent, isClient, isStaff, isAdmin, t]);
 
   return (
     <div className="w-full">
       <PageHeader
         eyebrow={t("common.account")}
         title={t("profile.title", { defaultValue: "Profile & settings" })}
-        description={t("profile.description", { defaultValue: "Keep your profile up to date for client proposals and university verification." })}
+        description={headerDescription}
         breadcrumbs={[{ label: "Workspace", to: "/dashboard" }, { label: "Profile" }]}
         actions={
           <>
@@ -237,7 +260,12 @@ export default function ProfilePage() {
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
                 <div>
                   <h2 className="font-display text-xl font-extrabold text-slate">{t("profile.generalProfile", { defaultValue: "General Profile" })}</h2>
-                  <p className="text-xs text-slate-300">{t("profile.generalProfileDescription", { defaultValue: "Identity, bio, and portfolio details shown on your public profile." })}</p>
+                  <p className="text-xs text-slate-300">
+                    {isStudent && t("profile.generalProfileDescription", { defaultValue: "Identity, bio, and portfolio details shown on your public profile." })}
+                    {isClient && t("profile.generalProfileDescriptionClient", { defaultValue: "Identity and company details shown on your posted projects." })}
+                    {isStaff && t("profile.generalProfileDescriptionStaff", { defaultValue: "Identity and department details shown to students and administrators." })}
+                    {isAdmin && t("profile.generalProfileDescriptionAdmin", { defaultValue: "Account identity and administrator contact details." })}
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge tone="brand">{ROLE_LABELS[user?.role] || "Member"}</Badge>
@@ -286,55 +314,89 @@ export default function ProfilePage() {
 
                   <Input
                     id="profile-headline"
-                    label={t("profile.headline")}
+                    label={
+                      isClient
+                        ? t("profile.headlineClient", { defaultValue: "Job title / Position" })
+                        : isStaff
+                        ? t("profile.headlineStaff", { defaultValue: "Job title / Role" })
+                        : isAdmin
+                        ? t("profile.headlineAdmin", { defaultValue: "Admin title" })
+                        : t("profile.headline")
+                    }
                     optional
                     value={form.headline}
                     onChange={set("headline")}
                     onBlur={blur("headline")}
                     error={touched.headline ? errors.headline : undefined}
-                    placeholder={t("profile.headlinePlaceholder")}
+                    placeholder={
+                      isClient
+                        ? t("profile.headlinePlaceholderClient", { defaultValue: "e.g. CTO, Hiring Manager" })
+                        : isStaff
+                        ? t("profile.headlinePlaceholderStaff", { defaultValue: "e.g. Department Chair, Career Coordinator" })
+                        : isAdmin
+                        ? t("profile.headlinePlaceholderAdmin", { defaultValue: "e.g. Platform Administrator" })
+                        : t("profile.headlinePlaceholder")
+                    }
                     maxLength={PROFILE_LIMITS.headline}
                   />
                 </div>
 
-                {/* Right Column: Bio & Portfolio Links */}
+                {/* Right Column: Bio, Location, University, Skills & Links */}
                 <div className="space-y-4">
-                  <Textarea
-                    id="profile-bio"
-                    label={t("profile.shortBio", { defaultValue: "Short bio" })}
-                    optional
-                    rows={3}
-                    value={form.bio}
-                    onChange={set("bio")}
-                    onBlur={blur("bio")}
-                    error={touched.bio ? errors.bio : undefined}
-                    maxLength={PROFILE_LIMITS.bio}
-                    placeholder={t("profile.bioPlaceholder", { defaultValue: "A brief overview of your expertise and goals..." })}
-                  />
+                  {!isAdmin && (
+                    <Textarea
+                      id="profile-bio"
+                      label={
+                        isClient
+                          ? t("profile.companyDescription", { defaultValue: "Company description" })
+                          : isStaff
+                          ? t("profile.departmentDescription", { defaultValue: "Department / Office description" })
+                          : t("profile.shortBio", { defaultValue: "Short bio" })
+                      }
+                      optional
+                      rows={3}
+                      value={form.bio}
+                      onChange={set("bio")}
+                      onBlur={blur("bio")}
+                      error={touched.bio ? errors.bio : undefined}
+                      maxLength={PROFILE_LIMITS.bio}
+                      placeholder={
+                        isClient
+                          ? t("profile.bioPlaceholderClient", { defaultValue: "Overview of your company or hiring focus..." })
+                          : isStaff
+                          ? t("profile.bioPlaceholderStaff", { defaultValue: "Overview of your department and student support services..." })
+                          : t("profile.bioPlaceholder", { defaultValue: "A brief overview of your expertise and goals..." })
+                      }
+                    />
+                  )}
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Input
-                      id="profile-location"
-                      label={t("profile.location", { defaultValue: "Location" })}
-                      optional
-                      value={form.location}
-                      onChange={set("location")}
-                      onBlur={blur("location")}
-                      error={touched.location ? errors.location : undefined}
-                      placeholder={t("profile.locationPlaceholder", { defaultValue: "Addis Ababa" })}
-                      maxLength={PROFILE_LIMITS.location}
-                    />
-                    <Input
-                      id="profile-university"
-                      label={t("registration.university")}
-                      optional
-                      value={form.university}
-                      onChange={set("university")}
-                      onBlur={blur("university")}
-                      error={touched.university ? errors.university : undefined}
-                      maxLength={PROFILE_LIMITS.university}
-                    />
-                  </div>
+                  {!isAdmin && (
+                    <div className={isStudent || isStaff ? "grid gap-4 sm:grid-cols-2" : "space-y-4"}>
+                      <Input
+                        id="profile-location"
+                        label={t("profile.location", { defaultValue: "Location" })}
+                        optional
+                        value={form.location}
+                        onChange={set("location")}
+                        onBlur={blur("location")}
+                        error={touched.location ? errors.location : undefined}
+                        placeholder={isStaff ? "Main Campus, Building B" : t("profile.locationPlaceholder", { defaultValue: "Addis Ababa" })}
+                        maxLength={PROFILE_LIMITS.location}
+                      />
+                      {(isStudent || isStaff) && (
+                        <Input
+                          id="profile-university"
+                          label={isStaff ? t("profile.universityOrInstitution", { defaultValue: "University / Institution" }) : t("registration.university")}
+                          optional
+                          value={form.university}
+                          onChange={set("university")}
+                          onBlur={blur("university")}
+                          error={touched.university ? errors.university : undefined}
+                          maxLength={PROFILE_LIMITS.university}
+                        />
+                      )}
+                    </div>
+                  )}
 
                   {isStudent && (
                     <Select
@@ -349,39 +411,49 @@ export default function ProfilePage() {
                     />
                   )}
 
-                  <Input
-                    id="profile-skills"
-                    label={t("profile.skills")}
-                    optional
-                    value={form.skills}
-                    onChange={set("skills")}
-                    onBlur={blur("skills")}
-                    error={touched.skills ? errors.skills : undefined}
-                    placeholder={t("profile.skillsExample", { defaultValue: "React, Python, Figma" })}
-                    maxLength={PROFILE_LIMITS.skills}
-                  />
+                  {isStudent && (
+                    <Input
+                      id="profile-skills"
+                      label={t("profile.skills")}
+                      optional
+                      value={form.skills}
+                      onChange={set("skills")}
+                      onBlur={blur("skills")}
+                      error={touched.skills ? errors.skills : undefined}
+                      placeholder={t("profile.skillsExample", { defaultValue: "React, Python, Figma" })}
+                      maxLength={PROFILE_LIMITS.skills}
+                    />
+                  )}
 
-                  <Input
-                    id="profile-website"
-                    label={t("profile.portfolioUrl", { defaultValue: "Portfolio URL" })}
-                    optional
-                    type="url"
-                    inputMode="url"
-                    value={form.website}
-                    onChange={set("website")}
-                    onBlur={blur("website")}
-                    error={touched.website ? errors.website : undefined}
-                    placeholder="https://portfolio.dev"
-                  />
+                  {!isAdmin && (
+                    <Input
+                      id="profile-website"
+                      label={
+                        isStudent
+                          ? t("profile.portfolioUrl", { defaultValue: "Portfolio URL" })
+                          : isClient
+                          ? t("profile.websiteUrlClient", { defaultValue: "Company website URL" })
+                          : t("profile.websiteUrlStaff", { defaultValue: "Department webpage URL" })
+                      }
+                      optional
+                      type="url"
+                      inputMode="url"
+                      value={form.website}
+                      onChange={set("website")}
+                      onBlur={blur("website")}
+                      error={touched.website ? errors.website : undefined}
+                      placeholder={isStudent ? "https://portfolio.dev" : isClient ? "https://company.com" : "https://university.edu"}
+                    />
+                  )}
                 </div>
               </div>
             </Card>
           )}
 
           {/* TAB 2: Verification */}
-          {activeTab === "verification" && (
+          {activeTab === "verification" && showVerificationTab && (
             <>
-              {user?.role === "student" && (
+              {isStudent && (
                 <>
                   <UniversityVerificationCard user={user} token={token} />
                   <SkillCertificationCard
@@ -392,15 +464,7 @@ export default function ProfilePage() {
                   />
                 </>
               )}
-              {user?.role === "university_staff" && <StaffVerificationCard user={user} token={token} />}
-              {user?.role !== "student" && user?.role !== "university_staff" && (
-                <Card as="section">
-                  <CardHeader title="Verification" description="Client profiles do not require university enrollment proof." />
-                  <p className="mt-4 text-base text-slate-300">
-                    Your account is registered as a Client. You can post projects and fund escrow directly.
-                  </p>
-                </Card>
-              )}
+              {isStaff && <StaffVerificationCard user={user} token={token} />}
             </>
           )}
 
@@ -429,7 +493,15 @@ export default function ProfilePage() {
             <CardHeader
               titleAs="h2"
               title={t("profile.strengthTitle", { defaultValue: "Profile strength" })}
-              description={t("profile.strengthDescription", { defaultValue: "Complete profiles get more invitations." })}
+              description={
+                isStudent
+                  ? t("profile.strengthDescription", { defaultValue: "Complete profiles get more invitations." })
+                  : isClient
+                  ? t("profile.strengthDescriptionClient", { defaultValue: "Complete profiles build trust with student freelancers." })
+                  : isStaff
+                  ? t("profile.strengthDescriptionStaff", { defaultValue: "Complete profiles build trust with students and platform admins." })
+                  : t("profile.strengthDescriptionAdmin", { defaultValue: "Keep your administrator profile up to date." })
+              }
             />
             <div className="mt-5">
               <ProgressBar
