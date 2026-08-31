@@ -37,6 +37,7 @@ export function assertPaymentProvider(provider) {
     "createTransfer",
     "getTransfer",
     "createRefund",
+    "getRefund",
     "createConnectedAccount",
     "getConnectedAccount",
     "createAccountLink",

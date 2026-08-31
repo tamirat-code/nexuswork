@@ -511,6 +511,7 @@ export async function refundClient(milestoneId, auditContext = {}) {
         currency: depositPayment.currency,
         direction: "refund",
         status: "pending",
+        provider: depositPayment.provider || (String(depositPayment.currency).toLowerCase() === "etb" ? "chapa" : "stripe"),
         provider_operation_key: `milestone-refund-${milestoneId}`,
         processing_at: new Date(),
       });
@@ -544,16 +545,43 @@ export async function refundClient(milestoneId, auditContext = {}) {
     const refundProvider = getPaymentProvider(
       depositPayment.provider || (String(depositPayment.currency).toLowerCase() === "etb" ? "chapa" : "stripe")
     );
-    if (refundProvider.name === "chapa") {
-      throw new ValidationError("Chapa refunds are not supported by the current payout integration");
+    payment.provider = refundProvider.name;
+
+    if (payment.provider_refund_id) {
+      refund = await refundProvider.getRefund(payment.provider_refund_id);
+      if (refund.status === "pending") {
+        payment.failure_code = "refund_pending_provider_confirmation";
+        payment.failure_message = `Refund is pending provider confirmation (status: ${refund.providerStatus || refund.status})`;
+        await payment.save();
+        return payment;
+      }
+      if (refund.status !== "succeeded") {
+        throw new ValidationError(`Refund provider rejected the refund (status: ${refund.providerStatus || refund.status})`);
+      }
+    } else {
+      refund = await refundProvider.createRefund({
+        paymentIntentId: depositPayment.provider_payment_id || depositPayment.stripe_payment_intent_id,
+        amountMinor: refundMoney.amountMinor,
+        currency: refundMoney.currency,
+        metadata: { milestoneId, reason: "NexusWork dispute resolution" },
+        idempotencyKey: operationKey,
+      });
+      payment.provider_refund_id = refund.id;
+      if (refund.status === "pending") {
+        payment.failure_code = "refund_pending_provider_confirmation";
+        payment.failure_message = `Refund is pending provider confirmation (status: ${refund.providerStatus || refund.status})`;
+        payment.processing_at = undefined;
+        await payment.save();
+        return payment;
+      }
+      if (refund.status !== "succeeded") {
+        throw new ValidationError(`Refund provider rejected the refund (status: ${refund.providerStatus || refund.status})`);
+      }
     }
-    refund = await refundProvider.createRefund({
-      paymentIntentId: depositPayment.provider_payment_id || depositPayment.stripe_payment_intent_id,
-      idempotencyKey: operationKey,
-    });
     payment.status = "succeeded";
-    payment.stripe_refund_id = refund.id;
+    if (refundProvider.name === "stripe") payment.stripe_refund_id = refund.id;
     payment.processing_at = undefined;
+    payment.failure_code = undefined;
     payment.failure_message = undefined;
     await payment.save();
     await postJournal({

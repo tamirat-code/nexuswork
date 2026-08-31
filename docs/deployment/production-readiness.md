@@ -82,7 +82,9 @@ With Chapa sandbox credentials and ETB data:
    verification.
 4. Verify amount, currency, transaction reference, and status server-side.
 5. Replay the webhook/callback and confirm no duplicate funding or release.
-6. Execute the payout test path if enabled by the Chapa account and verify
+6. Execute the refund test path using a known `tx_ref`; verify initiated,
+   processing, refunded, and reversed outcomes through the refund status API.
+7. Execute the payout test path if enabled by the Chapa account and verify
    pending, paid, failed, and reconciliation outcomes.
 
 No test or live provider credential belongs in source control, browser code,

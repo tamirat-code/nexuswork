@@ -93,9 +93,16 @@ function transferStatus(status) {
   return normalizeStatus(status);
 }
 
+function refundStatus(status) {
+  const value = String(status || "").toLowerCase();
+  if (value === "refunded" || value === "success" || value === "succeeded") return "succeeded";
+  if (value === "reversed" || value === "failed" || value === "cancelled" || value === "canceled") return "failed";
+  return "pending";
+}
+
 export const chapaProvider = {
   name: "chapa",
-  capabilities: ["hosted_checkout", "status_lookup", "payouts", "webhooks"],
+  capabilities: ["hosted_checkout", "status_lookup", "refunds", "payouts", "webhooks"],
   async createPaymentIntent({ amountMinor, currency, metadata = {}, idempotencyKey }) {
     const value = assertEtb({ amountMinor, currency });
     const txRef = idempotencyKey || "nexuswork-" + crypto.randomUUID();
@@ -194,7 +201,34 @@ export const chapaProvider = {
       providerStatus: data.status || body.status,
     };
   },
-  createRefund() { return unsupportedCapability("Chapa", "refunds"); },
+  async createRefund({ paymentIntentId, amountMinor, currency, metadata = {}, idempotencyKey }) {
+    const value = assertEtb({ amountMinor, currency });
+    if (!paymentIntentId) throw new PaymentProviderError("Chapa refund requires the original transaction reference", { code: "invalid_reference" });
+    const params = new URLSearchParams({
+      amount: String(majorUnitsFromMoney(value)),
+      reason: String(metadata.reason || "NexusWork dispute resolution"),
+      reference: idempotencyKey || "nexuswork-refund-" + crypto.randomUUID(),
+    });
+    const body = await request("/refund/" + encodeURIComponent(paymentIntentId), {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    const data = responseObject(body, "refund");
+    const id = data.ref_id || data.reference || body.ref_id;
+    if (typeof id !== "string" || !id.trim()) {
+      throw new PaymentProviderError("Chapa returned an incomplete refund response", { code: "malformed_response" });
+    }
+    return { id, status: refundStatus(data.status || body.status), providerStatus: data.status || body.status };
+  },
+  async getRefund(id) {
+    const body = await request("/refund/" + encodeURIComponent(id) + "/verify");
+    const data = responseObject(body, "refund verification");
+    if (typeof data.ref_id !== "string" || !data.ref_id.trim() || typeof data.status !== "string") {
+      throw new PaymentProviderError("Chapa returned an incomplete refund verification response", { code: "malformed_response" });
+    }
+    return { id: data.ref_id, status: refundStatus(data.status || body.status), providerStatus: data.status };
+  },
   createConnectedAccount() { return unsupportedCapability("Chapa", "connected accounts"); },
   getConnectedAccount() { return unsupportedCapability("Chapa", "connected accounts"); },
   createAccountLink() { return unsupportedCapability("Chapa", "account links"); },

@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import { jest } from "@jest/globals";
 import { chapaProvider } from "../../src/modules/payments/providers/chapa.provider.js";
-import { PaymentProviderError } from "../../src/modules/payments/providers/payment-provider.js";
 import { paymentConfig } from "../../src/config/payment.config.js";
 
 describe("Chapa provider contract", () => {
@@ -18,11 +17,36 @@ describe("Chapa provider contract", () => {
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ amount: "12.5", currency: "ETB", tx_ref: "funding-123" });
   });
 
-  test("rejects non-ETB money and unsupported payout/refund capabilities", async () => {
+  test("rejects non-ETB money and unsupported payout capabilities", async () => {
     await expect(chapaProvider.createPaymentIntent({ amountMinor: 100, currency: "usd", idempotencyKey: "funding-123" }))
       .rejects.toMatchObject({ code: "currency_mismatch" });
-    expect(() => chapaProvider.createRefund()).toThrow(PaymentProviderError);
     expect(() => chapaProvider.createPayout()).toThrow(/does not support payouts/);
+  });
+
+  test("creates and verifies an ETB refund", async () => {
+    jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "success", data: { ref_id: "rf_test_123", status: "initiated" } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "success", data: { ref_id: "rf_test_123", status: "refunded" } }),
+      });
+
+    await expect(chapaProvider.createRefund({
+      paymentIntentId: "tx_test_123",
+      amountMinor: 2500,
+      currency: "etb",
+      idempotencyKey: "milestone-refund-test-123",
+    })).resolves.toMatchObject({ id: "rf_test_123", status: "pending" });
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/refund/tx_test_123"), expect.objectContaining({
+      method: "POST",
+      headers: expect.objectContaining({ "Content-Type": "application/x-www-form-urlencoded" }),
+    }));
+
+    await expect(chapaProvider.getRefund("rf_test_123"))
+      .resolves.toMatchObject({ id: "rf_test_123", status: "succeeded" });
   });
 
   test("verifies payload HMAC signatures", () => {

@@ -6,6 +6,7 @@ const capabilities = [
   "createTransfer",
   "getTransfer",
   "createRefund",
+  "getRefund",
   "createConnectedAccount",
   "getConnectedAccount",
   "createAccountLink",

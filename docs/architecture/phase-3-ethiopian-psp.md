@@ -23,7 +23,7 @@ references, and HMAC webhook signatures.
 | Hosted ETB checkout | Supported | Implemented and mock contract-tested |
 | Transaction status lookup | Supported | Implemented and mock contract-tested |
 | Callback/webhook notification | Supported | Signature boundary implemented; sandbox not verified |
-| Refunds | Unsupported in this adapter | Never reports fake success |
+| Refunds | Supported | Chapa refund initiation plus refund-status verification implemented and contract-tested; sandbox not verified |
 | NexusWork payout orchestration | Deferred | Phase 4 boundary |
 | Stripe Connect compatibility | Not a Chapa capability | Existing Stripe path preserved |
 
@@ -47,6 +47,9 @@ references, and HMAC webhook signatures.
 - Callback success is never trusted without provider status lookup.
 - Amount and currency mismatches are rejected.
 - Provider timeout/failure is normalized; it is not converted to success.
+- Refund responses are treated as asynchronous when Chapa reports `initiated` or
+  `processing`; the local dispute remains open until a later status lookup reports
+  `refunded`.
 - Provider-confirmed/database-failed cases remain recoverable through the stored
   provider reference and status lookup. Full reconciliation is deferred.
 
@@ -61,6 +64,6 @@ Connect behavior remain on their existing path.
 ## Explicit limitations
 
 This phase does not implement escrow, payout orchestration, settlement
-reconciliation, payout retry state machines, or a commission engine. Chapa
-refund and payout support are not claimed. Real provider verification remains
-pending credentials and sandbox access.
+reconciliation, payout retry state machines, or a commission engine. Chapa payout
+support remains outside this adapter's current scope. Real provider refund and
+settlement verification remains pending credentials and sandbox access.

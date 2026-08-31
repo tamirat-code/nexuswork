@@ -99,6 +99,11 @@ export const stripeProvider = {
     return { id: refund.id, status: refund.status === "succeeded" ? "succeeded" : "pending", providerStatus: refund.status };
   },
 
+  async getRefund(id) {
+    const refund = await call(() => stripe.refunds.retrieve(id));
+    return { id: refund.id, status: refund.status === "succeeded" ? "succeeded" : "pending", providerStatus: refund.status };
+  },
+
   async createConnectedAccount({ email }) {
     return call(() => stripe.accounts.create({ type: "express", email, capabilities: { transfers: { requested: true } } }));
   },

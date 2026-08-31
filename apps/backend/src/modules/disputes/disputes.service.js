@@ -96,7 +96,10 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
   const previousDisputeState = dispute.status;
   const previousMilestoneState = milestone.status;
   if (outcome === "refund_client") {
-    await refundClient(milestone._id, auditContext);
+    const refund = await refundClient(milestone._id, auditContext);
+    if (refund.status !== "succeeded") {
+      throw new ValidationError("Refund is pending provider confirmation; the dispute remains open.");
+    }
     milestone.status = "not_funded";
   } else if (outcome === "release_student") {
     const studentWallet = await Wallet.findOne({ user_id: contract.student_id });
