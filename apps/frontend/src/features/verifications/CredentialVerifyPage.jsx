@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BadgeCheck, FileUp, ShieldAlert, ShieldCheck } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import { verifyCredential } from "../../services/api/verifications.api.js";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { verifyCredential, verifyPublicCredential } from "../../services/api/verifications.api.js";
 import { Alert, Button, Card, CardDivider, Textarea } from "../../components/ui/index.js";
 
 function extractCredentialFromText(text) {
@@ -23,8 +24,16 @@ function formatDate(value) {
 }
 
 export default function CredentialVerifyPage() {
+  const [searchParams] = useSearchParams();
+  const verificationId = searchParams.get("id") || "";
   const [rawCredential, setRawCredential] = useState("");
   const [parseError, setParseError] = useState("");
+
+  const publicVerification = useQuery({
+    queryKey: ["public-credential-verification", verificationId],
+    queryFn: () => verifyPublicCredential(verificationId),
+    enabled: Boolean(verificationId),
+  });
 
   const verifyMutation = useMutation({
     mutationFn: (credential) => verifyCredential(credential),
@@ -32,7 +41,8 @@ export default function CredentialVerifyPage() {
     onError: (err) => setParseError(err?.message || "Credential could not be verified."),
   });
 
-  const result = verifyMutation.data?.data;
+  const result = publicVerification.data?.data || verifyMutation.data?.data;
+  const displayError = parseError || publicVerification.error?.message;
   const skills = useMemo(() => result?.skills ?? [], [result]);
 
   function handleVerify() {
@@ -100,7 +110,7 @@ export default function CredentialVerifyPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold text-slate">Credential input</h2>
-              <p className="mt-1 text-sm text-slate-300">Upload the signed `.vc.jsonld` export. The PDF card is for viewing only.</p>
+              <p className="mt-1 text-sm text-slate-300">Scan the QR code on a credential card, or upload the signed `.vc.jsonld` export.</p>
             </div>
             <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-control border border-ink-300 bg-ink-50 px-4 text-sm font-semibold text-slate transition hover:border-brass/40 hover:bg-ink-700">
               <FileUp className="h-4 w-4" aria-hidden="true" />
@@ -135,11 +145,15 @@ export default function CredentialVerifyPage() {
             </Button>
           </div>
 
-          {(parseError || result) && <CardDivider className="my-6" />}
+          {(displayError || publicVerification.isLoading || result) && <CardDivider className="my-6" />}
 
-          {parseError && (
+          {publicVerification.isLoading && (
+            <Alert title="Checking credential">Verifying this credential with NexusWork…</Alert>
+          )}
+
+          {displayError && !publicVerification.isLoading && (
             <Alert variant="danger" title="Verification failed">
-              {parseError}
+              {displayError}
             </Alert>
           )}
 

@@ -7,6 +7,21 @@ on:
     branches: [main, develop]
 
 jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Scan repository and history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
@@ -38,6 +53,10 @@ jobs:
 
       - name: Syntax check
         run: npm run syntax
+
+      - name: Diff check
+        run: git diff --check
+        working-directory: .
 
       - name: Dependency audit
         run: npm audit --audit-level=high

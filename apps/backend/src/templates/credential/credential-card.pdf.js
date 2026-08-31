@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 import { env } from "../../config/env.js";
 
 function formatDate(date) {
@@ -10,7 +11,7 @@ function text(value, fallback = "Not provided") {
   return String(value || fallback);
 }
 
-export function renderCredentialCardPdf(credential) {
+export function renderCredentialCardPdf(credential, verificationId) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 0 });
     const chunks = [];
@@ -23,12 +24,14 @@ export function renderCredentialCardPdf(credential) {
     const proof = credential.proof || {};
     const skills = Array.isArray(achievement.alignment) ? achievement.alignment : [];
     const issued = formatDate(credential.validFrom || proof.created);
-    const verifyUrl = `${env.clientUrl || "http://localhost:5173"}/verify-credential`;
+    const verifyUrl = `${env.clientUrl || "http://localhost:5173"}/verify-credential?id=${encodeURIComponent(verificationId || "")}`;
     const proofPreview = proof.proofValue
       ? `${String(proof.proofValue).slice(0, 22)}...${String(proof.proofValue).slice(-14)}`
       : "No proof value";
 
-    doc.rect(0, 0, 595.28, 841.89).fill("#edf7f5");
+    QRCode.toBuffer(verifyUrl, { width: 96, margin: 1, errorCorrectionLevel: "M" })
+      .then((qrBuffer) => {
+        doc.rect(0, 0, 595.28, 841.89).fill("#edf7f5");
     doc.roundedRect(46, 78, 503, 635, 22).fill("#ffffff");
     doc.rect(46, 78, 503, 252).fill("#07313a");
     doc.rect(46, 78, 503, 7).fill("#00a99d");
@@ -85,6 +88,7 @@ export function renderCredentialCardPdf(credential) {
     labelValue("Status", credential.credentialStatus?.status || "active", rightX, y, 180);
 
     y += 92;
+    doc.image(qrBuffer, 425, 500, { width: 80, height: 80 });
     doc
       .fontSize(8)
       .fillColor("#647c7e")
@@ -125,11 +129,19 @@ export function renderCredentialCardPdf(credential) {
 
     doc
       .fontSize(8)
+      .fillColor("#547072")
+      .font("Helvetica")
+      .text("Scan to verify this credential with NexusWork", 395, 590, { width: 125, align: "center" });
+
+    doc
+      .fontSize(8)
       .fillColor("#7b9294")
       .text("This PDF is a human-readable credential card. Use the signed VC/Open Badge file for automated tamper verification.", 78, 770, {
         width: 430,
       });
 
-    doc.end();
+        doc.end();
+      })
+      .catch(reject);
   });
 }

@@ -14,6 +14,8 @@ export const exportMyCredential = (verificationId, token) =>
   apiRequest(`/verifications/mine/${verificationId}/credential`, { token });
 export const verifyCredential = (credential) =>
   apiRequest("/verifications/credentials/verify", { method: "POST", body: { credential } });
+export const verifyPublicCredential = (verificationId) =>
+  apiRequest(`/verifications/credentials/${verificationId}/verify`);
 export const certifyStudentSkill = (studentUserId, payload, token) =>
   apiRequest(`/verifications/students/${studentUserId}/skills/certify`, {
     method: "POST",

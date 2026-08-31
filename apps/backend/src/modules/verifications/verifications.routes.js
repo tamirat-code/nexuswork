@@ -7,6 +7,7 @@ import {
   getMine,
   exportCredential,
   exportCredentialCard,
+  verifyPublicCredential,
   verifyCredential,
   getAll,
   stats,
@@ -16,12 +17,13 @@ import {
   getSkillRequestQueue,
   reviewSkillRequest,
 } from "./verifications.controller.js";
-import { validateBody } from "../../shared/validators/ZodValidator.js";
-import { submitVerificationSchema, reviewVerificationSchema, submitSkillCertificationRequestSchema, reviewSkillCertificationRequestSchema } from "../../shared/validators/schemas.js";
+import { validateBody, validateParams } from "../../shared/validators/ZodValidator.js";
+import { objectIdParamsSchema, submitVerificationSchema, reviewVerificationSchema, submitSkillCertificationRequestSchema, reviewSkillCertificationRequestSchema } from "../../shared/validators/schemas.js";
 
 const router = Router();
 
 router.post("/credentials/verify", verifyCredential);
+router.get("/credentials/:id/verify", validateParams(objectIdParamsSchema("id")), verifyPublicCredential);
 router.post("/", requireAuth, validateBody(submitVerificationSchema), requestVerification);
 router.get("/mine", requireAuth, getMine);
 router.get("/mine/:id/credential/card", requireAuth, exportCredentialCard);

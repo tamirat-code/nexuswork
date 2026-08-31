@@ -10,6 +10,7 @@ import {
   getVerificationStats,
   reviewVerification,
   exportVerifiedCredential,
+  exportVerifiedCredentialById,
   submitSkillCertificationRequest,
   getMySkillCertificationRequests,
   listSkillCertificationRequests,
@@ -45,10 +46,32 @@ export const exportCredential = asyncHandler(async (req, res) => {
 
 export const exportCredentialCard = asyncHandler(async (req, res) => {
   const credential = await exportVerifiedCredential(req.params.id, req.user._id);
-  const pdfBuffer = await renderCredentialCardPdf(credential);
+  const pdfBuffer = await renderCredentialCardPdf(credential, req.params.id);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="nexuswork-credential-card-${req.params.id}.pdf"`);
   res.send(pdfBuffer);
+});
+
+export const verifyPublicCredential = asyncHandler(async (req, res) => {
+  const credential = await exportVerifiedCredentialById(req.params.id);
+  const result = verifyCredentialProof(credential);
+  const subject = credential.credentialSubject ?? {};
+  const achievement = subject.achievement ?? {};
+
+  res.json({
+    success: true,
+    data: {
+      ...result,
+      issuer: credential.issuer?.name || null,
+      subject: subject.name || null,
+      credentialName: achievement.name || credential.name || null,
+      issuedAt: credential.validFrom || credential.proof?.created || null,
+      status: credential.credentialStatus?.status || null,
+      skills: Array.isArray(achievement.alignment)
+        ? achievement.alignment.map((skill) => ({ name: skill.name, category: skill.category, level: skill.level }))
+        : [],
+    },
+  });
 });
 
 export const verifyCredential = asyncHandler(async (req, res) => {

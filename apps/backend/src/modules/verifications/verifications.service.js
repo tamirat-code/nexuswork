@@ -81,6 +81,18 @@ export async function exportVerifiedCredential(verificationId, userId) {
   return buildStudentCredential({ verification, university, user, profile });
 }
 
+export async function exportVerifiedCredentialById(verificationId) {
+  const verification = await Verification.findOne({ _id: verificationId, status: "approved" }).lean();
+  if (!verification) throw new NotFoundError("Approved verification credential not found");
+  const [university, user, profile] = await Promise.all([
+    University.findById(verification.university_id).select("name domain").lean(),
+    User.findById(verification.user_id).select("name").lean(),
+    StudentProfile.findOne({ user_id: verification.user_id }).select("skills").lean(),
+  ]);
+  if (!university || !user) throw new NotFoundError("Credential subject or issuer not found");
+  return buildStudentCredential({ verification, university, user, profile });
+}
+
 export async function submitVerification({
   userId,
   userEmail,
