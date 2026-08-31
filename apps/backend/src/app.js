@@ -18,7 +18,13 @@ const app = express();
 
 app.use(requestContext);
 
-app.use(helmet({ crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" } }));
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  // The frontend and API are deployed on different origins. CORS remains
+  // restricted to the configured allowlist, while CORP must permit the
+  // browser to consume authenticated API/file responses cross-origin.
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(cors(corsConfig));
 app.use(csrfGuard);
 
