@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,19 +36,19 @@ const proposalSchema = z.object({
 });
 
 function VerificationRequiredNotice() {
+  const { t } = useTranslation();
   return (
     <div className="rounded-control border border-brass/20 bg-brass/5 p-4">
       <p className="flex items-start gap-2 text-sm font-semibold text-slate">
         <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
-        Verify your university first
+        {t("projects.verifyFirst", { defaultValue: "Verify your university first" })}
       </p>
       <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-        Clients only see proposals from verified students. Submit your university details from your profile — most
-        requests are reviewed within a couple of days.
+        {t("projects.verifiedOnly", { defaultValue: "Clients only see proposals from verified students. Submit your university details from your profile — most requests are reviewed within a couple of days." })}
       </p>
       <Link to="/profile" className="mt-3 block">
         <Button variant="outline" className="w-full" size="sm">
-          Get verified
+          {t("projects.getVerified", { defaultValue: "Get verified" })}
         </Button>
       </Link>
     </div>
@@ -55,6 +56,7 @@ function VerificationRequiredNotice() {
 }
 
 function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", projectStatus = "open" }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [cvFile, setCvFile] = useState(null);
   const cvUpload = useMutation({ mutationFn: (file) => uploadFile(file, { relatedType: "cv", token }), onSuccess: (response) => setCvFile(response.data), onError: (error) => toast.error(error.message || "Could not upload your CV") });
@@ -79,33 +81,33 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
     onError: (err) => toast.error(err.message || "Could not submit proposal"),
   });
 
-  if (projectStatus !== "open") return <p className="rounded-control border border-ink-300 bg-ink-50 p-3 text-sm text-slate-300">This project is no longer accepting proposals.</p>;
+  if (projectStatus !== "open") return <p className="rounded-control border border-ink-300 bg-ink-50 p-3 text-sm text-slate-300">{t("projects.projectClosed", { defaultValue: "This project is no longer accepting proposals." })}</p>;
   if (!verified) return <VerificationRequiredNotice />;
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="w-full">Submit a proposal</Button>
+        <Button className="w-full">{t("projects.submitProposal", { defaultValue: "Submit a proposal" })}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Submit your proposal</DialogTitle>
-          <DialogDescription>Clients compare price, timeline, and cover notes side by side. Be specific.</DialogDescription>
+          <DialogTitle>{t("projects.submitYourProposal", { defaultValue: "Submit your proposal" })}</DialogTitle>
+          <DialogDescription>{t("projects.proposalHint", { defaultValue: "Clients compare price, timeline, and cover notes side by side. Be specific." })}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => mutation.mutate({ ...v, project_id: projectId }))} className="space-y-4">
             <FormField control={form.control} name="price" render={({ field }) => (
-              <FormItem><FormLabel>Your price ({currency})</FormLabel>
+              <FormItem><FormLabel>{t("projects.yourPrice", { currency, defaultValue: `Your price (${currency})` })}</FormLabel>
                 <FormControl><Input type="number" min={1} className="font-mono" placeholder="500" {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="delivery_time_days" render={({ field }) => (
-              <FormItem><FormLabel>Delivery time (days)</FormLabel>
+              <FormItem><FormLabel>{t("projects.deliveryDays", { defaultValue: "Delivery time (days)" })}</FormLabel>
                 <FormControl><Input type="number" min={1} max={365} {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="cover_note" render={({ field }) => (
-              <FormItem><FormLabel>Cover note</FormLabel>
+              <FormItem><FormLabel>{t("projects.coverNote", { defaultValue: "Cover note" })}</FormLabel>
                 <FormControl><Textarea rows={5} placeholder="Why are you the right person? What's your approach?" {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
@@ -119,7 +121,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
               </p>
             </div>
             <DialogFooter>
-              <Button type="submit" loading={mutation.isPending} disabled={!cvFile || cvUpload.isPending}>Submit proposal</Button>
+              <Button type="submit" loading={mutation.isPending} disabled={!cvFile || cvUpload.isPending}>{t("projects.submitProposal", { defaultValue: "Submit proposal" })}</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -129,6 +131,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
 }
 
 function ClientProposalList({ projectId, token, currency = "USD" }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [cvViewed, setCvViewed] = useState({});
   const { data, isLoading } = useQuery({
@@ -164,13 +167,13 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-brass" />
-        <h2 className="font-display text-lg text-slate">Incoming proposals ({proposals.length})</h2>
+        <h2 className="font-display text-lg text-slate">{t("projects.incomingProposals", { count: proposals.length, defaultValue: `Incoming proposals (${proposals.length})` })}</h2>
       </div>
 
       {isLoading && <><Skeleton className="h-28 w-full" /><Skeleton className="h-28 w-full" /></>}
       {!isLoading && proposals.length === 0 && (
         <Card className="p-6 text-center">
-          <p className="text-sm text-slate-300">No proposals yet. Share this project to attract students.</p>
+          <p className="text-sm text-slate-300">{t("projects.noProposals", { defaultValue: "No proposals yet. Share this project to attract students." })}</p>
         </Card>
       )}
 
@@ -185,7 +188,7 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
                 </Avatar>
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-slate">{p.student_id?.name || "Student"}</p>
-                  <Badge variant="success" className="mt-0.5"><BadgeCheck className="h-3 w-3" /> University verified</Badge>
+                  <Badge variant="success" className="mt-0.5"><BadgeCheck className="h-3 w-3" /> {t("projects.universityVerified", { defaultValue: "University verified" })}</Badge>
                 </div>
               </div>
               <div className="text-right">
@@ -199,7 +202,7 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
               <div className="flex gap-2">
                 {p.status === "pending" && (
                   <>
-                    {p.cv_file_id && <Button size="sm" variant="outline" onClick={() => viewCv(p)}>View CV</Button>}
+                    {p.cv_file_id && <Button size="sm" variant="outline" onClick={() => viewCv(p)}>{t("projects.viewCv", { defaultValue: "View CV" })}</Button>}
                     <Button size="sm" loading={acceptMutation.isPending} disabled={!cvViewed[p._id]} title={!cvViewed[p._id] ? "View the CV before approving" : undefined} onClick={() => acceptMutation.mutate(p._id)}>
                       Accept &amp; create contract
                     </Button>
@@ -215,6 +218,7 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
 }
 
 function RecommendedStudents({ projectId, token }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ["project-student-matches", projectId],
     queryFn: () => getStudentMatchesForProject(projectId, token),
@@ -228,9 +232,9 @@ function RecommendedStudents({ projectId, token }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-brass" />
-        <h2 className="font-display text-lg text-slate">Recommended students</h2>
+        <h2 className="font-display text-lg text-slate">{t("projects.recommendedStudents", { defaultValue: "Recommended students" })}</h2>
       </div>
-      <p className="text-sm text-slate-300">Verified students whose skills best match this brief — no proposal required yet.</p>
+      <p className="text-sm text-slate-300">{t("projects.recommendedHint", { defaultValue: "Verified students whose skills best match this brief — no proposal required yet." })}</p>
 
       {isLoading && <><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></>}
 
@@ -260,6 +264,7 @@ function RecommendedStudents({ projectId, token }) {
 }
 
 function EditProjectDialog({ project, token, projectId }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -320,9 +325,9 @@ function EditProjectDialog({ project, token, projectId }) {
   const availableSkills = skillCatalog.filter((skill) => !selectedSkills.includes(String(skill._id)));
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button size="sm" variant="outline" onClick={openEditor}>Edit project</Button>
+      <Button size="sm" variant="outline" onClick={openEditor}>{t("projects.editProject", { defaultValue: "Edit project" })}</Button>
       <DialogContent>
-        <DialogHeader><DialogTitle>Edit project</DialogTitle><DialogDescription>Only open projects can be edited.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{t("projects.editProject", { defaultValue: "Edit project" })}</DialogTitle><DialogDescription>{t("projects.onlyOpenEditable", { defaultValue: "Only open projects can be edited." })}</DialogDescription></DialogHeader>
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div><label className="text-sm font-medium text-slate">Title</label><Input className="mt-1" value={title} onChange={(event) => setTitle(event.target.value)} /></div>
           <div><label className="text-sm font-medium text-slate">Description</label><Textarea className="mt-1" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
@@ -336,13 +341,14 @@ function EditProjectDialog({ project, token, projectId }) {
           ) : <div><label className="text-sm font-medium text-slate">Budget</label><Input className="mt-1" type="number" min="10" value={budget} onChange={(event) => setBudget(event.target.value)} /></div>}
           <div><label className="text-sm font-medium text-slate">Required skills</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value="" onChange={(event) => { if (event.target.value) setSelectedSkills([...selectedSkills, event.target.value]); }}><option value="">Add a skill</option>{availableSkills.map((skill) => <option key={skill._id} value={skill._id}>{skill.name}</option>)}</select><div className="mt-2 flex flex-wrap gap-1.5">{selectedSkills.map((id) => { const skill = skillCatalog.find((item) => String(item._id) === id); return skill ? <Badge key={id} variant="secondary">{skill.name}<button type="button" className="ml-1" onClick={() => setSelectedSkills(selectedSkills.filter((item) => item !== id))}>×</button></Badge> : null; })}</div></div>
         </div>
-        <DialogFooter><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button loading={mutation.isPending} onClick={() => mutation.mutate()}>Save changes</Button></DialogFooter>
+        <DialogFooter><Button variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel", { defaultValue: "Cancel" })}</Button><Button loading={mutation.isPending} onClick={() => mutation.mutate()}>{t("common.save", { defaultValue: "Save changes" })}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
 export default function ProjectDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user, token, refreshMe } = useAuth();
   const { data, isLoading, error } = useQuery({ queryKey: ["project", id], queryFn: () => getProject(id) });
@@ -380,9 +386,9 @@ export default function ProjectDetailPage() {
   if (error) {
     return (
       <Card className="mx-auto max-w-xl p-8 text-center">
-        <h1 className="font-display text-xl text-slate">Project couldn't be loaded</h1>
+        <h1 className="font-display text-xl text-slate">{t("projects.loadError", { defaultValue: "Project couldn't be loaded" })}</h1>
         <p className="mt-2 text-sm text-slate-300">{error.message}</p>
-        <Link to="/projects" className="mt-6 inline-block"><Button variant="secondary">Back to projects</Button></Link>
+        <Link to="/projects" className="mt-6 inline-block"><Button variant="secondary">{t("projects.backToProjects", { defaultValue: "Back to projects" })}</Button></Link>
       </Card>
     );
   }
@@ -395,7 +401,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="w-full animate-fade-up">
       <Link to="/projects" className="inline-flex items-center gap-1.5 text-sm text-slate-300 transition-colors hover:text-brass">
-        <ArrowLeft className="h-4 w-4" /> All projects
+        <ArrowLeft className="h-4 w-4" /> {t("projects.allProjects", { defaultValue: "All projects" })}
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -406,8 +412,8 @@ export default function ProjectDetailPage() {
           <h1 className="mt-1 font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">{project.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-slate-300">
             <span>{formatTimeLeft(project.deadline)}</span>
-            <span>Remote</span>
-            {typeof project.proposals_count === "number" && <span>{project.proposals_count} proposals</span>}
+            <span>{t("projects.remote", { defaultValue: "Remote" })}</span>
+            {typeof project.proposals_count === "number" && <span>{t("projects.proposals", { count: project.proposals_count, defaultValue: `${project.proposals_count} proposals` })}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2"><StatusBadge kind="project" status={project.status} showDot />{isClientOwner && project.status === "open" && <EditProjectDialog project={project} projectId={id} token={token} />}</div>
@@ -416,19 +422,19 @@ export default function ProjectDetailPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
         <div className="space-y-6">
           <Card>
-            <CardHeader><CardTitle className="text-lg">The brief</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">{t("projects.brief", { defaultValue: "The brief" })}</CardTitle></CardHeader>
             <CardContent>
               <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">{project.description}</p>
               {project.required_skills?.length > 0 && (
                 <div className="mt-5 border-t border-ink-300 pt-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Skills required</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("projects.skillsRequired", { defaultValue: "Skills required" })}</p>
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
                     {project.required_skills.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}
                   </div>
                 </div>
               )}
               <div className="mt-5 border-t border-ink-300 pt-5">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">About the client</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("projects.aboutClient", { defaultValue: "About the client" })}</p>
                 <p className="mt-2 text-sm text-slate-300">{clientName} · hires through NexusWork escrow.</p>
               </div>
             </CardContent>
@@ -441,7 +447,7 @@ export default function ProjectDetailPage() {
         <aside className="space-y-6 lg:sticky lg:top-24">
           <Card>
             <CardContent className="p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Budget</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{t("projects.budget", { defaultValue: "Budget" })}</p>
               <p className="mt-1 font-display text-3xl tracking-tight text-brass">
                 {project.budget_type === "range"
                   ? `${formatCurrency(project.budget_min, project.currency || "USD")} – ${formatCurrency(project.budget_max, project.currency || "USD")}`

@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function TermsCheckbox({ checked, onChange, error }) {
+  const { t } = useTranslation();
   return (
     <div>
       <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-relaxed text-slate-300">
@@ -11,13 +13,13 @@ export default function TermsCheckbox({ checked, onChange, error }) {
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 bg-ink-100 text-brass accent-[var(--brand)]"
         />
         <span>
-          I agree to the{" "}
+          {t("auth.iAgreeToThe") || "I agree to the"}{" "}
           <Link to="/terms" target="_blank" className="font-semibold text-brass hover:underline">
-            Terms of Service
+            {t("footer.terms") || "Terms of Service"}
           </Link>{" "}
-          and{" "}
+          {t("auth.and") || "and"}{" "}
           <Link to="/privacy" target="_blank" className="font-semibold text-brass hover:underline">
-            Privacy Policy
+            {t("footer.privacy") || "Privacy Policy"}
           </Link>
         </span>
       </label>
@@ -29,3 +31,4 @@ export default function TermsCheckbox({ checked, onChange, error }) {
     </div>
   );
 }
+

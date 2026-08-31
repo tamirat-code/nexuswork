@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -26,48 +27,50 @@ function hasCompletedGuide() {
   }
 }
 
-const slides = [
-  {
-    eyebrow: "A better way to get started",
-    title: "Real work starts with the right connection.",
-    body: "NexusWork brings verified university talent and clients together around clear briefs, protected payments, and work that matters.",
-    icon: Sparkles,
-    tone: "from-teal-400/20 via-cyan-400/10 to-transparent",
-    points: ["Verified student talent", "Clear project expectations", "Escrow-backed milestones"],
-  },
-  {
-    eyebrow: "Choose your path",
-    title: "Start with what you need today.",
-    body: "Whether you are hiring or building your portfolio, your first step is only one click away.",
-    icon: BriefcaseBusiness,
-    tone: "from-brass/20 via-amber-400/10 to-transparent",
-    choices: [
-      { icon: BriefcaseBusiness, title: "I need work done", body: "Post a brief and find the right student.", to: "/register" },
-      { icon: GraduationCap, title: "I want to earn", body: "Build your profile and find paid work.", to: "/register" },
-    ],
-  },
-  {
-    eyebrow: "From proposal to contract",
-    title: "Every next step is clear.",
-    body: "The platform guides both sides from the first proposal to an agreed, signed contract.",
-    icon: FileCheck2,
-    tone: "from-blue-400/20 via-indigo-400/10 to-transparent",
-    flow: ["Project", "Proposal", "CV review", "Contract"],
-  },
-  {
-    eyebrow: "Work with confidence",
-    title: "Milestones protect the work and the payment.",
-    body: "Clients fund before work begins. Students deliver against the brief. Payment is released after approval.",
-    icon: ShieldCheck,
-    tone: "from-emerald-400/20 via-teal-400/10 to-transparent",
-    points: ["Fund the milestone", "Review the deliverable", "Approve and release"],
-  },
-];
-
 export default function LandingOnboarding({ enabled = true }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [slide, setSlide] = useState(0);
   const touchStart = useRef(null);
+
+  const slides = [
+    {
+      eyebrow: t("landing.onboarding.slide1.eyebrow"),
+      title: t("landing.onboarding.slide1.title"),
+      body: t("landing.onboarding.slide1.body"),
+      icon: Sparkles,
+      tone: "from-teal-400/20 via-cyan-400/10 to-transparent",
+      points: [t("landing.onboarding.slide1.point1"), t("landing.onboarding.slide1.point2"), t("landing.onboarding.slide1.point3")],
+    },
+    {
+      eyebrow: t("landing.onboarding.slide2.eyebrow"),
+      title: t("landing.onboarding.slide2.title"),
+      body: t("landing.onboarding.slide2.body"),
+      icon: BriefcaseBusiness,
+      tone: "from-brass/20 via-amber-400/10 to-transparent",
+      choices: [
+        { icon: BriefcaseBusiness, title: t("landing.onboarding.slide2.choice1Title"), body: t("landing.onboarding.slide2.choice1Body"), to: "/register" },
+        { icon: GraduationCap, title: t("landing.onboarding.slide2.choice2Title"), body: t("landing.onboarding.slide2.choice2Body"), to: "/register" },
+      ],
+    },
+    {
+      eyebrow: t("landing.onboarding.slide3.eyebrow"),
+      title: t("landing.onboarding.slide3.title"),
+      body: t("landing.onboarding.slide3.body"),
+      icon: FileCheck2,
+      tone: "from-blue-400/20 via-indigo-400/10 to-transparent",
+      flow: [t("landing.onboarding.slide3.flow1"), t("landing.onboarding.slide3.flow2"), t("landing.onboarding.slide3.flow3"), t("landing.onboarding.slide3.flow4")],
+    },
+    {
+      eyebrow: t("landing.onboarding.slide4.eyebrow"),
+      title: t("landing.onboarding.slide4.title"),
+      body: t("landing.onboarding.slide4.body"),
+      icon: ShieldCheck,
+      tone: "from-emerald-400/20 via-teal-400/10 to-transparent",
+      points: [t("landing.onboarding.slide4.point1"), t("landing.onboarding.slide4.point2"), t("landing.onboarding.slide4.point3")],
+    },
+  ];
+
   const current = slides[slide];
   const Icon = current.icon;
 
@@ -126,7 +129,7 @@ export default function LandingOnboarding({ enabled = true }) {
   return createPortal((
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/75 p-0 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="guest-onboarding-title">
       <div className="relative max-h-[min(760px,100dvh)] w-full max-w-4xl overflow-y-auto rounded-t-[28px] border border-ink-300 bg-ink-700 shadow-[0_28px_100px_rgba(0,0,0,0.45)] sm:rounded-[28px]">
-        <button type="button" onClick={finish} aria-label="Close getting started guide" className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-ink-300 bg-ink-700/80 text-slate-300 transition-colors hover:bg-ink-50 hover:text-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass">
+        <button type="button" onClick={finish} aria-label={t("landing.onboarding.closeGuide")} className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-ink-300 bg-ink-700/80 text-slate-300 transition-colors hover:bg-ink-50 hover:text-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass">
           <X className="h-5 w-5" />
         </button>
 
@@ -136,15 +139,15 @@ export default function LandingOnboarding({ enabled = true }) {
             <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full border border-white/10" />
             <div className="relative">
               <div className="flex items-center gap-2 text-sm font-bold text-slate"><img src="/logo.svg" alt="" className="h-9 w-9" /> NexusWork</div>
-              <p className="mt-20 max-w-xs font-display text-3xl font-extrabold leading-tight tracking-tight text-white">A guided path from your first click to finished work.</p>
+              <p className="mt-20 max-w-xs font-display text-3xl font-extrabold leading-tight tracking-tight text-white">{t("landing.onboarding.guidedPath")}</p>
             </div>
-            <div className="relative flex items-center gap-2 text-xs font-semibold text-slate-300"><span className="h-2 w-2 rounded-full bg-brass" /> Built for students and clients</div>
+            <div className="relative flex items-center gap-2 text-xs font-semibold text-slate-300"><span className="h-2 w-2 rounded-full bg-brass" /> {t("landing.onboarding.forBoth")}</div>
           </div>
 
           <div className="flex min-h-[590px] flex-col p-6 sm:p-10" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             <div className="flex items-center justify-between pr-12">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">Getting started · {String(slide + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</p>
-              <button type="button" onClick={finish} className="text-xs font-semibold text-slate-300 underline-offset-4 hover:text-brass hover:underline">Skip guide</button>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">{t("landing.onboarding.gettingStarted")} · {String(slide + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</p>
+              <button type="button" onClick={finish} className="text-xs font-semibold text-slate-300 underline-offset-4 hover:text-brass hover:underline">{t("landing.onboarding.skip")}</button>
             </div>
 
             <motion.div key={slide} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }} className="flex flex-1 flex-col justify-center py-10">
@@ -160,7 +163,7 @@ export default function LandingOnboarding({ enabled = true }) {
 
             <div className="flex items-center justify-between gap-4 border-t border-ink-300 pt-5">
               <div className="flex items-center gap-2" role="tablist" aria-label="Guide slides">{slides.map((item, index) => <button key={item.title} type="button" role="tab" aria-selected={slide === index} aria-label={`Go to slide ${index + 1}`} onClick={() => setSlide(index)} className={cn("h-2 rounded-full transition-all", slide === index ? "w-8 bg-brass" : "w-2 bg-ink-300 hover:bg-slate-300")} />)}</div>
-              <div className="flex items-center gap-2"><Button variant="ghost" size="sm" onClick={previous} disabled={slide === 0}><ChevronLeft className="h-4 w-4" /> Back</Button><Button size="sm" onClick={next}>{slide === slides.length - 1 ? "Get started" : "Next"}<ArrowRight className="h-4 w-4" /></Button></div>
+              <div className="flex items-center gap-2"><Button variant="ghost" size="sm" onClick={previous} disabled={slide === 0}><ChevronLeft className="h-4 w-4" /> {t("landing.onboarding.back")}</Button><Button size="sm" onClick={next}>{slide === slides.length - 1 ? t("landing.onboarding.getStarted") : t("landing.onboarding.next")}<ArrowRight className="h-4 w-4" /></Button></div>
             </div>
           </div>
         </div>
@@ -168,3 +171,4 @@ export default function LandingOnboarding({ enabled = true }) {
     </div>
   ), document.body);
 }
+

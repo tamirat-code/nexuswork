@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Button, Modal, ProgressBar } from "../../components/ui/index.js";
 import Spinner from "../../components/loaders/Spinner.jsx";
 
@@ -7,6 +8,7 @@ const VIEW = 288; // on-screen crop viewport (square)
 
 
 export default function AvatarCropModal({ open, file, uploading = false, progress, error, onCancel, onConfirm }) {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -142,24 +144,24 @@ export default function AvatarCropModal({ open, file, uploading = false, progres
     <Modal
       open={open}
       onClose={onCancel}
-      title="Crop your photo"
-      description="Drag to reposition, or use the arrow keys once the crop area is focused."
+      title={t("settings.cropPhotoTitle") || "Crop your photo"}
+      description={t("settings.cropPhotoDesc") || "Drag to reposition, or use the arrow keys once the crop area is focused."}
       size="md"
       dismissible={!uploading}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} disabled={uploading}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={confirm} loading={uploading} disabled={status !== "ready"}>
-            {uploading ? "Uploading" : "Save photo"}
+            {uploading ? t("common.uploading") : t("common.savePhoto")}
           </Button>
         </>
       }
     >
       <div aria-live="polite" className="space-y-4">
         {(error || loadError) && (
-          <Alert live variant="danger" title="Photo not saved">
+          <Alert live variant="danger" title={t("settings.photoNotSaved")}>
             {error || loadError}
           </Alert>
         )}
@@ -167,12 +169,12 @@ export default function AvatarCropModal({ open, file, uploading = false, progres
         {status === "loading" && (
           <div className="flex flex-col items-center gap-3 py-10 text-sm text-slate-300">
             <Spinner />
-            <p>Preparing your photo…</p>
+            <p>{t("common.preparingPhoto")}</p>
           </div>
         )}
 
         {status === "error" && !loadError && (
-          <p className="py-10 text-center text-sm text-slate-300">Nothing to crop yet.</p>
+          <p className="py-10 text-center text-sm text-slate-300">{t("common.nothingToCrop")}</p>
         )}
 
         {status === "ready" && (
@@ -219,7 +221,7 @@ export default function AvatarCropModal({ open, file, uploading = false, progres
             </label>
 
             {typeof progress === "number" && uploading && (
-              <ProgressBar value={progress} label="Uploading photo" showValue />
+              <ProgressBar value={progress} label={t("common.uploadingPhoto")} showValue />
             )}
           </>
         )}
@@ -227,3 +229,4 @@ export default function AvatarCropModal({ open, file, uploading = false, progres
     </Modal>
   );
 }
+

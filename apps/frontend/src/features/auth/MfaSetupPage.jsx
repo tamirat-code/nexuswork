@@ -7,6 +7,7 @@ import Button from "../../components/ui/Button.jsx";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import * as authApi from "../../services/api/auth.api.js";
+import { useTranslation } from "react-i18next";
 
 const STORAGE_KEY = "nw_mfa_setup";
 
@@ -15,6 +16,7 @@ export default function MfaSetupPage() {
   const navigate = useNavigate();
   const { user, completeMfaLogin } = useAuth();
   const { show } = useToast();
+  const { t } = useTranslation();
   const [setup, setSetup] = useState(() => {
     if (location.state?.setupToken) return location.state;
     try {
@@ -38,14 +40,14 @@ export default function MfaSetupPage() {
 
   const recoveryText = useMemo(() => recoveryCodes.join("\n"), [recoveryCodes]);
 
-  async function copyText(value, successMessage = "Copied to clipboard.") {
+  async function copyText(value, successMessage = t("mfa.copied")) {
     try {
       await navigator.clipboard?.writeText(value);
       setCopied(true);
       show(successMessage);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setError("Could not copy automatically. Please select and copy the value manually.");
+      setError(t("common.error"));
     }
   }
 
@@ -54,7 +56,7 @@ export default function MfaSetupPage() {
     setError("");
 
     if (code.length !== 6) {
-      setError("Enter the 6-digit code shown in your authenticator app.");
+      setError(t("mfa.enterSixDigit"));
       return;
     }
 
@@ -64,7 +66,7 @@ export default function MfaSetupPage() {
       sessionStorage.removeItem(STORAGE_KEY);
       completeMfaLogin(data.token, data.user);
       setRecoveryCodes(data.recoveryCodes || []);
-      show("MFA is now enabled on your account.");
+      show(t("mfa.enabled"));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -75,12 +77,12 @@ export default function MfaSetupPage() {
   if (!setup?.setupToken) {
     return (
       <AuthShell
-        eyebrow="Security"
-        title="MFA setup expired"
+        eyebrow={t("mfa.security")}
+        title={t("mfa.setupExpired")}
         subtitle={
           isProactive
-            ? "For your security, this setup session is no longer valid. Head back to Settings and start again."
-            : "For your security, this setup session is no longer valid. Return to login and start again."
+            ? t("mfa.setupExpiredSettings")
+            : t("mfa.setupExpiredLogin")
         }
       >
         <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-5">
@@ -88,10 +90,10 @@ export default function MfaSetupPage() {
             <LockKeyhole className="h-5 w-5" />
           </div>
           <p className="mt-4 text-sm leading-relaxed text-slate-300">
-            Your authenticator setup was not completed. No changes were made to your account.
+            {t("mfa.setupIncomplete")}
           </p>
           <Button className="mt-5 w-full" size="lg" onClick={() => navigate(isProactive ? "/settings" : "/login")}>
-            {isProactive ? "Return to settings" : "Return to login"}
+            {isProactive ? t("mfa.returnSettings") : t("mfa.returnToLogin")}
           </Button>
         </div>
       </AuthShell>
@@ -101,9 +103,9 @@ export default function MfaSetupPage() {
   if (recoveryCodes.length) {
     return (
       <AuthShell
-        eyebrow="MFA enabled"
-        title="Your account is protected"
-        subtitle="Save these recovery codes before continuing. Each code works once if you lose access to your authenticator."
+        eyebrow={t("mfa.enabled")}
+        title={t("mfa.protected")}
+        subtitle={t("mfa.saveCodes")}
       >
         <div className="space-y-5">
           <div className="flex items-start gap-3 rounded-2xl border border-brass/20 bg-brass/5 p-4">
@@ -111,9 +113,9 @@ export default function MfaSetupPage() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate">Keep these codes private</p>
+              <p className="text-sm font-semibold text-slate">{t("mfa.keepPrivate")}</p>
               <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                NexusWork will not show them again after you leave this page.
+                {t("mfa.codesShownOnce")}
               </p>
             </div>
           </div>
@@ -127,12 +129,12 @@ export default function MfaSetupPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Button type="button" variant="secondary" onClick={() => copyText(recoveryText, "Recovery codes copied.")}>
+            <Button type="button" variant="secondary" onClick={() => copyText(recoveryText, t("mfa.codesCopied"))}>
               {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-              {copied ? "Copied" : "Copy codes"}
+              {copied ? t("mfa.copied") : t("mfa.copyCodes")}
             </Button>
             <Button className="w-full" size="lg" onClick={() => navigate(returnTo)}>
-              {isProactive ? "Back to settings" : "Continue to NexusWork"}
+              {isProactive ? t("mfa.backSettings") : t("mfa.continue")}
             </Button>
           </div>
         </div>
@@ -142,18 +144,18 @@ export default function MfaSetupPage() {
 
   return (
     <AuthShell
-      eyebrow="Protect your account"
-      title="Set up two-factor authentication"
-      subtitle="Use an authenticator app to add an extra layer of protection to your NexusWork account."
+      eyebrow={t("mfa.protect")}
+      title={t("mfa.setupTitle")}
+      subtitle={t("mfa.setupSubtitle")}
     >
       <div className="space-y-5">
         <div className="flex items-center gap-2.5 rounded-xl border border-brass/20 bg-brass/5 px-4 py-3 text-xs leading-relaxed text-slate-300">
           <ShieldCheck className="h-4 w-4 shrink-0 text-brass" />
-          <span>Your password alone will no longer be enough to sign in.</span>
+          <span>{t("mfa.passwordNotEnough")}</span>
         </div>
 
         <div className="grid gap-3">
-          <SetupStep number="1" title="Open your authenticator app" description="Use Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app." />
+          <SetupStep number="1" title={t("mfa.openApp")} description={t("mfa.appDescription")} />
 
           <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
             <div className="flex items-start gap-3">
@@ -161,23 +163,23 @@ export default function MfaSetupPage() {
                 2
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate">Add NexusWork</p>
+                <p className="text-sm font-semibold text-slate">{t("mfa.addNexus")}</p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                  If your app supports an OTP URI, use the value below. Otherwise, enter the manual setup key.
+                  {t("mfa.addDescription")}
                 </p>
               </div>
             </div>
 
             <div className="mt-4 rounded-xl border border-ink-300 bg-ink/60 p-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Manual setup key</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("mfa.manualKey")}</p>
                 <button
                   type="button"
-                  onClick={() => copyText(setup.secret, "Setup key copied.")}
+                  onClick={() => copyText(setup.secret, t("mfa.keyCopied"))}
                   className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-brass transition hover:bg-brass/10"
                 >
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? t("mfa.copied") : t("mfa.copy")}
                 </button>
               </div>
               <p className="mt-2 break-all font-mono text-sm leading-relaxed tracking-wide text-slate">{setup.secret}</p>
@@ -185,16 +187,16 @@ export default function MfaSetupPage() {
 
             <details className="mt-3 rounded-xl border border-ink-300 bg-ink/20">
               <summary className="cursor-pointer px-3 py-2.5 text-xs font-medium text-slate-300 hover:text-brass">
-                Advanced: show OTP URI
+                {t("mfa.advancedUri")}
               </summary>
               <div className="border-t border-ink-300 px-3 py-3">
                 <p className="break-all font-mono text-[11px] leading-relaxed text-slate-400">{setup.otpauthUri}</p>
                 <button
                   type="button"
-                  onClick={() => copyText(setup.otpauthUri, "OTP URI copied.")}
+                  onClick={() => copyText(setup.otpauthUri, t("mfa.uriCopied"))}
                   className="mt-2 text-xs font-medium text-brass hover:underline"
                 >
-                  Copy OTP URI
+                  {t("mfa.copyUri")}
                 </button>
               </div>
             </details>
@@ -206,16 +208,16 @@ export default function MfaSetupPage() {
                 3
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate">Verify your authenticator</p>
+                <p className="text-sm font-semibold text-slate">{t("mfa.verifyAuthenticator")}</p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                  Enter the current 6-digit code from your app. The code refreshes automatically every few seconds.
+                  {t("mfa.verifyDescription")}
                 </p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <Input
-                label="6-digit authenticator code"
+                label={t("mfa.sixDigitCode")}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 inputMode="numeric"
@@ -227,14 +229,14 @@ export default function MfaSetupPage() {
               />
               <Button type="submit" loading={loading} disabled={code.length !== 6} className="w-full" size="lg">
                 <KeyRound className="h-4 w-4" />
-                Enable MFA
+                {t("mfa.enable")}
               </Button>
             </form>
           </div>
 
           <div className="flex gap-2.5 rounded-xl border border-ink-300/70 bg-ink-500/20 px-3.5 py-3 text-[11px] leading-relaxed text-slate-400">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
-            <p>After activation, NexusWork will ask for an authenticator code whenever you sign in.</p>
+            <p>{t("mfa.afterActivation")}</p>
           </div>
         </div>
       </div>

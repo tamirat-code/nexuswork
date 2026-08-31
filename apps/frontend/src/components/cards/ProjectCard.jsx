@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, Clock3, MapPin, ShieldCheck, Users } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeAgo, formatTimeLeft } from "../../utils/date.utils.js";
+import { useTranslation } from "react-i18next";
 
 const CATEGORY_TAG_STYLES = {
   Development: "border-brand/30 bg-brand-soft text-brand-dark",
@@ -13,8 +14,9 @@ const CATEGORY_TAG_STYLES = {
 };
 
 export default function ProjectCard({ project }) {
+  const { t } = useTranslation();
   const clientName =
-    project.client_id?.client_profile?.organization_name || project.client_id?.name || "Client";
+    project.client_id?.client_profile?.organization_name || project.client_id?.name || t("projects.client", { defaultValue: "Client" });
   const extraSkills = Math.max((project.required_skills?.length ?? 0) - 3, 0);
   const categoryTagClass =
     CATEGORY_TAG_STYLES[project.category] || "border-brass/30 bg-brass/10 text-brass";
@@ -30,7 +32,7 @@ export default function ProjectCard({ project }) {
           <span
             className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${categoryTagClass}`}
           >
-            {project.category || "General"}
+            {project.category || t("projects.general", { defaultValue: "General" })}
           </span>
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-content-muted sm:text-sm">
             <ShieldCheck className="h-3.5 w-3.5 text-brand" /> {clientName}
@@ -41,7 +43,7 @@ export default function ProjectCard({ project }) {
           <p className="font-mono text-base font-extrabold tracking-tight text-brand-dark sm:text-lg">
             {formatCurrency(project.budget)}
           </p>
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-content-muted">Fixed price</p>
+          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-content-muted">{t("projects.fixedPrice", { defaultValue: "Fixed price" })}</p>
         </div>
       </div>
 
@@ -76,9 +78,9 @@ export default function ProjectCard({ project }) {
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border-subtle pt-4 text-xs text-content-muted sm:text-sm">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span className="inline-flex items-center gap-1.5 font-bold text-content-primary"><Clock3 className="h-3.5 w-3.5 text-brand" /> {formatTimeLeft(project.deadline)}</span>
-            <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Remote</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {t("projects.remote", { defaultValue: "Remote" })}</span>
             {typeof project.proposals_count === "number" && (
-              <span className="inline-flex items-center gap-1.5 font-semibold text-content-secondary"><Users className="h-3.5 w-3.5" /> {project.proposals_count} proposals</span>
+              <span className="inline-flex items-center gap-1.5 font-semibold text-content-secondary"><Users className="h-3.5 w-3.5" /> {t("projects.proposals", { count: project.proposals_count, defaultValue: `${project.proposals_count} proposals` })}</span>
             )}
           </div>
           <span>{formatTimeAgo(project.createdAt)}</span>

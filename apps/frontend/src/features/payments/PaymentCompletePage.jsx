@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { CheckCircle2, Clock3, Loader2, ShieldCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { confirmMilestoneFunding } from "../../services/api/milestones.api.js";
@@ -8,6 +9,7 @@ import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Card, CardContent } from "../../components/ui/shadcn/card.jsx";
 
 export default function PaymentCompletePage() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const { token } = useAuth();
   const queryClient = useQueryClient();
@@ -65,8 +67,6 @@ export default function PaymentCompletePage() {
       stopped = true;
       if (timer) window.clearTimeout(timer);
     };
-    // The callback reference is intentionally sent to the server for provider
-    // verification; it is never treated as proof of payment by the frontend.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentReference, token, queryClient]);
 
@@ -85,26 +85,27 @@ export default function PaymentCompletePage() {
             <Loader2 className="mx-auto h-14 w-14 animate-spin text-brass" />
           )}
           <h1 className="mt-5 font-display text-3xl text-slate">
-            {confirmed ? "Payment confirmed" : failed ? "Payment was not completed" : state === "checking" ? "Verifying payment…" : "Payment verification pending"}
+            {confirmed ? t("payments.confirmedTitle") : failed ? t("payments.failedTitle") : state === "checking" ? t("payments.checkingTitle") : t("payments.pendingTitle")}
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-300">
             {confirmed
-              ? "Your milestone payment has been verified and placed in escrow."
+              ? t("payments.confirmedDesc")
               : failed
-                ? errorMessage || "Chapa marked this transaction as failed or cancelled. Start a new payment attempt."
+                ? errorMessage || t("payments.failedTitle")
               : state === "checking"
-                ? `Checking Chapa securely (attempt ${attempt} of 15). This can take up to 30 seconds. Your milestone will not be marked funded until the server confirms the payment.`
-                : errorMessage || "Chapa returned you to NexusWork. We are waiting for secure provider verification. Your milestone will not be marked funded until the server confirms the payment."}
+                ? t("payments.checkingDesc", { attempt })
+                : errorMessage || t("payments.pendingDesc")}
           </p>
           <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-300">
-            <ShieldCheck className="h-4 w-4 text-brass" /> Provider verification protects your escrow balance.
+            <ShieldCheck className="h-4 w-4 text-brass" /> {t("payments.providerVerificationNotice")}
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link to="/contracts"><Button>View contracts</Button></Link>
-            <Link to="/payments"><Button variant="secondary">View payments</Button></Link>
+            <Link to="/contracts"><Button>{t("payments.viewContracts")}</Button></Link>
+            <Link to="/payments"><Button variant="secondary">{t("payments.viewPayments")}</Button></Link>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+

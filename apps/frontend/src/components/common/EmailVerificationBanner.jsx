@@ -4,10 +4,12 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../notifications/ToastProvider.jsx";
 import { resendVerification } from "../../services/api/auth.api.js";
 import Button from "../ui/Button.jsx";
+import { useTranslation } from "react-i18next";
 
 export default function EmailVerificationBanner() {
   const { user, token } = useAuth();
   const { show } = useToast();
+  const { t } = useTranslation();
   const [sending, setSending] = useState(false);
 
   if (!user || user.email_verified || !token) return null;
@@ -17,7 +19,7 @@ export default function EmailVerificationBanner() {
     setSending(true);
     try {
       await resendVerification(token);
-      show("Verification email sent. Check your inbox.");
+      show(t("emailVerification.sent"));
     } catch (err) {
       show(err.message, { variant: "error" });
     } finally {
@@ -35,15 +37,15 @@ export default function EmailVerificationBanner() {
           <MailCheck className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
-          <p className="font-semibold">Verify your email address</p>
+          <p className="font-semibold">{t("emailVerification.title")}</p>
           <p className="mt-0.5 text-sm text-slate-300">
-            Verify {user.email} to create projects, submit proposals, and manage payments.
+            {t("emailVerification.description", { email: user.email })}
           </p>
         </div>
       </div>
       <Button type="button" size="sm" variant="outline" loading={sending} onClick={handleResend}>
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
-        Resend email
+        {t("emailVerification.resend")}
       </Button>
     </section>
   );

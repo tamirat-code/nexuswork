@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Sparkles, Zap, TrendingUp, BookOpen } from "lucide-react";
 import { getRecommendations, getCareerRecommendation } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -11,13 +12,10 @@ import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 
 export default function RecommendationPage() {
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const isStudent = user?.role === "student";
 
-  // The /recommendations/me and /recommendations/career endpoints are student-only on the
-  // backend (requireRole("student")) — they rank open projects against this student's own
-  // profile. Fetching them for any other role just 403s, so gate the queries on role, not
-  // just on having a token.
   const { data, isLoading } = useQuery({
     queryKey: ["recommendations"],
     queryFn: () => getRecommendations(token),
@@ -37,16 +35,13 @@ export default function RecommendationPage() {
       <div className="mx-auto max-w-2xl animate-fade-up">
         <Card className="p-10 text-center">
           <Sparkles className="mx-auto h-10 w-10 text-brass" />
-          <h1 className="mt-4 font-display text-xl text-slate">AI matching is student-facing</h1>
+          <h1 className="mt-4 font-display text-xl text-slate">{t("recommendations.studentFacingTitle")}</h1>
           <p className="mt-2 text-sm text-slate-300">
-            This page ranks open projects against a student's verified skills, so it's only available to student
-            accounts. As a {user?.role === "client" ? "client" : "team member"}, you'll find the AI tools built into
-            your workflow instead: a suggested budget while posting a project, and a "Recommended students" panel on
-            each project you own.
+            {t("recommendations.studentFacingDesc")}
           </p>
           {user?.role === "client" && (
             <Link to="/projects/new" className="mt-6 inline-block">
-              <Button variant="secondary">Post a project</Button>
+              <Button variant="secondary">{t("recommendations.postProjectBtn")}</Button>
             </Link>
           )}
         </Card>
@@ -57,15 +52,15 @@ export default function RecommendationPage() {
   return (
     <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brass"><Sparkles className="h-3.5 w-3.5" /> AI matching</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Recommended for you</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">Projects matched to your verified skills — we tell you exactly why each one fits.</p>
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brass"><Sparkles className="h-3.5 w-3.5" /> {t("recommendations.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("recommendations.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">{t("recommendations.subtitle")}</p>
       </header>
 
       {isStudent && (
         <section className="mt-8">
-          <h2 className="flex items-center gap-1.5 font-display text-lg text-slate"><TrendingUp className="h-4 w-4 text-brass" /> Your career path</h2>
-          <p className="mt-1 text-sm text-slate-300">Skills in demand on NexusWork that aren't on your profile yet, with resources to close the gap.</p>
+          <h2 className="flex items-center gap-1.5 font-display text-lg text-slate"><TrendingUp className="h-4 w-4 text-brass" /> {t("recommendations.careerPathTitle")}</h2>
+          <p className="mt-1 text-sm text-slate-300">{t("recommendations.careerPathDesc")}</p>
 
           {careerLoading && <Skeleton className="mt-4 h-28 w-full" />}
 
@@ -80,7 +75,9 @@ export default function RecommendationPage() {
                       <div key={skill.name} className="rounded-lg border border-ink-300 p-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-display text-sm capitalize text-slate">{skill.name}</span>
-                          <Badge variant="outline" className="text-xs">{skill.demand_count} open project{skill.demand_count === 1 ? "" : "s"}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {skill.demand_count === 1 ? t("recommendations.openProjectsDemand", { count: skill.demand_count }) : t("recommendations.openProjectsDemand_plural", { count: skill.demand_count })}
+                          </Badge>
                         </div>
                         {skill.resources?.length > 0 ? (
                           <ul className="mt-2 space-y-1">
@@ -99,14 +96,14 @@ export default function RecommendationPage() {
                           </ul>
                         ) : (
                           <Link to="/learning" className="mt-2 block text-xs text-slate-300 hover:text-brass hover:underline">
-                            Browse learning resources →
+                            {t("recommendations.browseLearningResources")}
                           </Link>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-300">You already cover every in-demand skill we're tracking — nice work.</p>
+                  <p className="text-sm text-slate-300">{t("recommendations.allSkillsCovered")}</p>
                 )}
               </CardContent>
             </Card>
@@ -119,8 +116,8 @@ export default function RecommendationPage() {
       {!isLoading && recs.length === 0 && (
         <Card className="mt-8 p-14 text-center">
           <Zap className="mx-auto h-10 w-10 text-brass" />
-          <h3 className="mt-4 font-display text-lg text-slate">No matches yet</h3>
-          <p className="mt-2 text-sm text-slate-300">Add more verified skills to unlock smarter recommendations.</p>
+          <h3 className="mt-4 font-display text-lg text-slate">{t("recommendations.noMatchesTitle")}</h3>
+          <p className="mt-2 text-sm text-slate-300">{t("recommendations.noMatchesDesc")}</p>
         </Card>
       )}
 
@@ -131,7 +128,7 @@ export default function RecommendationPage() {
             <Card key={p._id} className="flex flex-col border-brass/20 transition-shadow hover:shadow-elevated">
               <CardContent className="flex flex-1 flex-col p-5">
                 <div className="flex items-center justify-between gap-2">
-                  <Badge variant="outline" className="gap-1"><Sparkles className="h-3 w-3" /> {r.match_score ? `${Math.round(r.match_score * 100)}% match` : "Recommended"}</Badge>
+                  <Badge variant="outline" className="gap-1"><Sparkles className="h-3 w-3" /> {r.match_score ? t("recommendations.matchScore", { percent: Math.round(r.match_score * 100) }) : t("recommendations.recommendedBadge")}</Badge>
                   <span className="font-mono text-sm text-brass">{formatCurrency(p.budget)}</span>
                 </div>
                 <h3 className="mt-3 font-display text-base leading-snug text-slate">{p.title}</h3>
@@ -147,7 +144,7 @@ export default function RecommendationPage() {
 
                 <div className="mt-4 flex items-center justify-between border-t border-ink-300 pt-3 text-xs text-slate-300">
                   <span>{formatTimeLeft(p.deadline)}</span>
-                  <Link to={`/projects/${p._id}`}><Button size="sm" variant="secondary">View project</Button></Link>
+                  <Link to={`/projects/${p._id}`}><Button size="sm" variant="secondary">{t("recommendations.viewProject")}</Button></Link>
                 </div>
               </CardContent>
             </Card>

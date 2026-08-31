@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+
 import { useQuery } from "@tanstack/react-query";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Plus, Minus, ArrowUpRight, Check, CircleDollarSign, ShieldCheck, Sparkles, Code2, Palette, BarChart3, PenLine, Video, Megaphone, LockKeyhole, BadgeCheck, WalletCards } from "lucide-react";
@@ -171,65 +173,6 @@ function SectionHeading({ eyebrow, title, subtitle, align = "left" }) {
         <p className="mt-3.5 font-sans text-base leading-relaxed text-content-secondary">{subtitle}</p>
       )}
     </motion.div>
-  );
-}
-
-function OpenRightNow() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["projects", "landing"],
-    queryFn: () => listProjects(),
-  });
-
-  const projects = (data?.data ?? []).slice(0, 4);
-
-  return (
-    <section className="border-b border-border-subtle bg-canvas px-6 py-20 sm:px-10 lg:px-16" aria-label="Open projects">
-      <div className="w-full">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <SectionHeading eyebrow="Live opportunities" title="Open right now" subtitle="Fresh briefs from clients hiring this week." />
-        <Link
-          to="/projects"
-          className="inline-flex items-center gap-2 rounded-control border border-border-strong bg-surface px-4 py-2.5 text-sm font-bold text-brand-dark shadow-subtle transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-card"
-        >
-          See all projects <ArrowUpRight className="h-4 w-4" />
-        </Link>
-        </div>
-
-      {isLoading && (
-        <div className="flex justify-center rounded-card border border-border-subtle bg-surface py-14 shadow-card">
-          <Spinner />
-        </div>
-      )}
-
-      {error && (
-        <p className="rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm font-medium text-brick">
-          {error.message}
-        </p>
-      )}
-
-      {!isLoading && !error && projects.length === 0 && (
-        <p className="rounded-card border border-dashed border-border-strong bg-surface px-5 py-10 text-center text-sm text-content-muted">
-          No open projects yet — check back soon.
-        </p>
-      )}
-
-      {projects.length > 0 && (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2"
-          initial="hidden"
-          whileInView="show"
-          viewport={VIEWPORT}
-          variants={STAGGER_CONTAINER}
-        >
-          {projects.map((project) => (
-            <motion.div key={project._id} variants={FADE_UP}>
-              <ProjectCard project={project} />
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-      </div>
-    </section>
   );
 }
 
@@ -441,7 +384,105 @@ function HeroVideoBackground() {
   );
 }
 
+function OpenRightNow() {
+  const { t } = useTranslation();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["projects", "landing"],
+    queryFn: () => listProjects(),
+  });
+
+  const projects = (data?.data ?? []).slice(0, 4);
+
+  return (
+    <section className="border-b border-border-subtle bg-canvas px-6 py-20 sm:px-10 lg:px-16" aria-label="Open projects">
+      <div className="w-full">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <SectionHeading eyebrow={t("landing.openNow.eyebrow")} title={t("landing.openNow.title")} subtitle={t("landing.openNow.subtitle")} />
+        <Link
+          to="/projects"
+          className="inline-flex items-center gap-2 rounded-control border border-border-strong bg-surface px-4 py-2.5 text-sm font-bold text-brand-dark shadow-subtle transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-card"
+        >
+          {t("landing.openNow.seeAll")} <ArrowUpRight className="h-4 w-4" />
+        </Link>
+        </div>
+
+      {isLoading && (
+        <div className="flex justify-center rounded-card border border-border-subtle bg-surface py-14 shadow-card">
+          <Spinner />
+        </div>
+      )}
+
+      {error && (
+        <p className="rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm font-medium text-brick">
+          {error.message}
+        </p>
+      )}
+
+      {!isLoading && !error && projects.length === 0 && (
+        <div className="rounded-card border border-border-subtle bg-surface px-6 py-12 text-center shadow-card">
+          <p className="text-sm font-semibold text-content-secondary">
+            No open projects right now. Check back soon!
+          </p>
+        </div>
+      )}
+
+      {!isLoading && !error && projects.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      )}
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
+  const { t } = useTranslation();
+
+  const clientSteps = [
+    { n: "01", title: t("landing.howItWorks.step1ClientTitle"), body: t("landing.howItWorks.step1ClientBody") },
+    { n: "02", title: t("landing.howItWorks.step2ClientTitle"), body: t("landing.howItWorks.step2ClientBody") },
+    { n: "03", title: t("landing.howItWorks.step3ClientTitle"), body: t("landing.howItWorks.step3ClientBody") },
+    { n: "04", title: t("landing.howItWorks.step4ClientTitle"), body: t("landing.howItWorks.step4ClientBody") },
+  ];
+
+  const studentSteps = [
+    { n: "01", title: t("landing.howItWorks.step1StudentTitle"), body: t("landing.howItWorks.step1StudentBody") },
+    { n: "02", title: t("landing.howItWorks.step2StudentTitle"), body: t("landing.howItWorks.step2StudentBody") },
+    { n: "03", title: t("landing.howItWorks.step3StudentTitle"), body: t("landing.howItWorks.step3StudentBody") },
+    { n: "04", title: t("landing.howItWorks.step4StudentTitle"), body: t("landing.howItWorks.step4StudentBody") },
+  ];
+
+  const categories = [
+    { name: t("landing.categories.devTitle"), desc: t("landing.categories.devDesc"), icon: Code2, tone: "teal" },
+    { name: t("landing.categories.designTitle"), desc: t("landing.categories.designDesc"), icon: Palette, tone: "cyan" },
+    { name: t("landing.categories.dataTitle"), desc: t("landing.categories.dataDesc"), icon: BarChart3, tone: "blue" },
+    { name: t("landing.categories.writingTitle"), desc: t("landing.categories.writingDesc"), icon: PenLine, tone: "amber" },
+    { name: t("landing.categories.videoTitle"), desc: t("landing.categories.videoDesc"), icon: Video, tone: "slate" },
+    { name: t("landing.categories.marketingTitle"), desc: t("landing.categories.marketingDesc"), icon: Megaphone, tone: "emerald" },
+  ];
+
+  const faqs = [
+    { q: t("landing.faqs.q1"), a: t("landing.faqs.a1") },
+    { q: t("landing.faqs.q2"), a: t("landing.faqs.a2") },
+    { q: t("landing.faqs.q3"), a: t("landing.faqs.a3") },
+    { q: t("landing.faqs.q4"), a: t("landing.faqs.a4") },
+  ];
+
+  const trustSignals = [
+    { title: t("landing.trust.escrowTitle"), body: t("landing.trust.escrowBody") },
+    { title: t("landing.trust.verifiedTitle"), body: t("landing.trust.verifiedBody") },
+    { title: t("landing.trust.noFeesTitle"), body: t("landing.trust.noFeesBody") },
+  ];
+
+  const stats = [
+    { value: "1,200+", label: t("landing.stats.students") },
+    { value: "$180K+", label: t("landing.stats.escrow") },
+    { value: "40+", label: t("landing.stats.universities") },
+  ];
+
   return (
     <div className="bg-canvas">
       <LandingOnboarding />
@@ -459,15 +500,14 @@ export default function LandingPage() {
               variants={FADE_UP}
               className="font-display text-[2.7rem] font-extrabold leading-[1.03] tracking-[-0.04em] text-content-primary sm:text-[4.25rem]"
             >
-              Where student talent meets real, paid work.
+              {t("landing.heroTitle")}
             </motion.h1>
 
             <motion.p
               variants={FADE_UP}
               className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-content-secondary sm:text-lg lg:mx-0"
             >
-              NexusWork connects verified university students with clients who need projects done — with
-              every milestone held in escrow until the work is approved.
+              {t("landing.heroSubtitle")}
             </motion.p>
 
             <motion.div
@@ -475,10 +515,10 @@ export default function LandingPage() {
               className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
             >
               <Link to="/projects" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto">Browse open projects</Button>
+                <Button size="lg" className="w-full sm:w-auto">{t("landing.openNow.seeAll")}</Button>
               </Link>
               <Link to="/register" className="w-full sm:w-auto">
-                <Button variant="secondary" size="lg" className="w-full sm:w-auto">Post a project</Button>
+                <Button variant="secondary" size="lg" className="w-full sm:w-auto">{t("landing.postBrief")}</Button>
               </Link>
             </motion.div>
 
@@ -486,7 +526,7 @@ export default function LandingPage() {
               variants={FADE_UP}
               className="mx-auto mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-border-subtle pt-7 lg:mx-0"
             >
-              {STATS.map(({ value, label }) => (
+              {stats.map(({ value, label }) => (
                 <div key={label}>
                   <p className="font-display text-2xl tracking-tight text-brand-dark sm:text-3xl">{value}</p>
                   <p className="mt-1 text-xs text-content-muted">{label}</p>
@@ -504,7 +544,7 @@ export default function LandingPage() {
 
       <section className="border-b border-border-subtle bg-surface-soft" aria-label="Trust signals">
         <div className="grid w-full grid-cols-1 gap-3 px-6 py-5 sm:grid-cols-3 sm:px-10 lg:px-16">
-          {TRUST_SIGNALS.map(({ title, body }, index) => (
+          {trustSignals.map(({ title, body }, index) => (
             <div key={title} className="flex items-center gap-3 rounded-control border border-border-subtle bg-surface px-4 py-3 shadow-subtle">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-dark">
                 {index === 0 ? <LockKeyhole className="h-4 w-4" /> : index === 1 ? <BadgeCheck className="h-4 w-4" /> : <WalletCards className="h-4 w-4" />}
@@ -522,9 +562,9 @@ export default function LandingPage() {
       <section className="border-y border-border-subtle bg-surface-soft" aria-label="Customer stories">
         <div className="grid w-full items-center gap-10 px-6 py-18 sm:px-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:px-16">
           <SectionHeading
-            eyebrow="Proof in the work"
-            title="A marketplace people come back to"
-            subtitle="Clear briefs, protected milestones and verified talent make the first project easier — and the next one obvious."
+            eyebrow={t("landing.stories.eyebrow")}
+            title={t("landing.stories.title")}
+            subtitle={t("landing.stories.subtitle")}
           />
           <HeroTestimonial />
         </div>
@@ -533,9 +573,9 @@ export default function LandingPage() {
       <section className="border-b border-border-subtle bg-surface-soft" aria-label="Categories">
         <div className="w-full px-6 py-20 sm:px-10 lg:px-16">
           <SectionHeading
-            eyebrow="Browse by discipline"
-            title="Categories students work in"
-            subtitle="Every category is staffed by students whose enrollment has been verified by their university."
+            eyebrow={t("landing.categories.eyebrow")}
+            title={t("landing.categories.title")}
+            subtitle={t("landing.heroSubtitle")}
           />
 
           <motion.div
@@ -545,7 +585,7 @@ export default function LandingPage() {
             viewport={VIEWPORT}
             variants={STAGGER_CONTAINER}
           >
-            {CATEGORIES.map(({ name, desc, icon: Icon, tone }) => (
+            {categories.map(({ name, desc, icon: Icon, tone }) => (
               <motion.div key={name} variants={FADE_UP}>
                 <Link
                   to={`/projects?category=${encodeURIComponent(name)}`}
@@ -568,12 +608,12 @@ export default function LandingPage() {
         <div className="w-full">
         <SectionHeading
           align="center"
-          eyebrow="How it works"
-          title="Real work, funded before it starts"
-          subtitle="NexusWork removes the two things that break student freelancing: unverified profiles and unpaid invoices."
+          eyebrow={t("landing.howItWorks.eyebrow")}
+          title={t("landing.howItWorks.title")}
+          subtitle={t("landing.heroSubtitle")}
         />
 
-        <div className="mb-4 mt-12 flex items-center gap-3"><span className="h-px w-8 bg-brand" /><p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-dark">For clients</p></div>
+        <div className="mb-4 mt-12 flex items-center gap-3"><span className="h-px w-8 bg-brand" /><p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-dark">{t("landing.howItWorks.clientTab")}</p></div>
         <motion.div
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
           initial="hidden"
@@ -581,7 +621,7 @@ export default function LandingPage() {
           viewport={VIEWPORT}
           variants={STAGGER_CONTAINER}
         >
-          {CLIENT_STEPS.map((step) => (
+          {clientSteps.map((step) => (
             <motion.article
               key={step.n}
               variants={FADE_UP}
@@ -599,16 +639,16 @@ export default function LandingPage() {
         <div className="mt-14 grid gap-8 lg:grid-cols-[300px_1fr] lg:items-start">
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-brass">
-              For students
+              {t("landing.howItWorks.studentTab")}
             </p>
             <h3 className="font-display text-xl font-extrabold leading-snug tracking-tight text-slate sm:text-2xl">
-              Paid, portfolio-grade work that fits around a degree
+              {t("landing.heroTitle")}
             </h3>
             <p className="mt-3 text-base leading-relaxed text-slate-300">
-              With the payment terms agreed before you write a line of code or open Figma.
+              {t("landing.heroSubtitle")}
             </p>
             <Link to="/register" className="mt-6 inline-block w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto">Join as a student</Button>
+              <Button size="lg" className="w-full sm:w-auto">{t("landing.cta.getStarted")}</Button>
             </Link>
           </div>
 
@@ -619,7 +659,7 @@ export default function LandingPage() {
             viewport={VIEWPORT}
             variants={STAGGER_CONTAINER}
           >
-            {STUDENT_STEPS.map((step) => (
+            {studentSteps.map((step) => (
               <motion.article key={step.n} variants={FADE_UP} className="bg-surface p-5 transition-colors hover:bg-surface-soft sm:p-6">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brass/12 font-mono text-xs font-bold text-brass">
                   {step.n}
@@ -637,7 +677,7 @@ export default function LandingPage() {
         <div className="w-full px-6 py-20 sm:px-10 lg:px-16">
           <div className="grid gap-10 lg:grid-cols-[280px_1fr] lg:gap-16">
             <div className="lg:sticky lg:top-24 lg:self-start">
-              <SectionHeading eyebrow="FAQ" title="Questions" />
+              <SectionHeading eyebrow={t("landing.faqs.eyebrow")} title={t("landing.faqs.title")} />
             </div>
 
             <AccordionPrimitive.Root
@@ -646,7 +686,7 @@ export default function LandingPage() {
               defaultValue="faq-0"
               className="overflow-hidden rounded-card border border-border-subtle bg-surface shadow-card"
             >
-              {FAQS.map(({ q, a }, i) => (
+              {faqs.map(({ q, a }, i) => (
                 <AccordionPrimitive.Item key={q} value={`faq-${i}`} className="group border-b border-border-subtle last:border-b-0">
                   <AccordionPrimitive.Header>
                     <AccordionPrimitive.Trigger className="flex w-full items-center justify-between gap-6 px-5 py-5 text-left transition-colors hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink-50 sm:px-6">
@@ -677,11 +717,11 @@ export default function LandingPage() {
 
         <div className="relative z-10 mx-auto max-w-5xl px-6 text-center sm:px-10 lg:px-16">
           <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Ready to hire top student talent or start earning?
+            {t("landing.cta.title")}
           </h2>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-300 sm:text-xl">
-            Post your brief in three minutes. Milestones are safely funded in escrow before work starts and released when you approve.
+            {t("landing.cta.subtitle")}
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -689,13 +729,13 @@ export default function LandingPage() {
               to="/register"
               className="inline-flex h-14 w-full items-center justify-center rounded-control bg-brass px-9 text-base font-extrabold tracking-tight text-ink shadow-elevated transition-all hover:bg-brass-300 hover:scale-[1.02] sm:w-auto"
             >
-              Post a project brief
+              {t("landing.postBrief")}
             </Link>
             <Link
               to="/projects"
               className="inline-flex h-14 w-full items-center justify-center rounded-control border-2 border-brass/50 bg-brass/10 px-9 text-base font-extrabold tracking-tight text-brass transition-all hover:bg-brass/20 hover:scale-[1.02] sm:w-auto"
             >
-              Browse open briefs →
+              {t("landing.cta.browseTalent")} →
             </Link>
           </div>
         </div>

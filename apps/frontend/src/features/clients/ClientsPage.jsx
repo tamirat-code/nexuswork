@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Building2, Mail } from "lucide-react";
 import { listClients } from "../../services/api/clients.api.js";
 import { Card, CardContent } from "../../components/ui/shadcn/card.jsx";
@@ -10,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
 
 export default function ClientsPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const { data, isLoading, error } = useQuery({
     queryKey: ["clients", search],
@@ -20,23 +22,23 @@ export default function ClientsPage() {
   return (
     <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Client directory</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Organizations &amp; individual clients</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">Verified employers posting projects through NexusWork escrow.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("clients.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("clients.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">{t("clients.subtitle")}</p>
       </header>
       <div className="mt-6 max-w-md">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search clients, orgs, or sector…" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("clients.searchPlaceholder")} />
       </div>
       <Card className="mt-6 overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Sector</TableHead>
-                <TableHead className="text-right">Projects</TableHead>
-                <TableHead className="text-right">Total spent</TableHead>
+                <TableHead>{t("clients.tableClient")}</TableHead>
+                <TableHead>{t("clients.tableType")}</TableHead>
+                <TableHead>{t("clients.tableSector")}</TableHead>
+                <TableHead className="text-right">{t("clients.tableProjects")}</TableHead>
+                <TableHead className="text-right">{t("clients.tableTotalSpent")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -45,10 +47,10 @@ export default function ClientsPage() {
               ))}
               {error && <TableRow><TableCell colSpan={5} className="text-center text-brick">{error.message}</TableCell></TableRow>}
               {!isLoading && !error && clients.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="py-12 text-center text-slate-300">No clients found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-12 text-center text-slate-300">{t("clients.noClients")}</TableCell></TableRow>
               )}
               {clients.map((c) => {
-                const orgName = c.name || c.client_profile?.organization_name || "Client";
+                const orgName = c.name || c.client_profile?.organization_name || t("clients.tableClient");
                 return (
                   <TableRow key={c._id}>
                     <TableCell>
@@ -61,7 +63,7 @@ export default function ClientsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {c.client_profile?.is_organization ? <Badge variant="secondary"><Building2 className="h-3 w-3" /> Organization</Badge> : <Badge variant="outline">Individual</Badge>}
+                      {c.client_profile?.is_organization ? <Badge variant="secondary"><Building2 className="h-3 w-3" /> {t("clients.organization")}</Badge> : <Badge variant="outline">{t("clients.individual")}</Badge>}
                     </TableCell>
                     <TableCell className="text-sm text-slate-300">{c.client_profile?.sector || "—"}</TableCell>
                     <TableCell className="text-right font-mono text-slate-300">{c.projects_count ?? 0}</TableCell>
@@ -76,3 +78,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+

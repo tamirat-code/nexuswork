@@ -1,13 +1,10 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-
-const HIGHLIGHTS = [
-  "Escrow-protected milestones — funds released only on approval",
-  "University-verified student profiles",
-  "Transparent fees, no surprise deductions",
-];
+import { useTranslation } from "react-i18next";
 
 export default function AuthShell({ eyebrow, title, subtitle, children, footer }) {
+  const { t } = useTranslation();
+  const highlights = ["auth.highlightEscrow", "auth.highlightVerified", "auth.highlightFees"];
   return (
     <div className="grid min-h-screen bg-ink lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <motion.div
@@ -42,7 +39,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
           </motion.div>
         </div>
 
-        <p className="text-xs text-slate-300">© {new Date().getFullYear()} NexusWork. All rights reserved.</p>
+        <p className="text-xs text-slate-300">{t("auth.copyright", { year: new Date().getFullYear() })}</p>
       </motion.div>
 
       <motion.div
@@ -83,16 +80,16 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
             <SealMark className="mb-7 h-14 w-14 text-brass" />
           </motion.div>
           <p className="max-w-md font-display text-[26px] font-semibold leading-snug tracking-tight text-slate xl:text-3xl">
-            Verified student talent. Escrow-protected work.
+            {t("auth.heroTitle")}
           </p>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-300">
-            A focused workspace for ambitious students and clients who value clear delivery.
+            {t("auth.heroSubtitle")}
           </p>
           <ul className="mt-9 space-y-3.5">
-            {HIGHLIGHTS.map((item) => (
-              <li key={item} className="flex gap-3 text-sm leading-relaxed text-slate-300 transition-transform hover:translate-x-1">
+            {highlights.map((key) => (
+              <li key={key} className="flex gap-3 text-sm leading-relaxed text-slate-300 transition-transform hover:translate-x-1">
                 <SealMark className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
-                <span>{item}</span>
+                <span>{t(key)}</span>
               </li>
             ))}
           </ul>

@@ -7,8 +7,10 @@ import {
 import {
   useNavigate,
 } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { toast } from "sonner";
+
 
 import {
   Bell,
@@ -50,6 +52,7 @@ import { logger } from "../../lib/logger.js";
 
 export default function NotificationsPage() {
 
+  const { t } = useTranslation();
   const { token } =
     useAuth();
 
@@ -58,6 +61,7 @@ export default function NotificationsPage() {
 
   const queryClient =
     useQueryClient();
+
 
 
   const {
@@ -360,18 +364,18 @@ export default function NotificationsPage() {
         <div>
 
           <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">
-            Inbox
+            {t("notifications.eyebrow")}
           </p>
 
           <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">
-            Notifications
+            {t("notifications.title")}
           </h1>
 
           <p className="mt-2 text-sm text-slate-300">
 
             {unread > 0
-              ? `${unread} unread`
-              : "You're all caught up"}
+              ? t("notifications.unread", { count: unread })
+              : t("notifications.allCaughtUp")}
 
           </p>
 
@@ -393,7 +397,7 @@ export default function NotificationsPage() {
 
             <CheckCheck className="h-4 w-4" />
 
-            Mark all read
+            {t("notifications.markAllRead")}
 
           </Button>
 
@@ -402,7 +406,7 @@ export default function NotificationsPage() {
       </header>
 
 
-    
+
 
       {items.length === 0 && (
 
@@ -411,12 +415,11 @@ export default function NotificationsPage() {
           <Bell className="mx-auto h-10 w-10 text-slate-300" />
 
           <h3 className="mt-4 font-display text-lg text-slate">
-            Nothing here yet
+            {t("notifications.emptyTitle")}
           </h3>
 
           <p className="mt-2 text-sm text-slate-300">
-            Proposal, milestone, contract, and
-            dispute updates will appear here.
+            {t("notifications.emptyDesc")}
           </p>
 
         </Card>
@@ -527,7 +530,7 @@ export default function NotificationsPage() {
                           variant="default"
                           className="shrink-0"
                         >
-                          New
+                          {t("notifications.newBadge")}
                         </Badge>
 
                       )}
@@ -548,7 +551,7 @@ export default function NotificationsPage() {
 
                         <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
 
-                          Review proposal
+                          {t("notifications.reviewProposal")}
 
                           <ChevronRight className="h-3.5 w-3.5" />
 
@@ -561,7 +564,7 @@ export default function NotificationsPage() {
 
                         <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
 
-                          Review request
+                          {t("notifications.reviewRequest")}
 
                           <ChevronRight className="h-3.5 w-3.5" />
 
@@ -574,7 +577,7 @@ export default function NotificationsPage() {
 
                         <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
 
-                          View status
+                          {t("notifications.viewStatus")}
 
                           <ChevronRight className="h-3.5 w-3.5" />
 
@@ -596,6 +599,7 @@ export default function NotificationsPage() {
         )}
 
       </div>
+
 
     </div>
 

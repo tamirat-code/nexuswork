@@ -4,10 +4,12 @@ import Dropdown, { DropdownDivider, DropdownItem, DropdownLabel, DropdownLink } 
 import NavIcon from "./NavIcon.jsx";
 import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useTranslation } from "react-i18next";
 
 
 export default function UserMenu({ compact = false }) {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -24,7 +26,7 @@ export default function UserMenu({ compact = false }) {
         <button
           {...triggerProps}
           type="button"
-          aria-label="Account menu"
+          aria-label={t("common.accountMenu")}
           className="flex items-center gap-2 rounded-control p-1 pr-2 transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
         >
           <Avatar name={user.name || user.email} src={user.avatarUrl} size="sm" decorative />
@@ -49,20 +51,20 @@ export default function UserMenu({ compact = false }) {
       {({ close }) => (
         <>
           <DropdownLabel>
-            <span className="block truncate text-slate">{user.name || "Your account"}</span>
+            <span className="block truncate text-slate">{user.name || t("common.yourAccount")}</span>
             <span className="block truncate text-xs font-normal text-slate-300">
               {ROLE_LABELS[user.role] || user.email}
             </span>
           </DropdownLabel>
           <DropdownDivider />
           <DropdownLink to="/dashboard" onClick={close} icon={<NavIcon name="grid" className="h-4 w-4" />}>
-            Dashboard
+            {t("navigation.dashboard")}
           </DropdownLink>
           <DropdownLink to="/profile" onClick={close} icon={<NavIcon name="user" className="h-4 w-4" />}>
-            Profile
+            {t("navigation.profile")}
           </DropdownLink>
           <DropdownLink to="/settings" onClick={close} icon={<NavIcon name="cog" className="h-4 w-4" />}>
-            Settings
+            {t("navigation.settings")}
           </DropdownLink>
           <DropdownDivider />
           <DropdownItem
@@ -73,7 +75,7 @@ export default function UserMenu({ compact = false }) {
               handleLogout();
             }}
           >
-            Log out
+            {t("common.logOut")}
           </DropdownItem>
         </>
       )}

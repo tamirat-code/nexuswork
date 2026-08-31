@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,7 +48,7 @@ const projectSchema = z.object({
   }
 });
 
-function SkillPicker({ value, onChange, catalog = [] }) {
+function SkillPicker({ value, onChange, catalog = [], t }) {
   const [input, setInput] = useState("");
   const skills = value || [];
 
@@ -61,14 +62,14 @@ function SkillPicker({ value, onChange, catalog = [] }) {
   return (
     <div>
       <div className="flex gap-2">
-        <select value={input} onChange={(e) => setInput(e.target.value)} aria-label="Choose required skill"
+        <select value={input} onChange={(e) => setInput(e.target.value)} aria-label={t("projectsForm.chooseSkill")}
           className="h-11 min-w-0 flex-1 rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate">
-          <option value="">Choose a skill from the catalogue</option>
+          <option value="">{t("projectsForm.chooseSkill")}</option>
           {catalog.filter((skill) => !skills.some((selected) => selected._id === skill._id)).map((skill) => (
             <option key={skill._id} value={skill._id}>{skill.name}</option>
           ))}
         </select>
-        <Button type="button" variant="secondary" className="h-11 shrink-0" onClick={addSkill}>Add</Button>
+        <Button type="button" variant="secondary" className="h-11 shrink-0" onClick={addSkill}>{t("projectsForm.add")}</Button>
       </div>
       {skills.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -87,6 +88,7 @@ function SkillPicker({ value, onChange, catalog = [] }) {
 }
 
 function PriceSuggestion({ skills, category, token, onApply }) {
+  const { t } = useTranslation();
   const enabled = skills.length > 0 || Boolean(category);
   const { data, isFetching } = useQuery({
     queryKey: ["price-suggestion", skills, category],
@@ -101,7 +103,7 @@ function PriceSuggestion({ skills, category, token, onApply }) {
   if (!isFetching && suggestion?.suggested_price == null) {
     return (
       <p className="mt-2 text-xs text-slate-300">
-        Not enough historical proposals for these skills yet to suggest a price.
+        {t("projectsForm.priceUnavailable")}
       </p>
     );
   }
@@ -110,14 +112,14 @@ function PriceSuggestion({ skills, category, token, onApply }) {
     <div className="mt-2 flex items-center gap-2 text-xs">
       <Sparkles className="h-3.5 w-3.5 shrink-0 text-brass" />
       {isFetching ? (
-        <span className="text-slate-300">Checking similar accepted proposals…</span>
+        <span className="text-slate-300">{t("projectsForm.checkingPrice")}</span>
       ) : (
         <span className="text-slate-300">
-          Similar accepted proposals settled around{" "}
+          {t("projectsForm.similarPrice")} {" "}
           <span className="font-mono font-semibold text-brass">{formatCurrency(suggestion.suggested_price)}</span>
-          {" "}({suggestion.sample_size} sample{suggestion.sample_size === 1 ? "" : "s"}).{" "}
+          {" "}({suggestion.sample_size} {t("projectsForm.sample")}{suggestion.sample_size === 1 ? "" : "s"}).{" "}
           <button type="button" onClick={() => onApply(suggestion.suggested_price)} className="font-semibold text-brass hover:underline">
-            Use this
+            {t("projectsForm.usePrice")}
           </button>
         </span>
       )}
@@ -126,6 +128,7 @@ function PriceSuggestion({ skills, category, token, onApply }) {
 }
 
 export default function PostProjectPage() {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -140,8 +143,8 @@ export default function PostProjectPage() {
 
   const mutation = useMutation({
     mutationFn: (payload) => createProject(payload, token),
-    onSuccess: () => { toast.success("Project posted — students can now submit proposals"); navigate("/projects"); },
-    onError: (err) => toast.error(err.message || "Could not post project"),
+    onSuccess: () => { toast.success(t("projectsForm.projectPosted")); navigate("/projects"); },
+    onError: (err) => toast.error(err.message || t("projectsForm.postError")),
   });
 
   async function handleSubmit(values) {
@@ -160,13 +163,13 @@ export default function PostProjectPage() {
       <header className="flex items-center gap-3">
         <Sparkles className="h-5 w-5 text-brass" />
         <div>
-          <h1 className="font-display text-2xl tracking-tight text-slate">Post a project</h1>
-          <p className="text-sm text-slate-300">Get university-verified students bidding on your brief.</p>
+          <h1 className="font-display text-2xl tracking-tight text-slate">{t("projectsForm.postTitle")}</h1>
+          <p className="text-sm text-slate-300">{t("projectsForm.postDescription")}</p>
         </div>
       </header>
 
-      <div className="mt-6 flex items-center gap-2" aria-label="Progress">
-        {["Basics", "Skills & budget", "Review"].map((label, i) => (
+      <div className="mt-6 flex items-center gap-2" aria-label={t("common.progress", { defaultValue: "Progress" })}>
+        {[t("projectsForm.basics"), t("projectsForm.skillsBudget"), t("projectsForm.review")].map((label, i) => (
           <div key={label} className="flex flex-1 flex-col gap-1.5">
             <div className={`h-1 rounded-full ${i <= step ? "bg-brass" : "bg-ink-300"}`} />
             <p className={`text-xs ${i === step ? "font-semibold text-brass" : "text-slate-300"}`}>{label}</p>
@@ -178,30 +181,28 @@ export default function PostProjectPage() {
         <form onSubmit={form.handleSubmit(handleSubmit)} className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>{step === 0 ? "Tell us about the work" : step === 1 ? "Skills, budget & timeline" : "Review & publish"}</CardTitle>
+              <CardTitle>{step === 0 ? t("projectsForm.tellWork") : step === 1 ? t("projectsForm.setExpectations") : t("projectsForm.reviewPublish")}</CardTitle>
               <CardDescription>
-                {step === 0 ? "A clear title and description get better proposals."
-                  : step === 1 ? "Set expectations so students can price accurately."
-                  : "Check everything looks right before publishing."}
+                {step === 0 ? t("projectsForm.tellWorkHint") : step === 1 ? t("projectsForm.setExpectationsHint") : t("projectsForm.reviewPublishHint")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               {step === 0 && (
                 <>
                   <FormField control={form.control} name="title" render={({ field }) => (
-                    <FormItem><FormLabel>Project title</FormLabel>
-                      <FormControl><Input placeholder="E.g. Build a React dashboard for our campus club" {...field} /></FormControl>
+                    <FormItem><FormLabel>{t("projectsForm.title")}</FormLabel>
+                      <FormControl><Input placeholder={t("projectsForm.titlePlaceholder")} {...field} /></FormControl>
                       <FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>Description</FormLabel>
-                      <FormControl><Textarea rows={6} placeholder="What do you need built? What does success look like?" {...field} /></FormControl>
+                    <FormItem><FormLabel>{t("projectsForm.description")}</FormLabel>
+                      <FormControl><Textarea rows={6} placeholder={t("projectsForm.descriptionPlaceholder")} {...field} /></FormControl>
                       <FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="category" render={({ field }) => (
-                    <FormItem><FormLabel>Category</FormLabel>
+                    <FormItem><FormLabel>{t("projectsForm.category")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Choose a category" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder={t("projectsForm.chooseCategory")} /></SelectTrigger></FormControl>
                         <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage /></FormItem>
@@ -212,12 +213,12 @@ export default function PostProjectPage() {
               {step === 1 && (
                 <>
                   <div>
-                    <Label>Required skills</Label>
-                    <p className="mb-2 text-xs text-slate-300">Structured skills drive our matching engine.</p>
-                    <SkillPicker value={skills} catalog={skillCatalog} onChange={setSkills} />
+                    <Label>{t("projectsForm.requiredSkills")}</Label>
+                    <p className="mb-2 text-xs text-slate-300">{t("projectsForm.skillsHint")}</p>
+                    <SkillPicker value={skills} catalog={skillCatalog} onChange={setSkills} t={t} />
                   </div>
                   <FormField control={form.control} name="experience_level" render={({ field }) => (
-                    <FormItem><FormLabel>Experience level</FormLabel>
+                    <FormItem><FormLabel>{t("projectsForm.experience")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{EXPERIENCE_LEVELS.map((lvl) => <SelectItem key={lvl} value={lvl} className="capitalize">{lvl}</SelectItem>)}</SelectContent>
@@ -225,43 +226,43 @@ export default function PostProjectPage() {
                       <FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="currency" render={({ field }) => (
-                    <FormItem><FormLabel>Payment currency</FormLabel>
+                    <FormItem><FormLabel>{t("projectsForm.currency")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="USD">USD — Stripe</SelectItem>
-                          <SelectItem value="ETB">ETB — Chapa</SelectItem>
+                          <SelectItem value="USD">{t("projectsForm.stripe")}</SelectItem>
+                          <SelectItem value="ETB">{t("projectsForm.chapa")}</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>This currency is locked into the contract and its milestones.</FormDescription>
+                      <FormDescription>{t("projectsForm.currencyHint")}</FormDescription>
                       <FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="budget_type" render={({ field }) => (
-                    <FormItem><FormLabel>Budget type</FormLabel>
+                    <FormItem><FormLabel>{t("projectsForm.budgetType")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="fixed">Fixed budget</SelectItem><SelectItem value="range">Budget range</SelectItem></SelectContent>
+                        <SelectContent><SelectItem value="fixed">{t("projectsForm.fixed")}</SelectItem><SelectItem value="range">{t("projectsForm.range")}</SelectItem></SelectContent>
                       </Select><FormMessage /></FormItem>
                   )} />
                   {form.watch("budget_type") === "range" ? (
                     <div className="grid gap-3 sm:grid-cols-2">
                       <FormField control={form.control} name="budget_min" render={({ field }) => (
-                        <FormItem><FormLabel>Minimum ({form.watch("currency")})</FormLabel><FormControl><Input type="number" min={10} placeholder="500" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t("projectsForm.minimum", { currency: form.watch("currency") })}</FormLabel><FormControl><Input type="number" min={10} placeholder="500" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="budget_max" render={({ field }) => (
-                        <FormItem><FormLabel>Maximum ({form.watch("currency")})</FormLabel><FormControl><Input type="number" min={10} placeholder="1000" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t("projectsForm.maximum", { currency: form.watch("currency") })}</FormLabel><FormControl><Input type="number" min={10} placeholder="1000" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   ) : (
                     <FormField control={form.control} name="budget" render={({ field }) => (
-                      <FormItem><FormLabel>Budget ({form.watch("currency")})</FormLabel>
+                      <FormItem><FormLabel>{t("projectsForm.budget", { currency: form.watch("currency") })}</FormLabel>
                         <FormControl><Input type="number" min={10} placeholder="750" className="font-mono" {...field} /></FormControl>
                         <PriceSuggestion skills={skills.map((skill) => skill.name)} category={form.watch("category")} token={token} onApply={(price) => form.setValue("budget", price, { shouldValidate: true })} />
                         <FormMessage /></FormItem>
                     )} />
                   )}
                   <FormField control={form.control} name="deadline" render={({ field }) => (
-                    <FormItem><FormLabel>Deadline</FormLabel>
+                    <FormItem><FormLabel>{t("projectsForm.deadline")}</FormLabel>
                       <FormControl><Input type="date" {...field} /></FormControl>
                       <FormMessage /></FormItem>
                   )} />
@@ -271,9 +272,9 @@ export default function PostProjectPage() {
               {step === 2 && (
                 <div className="space-y-3">
                   <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between gap-4"><dt className="text-slate-300">Title</dt><dd className="font-semibold text-slate">{form.watch("title")}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className="text-slate-300">Category</dt><dd className="font-semibold text-slate">{form.watch("category")}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className="text-slate-300">Budget</dt><dd className="font-mono text-brass">{form.watch("currency")} {form.watch("budget")}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-slate-300">{t("projectsForm.titleSummary")}</dt><dd className="font-semibold text-slate">{form.watch("title")}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-slate-300">{t("projectsForm.categorySummary")}</dt><dd className="font-semibold text-slate">{form.watch("category")}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-slate-300">{t("projectsForm.budgetSummary")}</dt><dd className="font-mono text-brass">{form.watch("currency")} {form.watch("budget")}</dd></div>
                     {skills.length > 0 && <div className="flex flex-wrap gap-1.5 pt-2">{skills.map((s) => <Badge key={s._id} variant="secondary">{s.name}</Badge>)}</div>}
                   </dl>
                 </div>
@@ -283,17 +284,17 @@ export default function PostProjectPage() {
 
           <div className="mt-6 flex items-center justify-between">
             <Button type="button" variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
-              <ChevronLeft className="h-4 w-4" /> Back
+              <ChevronLeft className="h-4 w-4" /> {t("projectsForm.back")}
             </Button>
             {step < 2 ? (
               <Button type="button" onClick={async () => {
                 const valid = await form.trigger(step === 0 ? ["title", "description", "category"] : ["experience_level", "budget", "currency", "deadline"]);
                 if (valid) setStep((s) => Math.min(2, s + 1));
               }}>
-                Continue <ChevronRight className="h-4 w-4" />
+                {t("projectsForm.continue")} <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" loading={mutation.isPending}>Publish project</Button>
+              <Button type="submit" loading={mutation.isPending}>{t("projectsForm.publish")}</Button>
             )}
           </div>
         </form>

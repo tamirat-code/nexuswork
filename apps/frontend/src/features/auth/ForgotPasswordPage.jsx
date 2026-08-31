@@ -5,12 +5,14 @@ import AuthShell from "./components/AuthShell.jsx";
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
 import { SealMark } from "./components/AuthShell.jsx";
+import { useTranslation } from "react-i18next";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useTranslation();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,16 +30,15 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <AuthShell eyebrow="Check your inbox" title="Reset link sent">
+      <AuthShell eyebrow={t("auth.checkInbox")} title={t("auth.resetLinkSent")}>
         <div className="rounded-card border border-escrow bg-escrow-100 p-5 flex gap-3">
           <SealMark className="h-5 w-5 shrink-0 text-escrow mt-0.5" />
           <p className="text-sm text-slate">
-            If an account exists for <strong>{email}</strong>, we've sent a link to reset the password. It expires
-            in 1 hour.
+            {t("auth.resetLinkDescription", { email })}
           </p>
         </div>
         <Link to="/login" className="mt-6 inline-block text-sm font-semibold text-brass hover:underline">
-          Back to login
+          {t("auth.backToLogin")}
         </Link>
       </AuthShell>
     );
@@ -45,18 +46,18 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="Password reset"
-      title="Forgot your password?"
-      subtitle="Enter your email and we'll send you a link to reset it."
+      eyebrow={t("auth.passwordReset")}
+      title={t("auth.forgotPassword")}
+      subtitle={t("auth.resetDescription")}
       footer={
         <Link to="/login" className="font-semibold text-brass hover:underline">
-          Back to login
+          {t("auth.backToLogin")}
         </Link>
       }
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <Input
-          label="Email"
+          label={t("auth.email")}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -64,7 +65,7 @@ export default function ForgotPasswordPage() {
           autoComplete="email"
         />
         <Button type="submit" loading={submitting} className="w-full" size="lg">
-          Send reset link
+          {t("auth.sendResetLink")}
         </Button>
       </form>
     </AuthShell>

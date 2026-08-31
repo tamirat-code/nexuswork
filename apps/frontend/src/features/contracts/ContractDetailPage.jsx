@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState,useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+
 import {
   AlertTriangle,
   ArrowLeft,
@@ -861,8 +863,10 @@ function ChatPanel({ contractId, token, contract }) {
 }
 
 export default function ContractDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { token, user } = useAuth();
+
   const queryClient = useQueryClient();
   const [fundingMilestone, setFundingMilestone] = useState(null);
   const [paymentChoiceMilestone, setPaymentChoiceMilestone] = useState(null);

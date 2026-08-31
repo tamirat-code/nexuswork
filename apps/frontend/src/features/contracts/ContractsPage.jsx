@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import {
@@ -17,6 +18,7 @@ import { formatTimeAgo } from "../../utils/date.utils.js";
 
 /** All contracts the signed-in user is a party to. */
 export default function ContractsPage() {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["contracts"],
@@ -29,8 +31,8 @@ export default function ContractsPage() {
   return (
     <>
       <PageHeader
-        title="Contracts"
-        description="Signed agreements, funded milestones, and everything currently in flight."
+        title={t("contracts.title")}
+        description={t("contracts.description")}
       />
 
       {isLoading && <SkeletonList count={3} />}
@@ -39,11 +41,11 @@ export default function ContractsPage() {
 
       {!isLoading && !error && contracts.length === 0 && (
         <EmptyState
-          title="No contracts yet"
-          description="Once a proposal is accepted and the first milestone is funded, the contract shows up here."
+          title={t("contracts.noContracts")}
+          description={t("contracts.noContractsDesc")}
           action={
             <Link to="/projects">
-              <Button>Browse projects</Button>
+              <Button>{t("contracts.browseProjects")}</Button>
             </Link>
           }
         />
@@ -52,7 +54,7 @@ export default function ContractsPage() {
       {contracts.length > 0 && (
         <ul className="space-y-4">
           {contracts.map((contract) => {
-            const title = contract.project_id?.title || contract.title || "Contract";
+            const title = contract.project_id?.title || contract.title || t("contracts.contractTitle");
             const amount =
               contract.total_amount ??
               contract.amount ??
@@ -73,16 +75,16 @@ export default function ContractsPage() {
                         {title}
                       </h2>
                       <p className="mt-1 text-sm text-slate-300">
-                        {formatCurrency(amount, contract.terms?.currency || "USD")} · started {formatTimeAgo(contract.createdAt)}
+                        {formatCurrency(amount, contract.terms?.currency || "USD")} · {t("contracts.started")} {formatTimeAgo(contract.createdAt)}
                       </p>
                       {contract.status === "pending_review" && (
                         <p className="mt-2 text-xs font-medium text-brass">
-                          Click to review and sign this contract
+                          {t("contracts.reviewAndSign")}
                         </p>
                       )}
                       {contract.status === "pending_signature" && (
                         <p className="mt-2 text-xs font-medium text-brass">
-                          Click to review your signature status
+                          {t("contracts.reviewSignatureStatus")}
                         </p>
                       )}
                     </div>
@@ -97,3 +99,4 @@ export default function ContractsPage() {
     </>
   );
 }
+

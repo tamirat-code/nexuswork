@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Wallet, ArrowDownLeft, ArrowUpRight, CheckCircle2, ShieldAlert } from "lucide-react";
@@ -35,6 +36,7 @@ const WITHDRAWAL_STATUS = {
 };
 
 export default function WalletsPage() {
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
@@ -115,9 +117,9 @@ export default function WalletsPage() {
   return (
     <div className="w-full animate-fade-up">
       <PageHeader
-        eyebrow="Money"
-        title="Wallet"
-        description="Track available balance, pending escrow, and milestone payouts."
+        eyebrow={t("wallets.eyebrow")}
+        title={t("wallets.title")}
+        description={t("wallets.description")}
       />
 
       {isStudent && (
@@ -132,16 +134,16 @@ export default function WalletsPage() {
 
               <div>
                 <p className="text-sm font-semibold text-slate">
-                  {wallet?.payouts_enabled ? "Payout account ready" : "Payout setup required"}
+                  {wallet?.payouts_enabled ? t("wallets.payoutReadyTitle") : t("wallets.payoutSetupRequiredTitle")}
                 </p>
                 <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300">
                   {wallet?.payouts_enabled
-                    ? "Your Stripe Connect account can receive supported-currency milestone payouts."
-                    : "Set up Stripe Connect for supported-currency payouts, or add a Chapa ETB account for ETB milestone payouts."}
+                    ? t("wallets.payoutReadyDesc")
+                    : t("wallets.payoutSetupRequiredDesc")}
                 </p>
                 {!wallet?.payouts_enabled && wallet?.requirements_due?.length > 0 && (
                   <p className="mt-1.5 text-xs text-slate-300">
-                    Stripe still needs {wallet.requirements_due.length} item(s) from you.
+                    {t("wallets.stripeNeedsItems", { count: wallet.requirements_due.length })}
                   </p>
                 )}
               </div>
@@ -152,7 +154,7 @@ export default function WalletsPage() {
               onClick={() => connect.mutate()}
               loading={connect.isPending}
             >
-              {wallet?.payouts_enabled ? "Manage payout account" : "Set up payouts"}
+              {wallet?.payouts_enabled ? t("wallets.managePayoutAccount") : t("wallets.setUpPayouts")}
             </Button>
           </div>
         </Card>
@@ -162,25 +164,25 @@ export default function WalletsPage() {
         <Card className="mb-6">
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-semibold text-slate">ETB payout account</p>
+              <p className="text-sm font-semibold text-slate">{t("wallets.etbPayoutAccount")}</p>
               <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                Add the student bank account that Chapa should use for ETB milestone payouts. The account number is encrypted and only its last four digits are displayed.
+                {t("wallets.etbPayoutDesc")}
               </p>
             </div>
             <div className="rounded-lg border border-ink-300 bg-ink-50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">ETB earnings</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{t("wallets.etbEarnings")}</p>
               <p className="mt-1 font-mono text-2xl font-bold text-brass">
                 {formatCurrency(wallet?.balances?.etb?.available ?? 0, "ETB")}
               </p>
-              <p className="mt-1 text-xs text-slate-300">Approved ETB milestones appear here after the Chapa payout is successfully released.</p>
+              <p className="mt-1 text-xs text-slate-300">{t("wallets.etbEarningsDesc")}</p>
             </div>
             {wallet?.chapa_payout_ready && (
-              <p className="text-xs text-escrow">Ready: {wallet.chapa_account_name} · bank {wallet.chapa_bank_code} · ending {wallet.chapa_account_number_last4}</p>
+              <p className="text-xs text-escrow">{t("wallets.etbReady", { name: wallet.chapa_account_name, code: wallet.chapa_bank_code, last4: wallet.chapa_account_number_last4 })}</p>
             )}
             <div className="grid gap-3 md:grid-cols-3">
-              <Input label="Bank code" maxLength={20} value={chapaDetails.bank_code} onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value.replace(/\D/g, "") }))} placeholder="656" />
-              <Input label="Account name" maxLength={150} value={chapaDetails.account_name} onChange={(e) => setChapaDetails((v) => ({ ...v, account_name: e.target.value }))} placeholder="Full account name" />
-              <Input label="Account number" inputMode="numeric" maxLength={30} value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank account number" />
+              <Input label={t("wallets.bankCode")} maxLength={20} value={chapaDetails.bank_code} onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value.replace(/\D/g, "") }))} placeholder="656" />
+              <Input label={t("wallets.accountName")} maxLength={150} value={chapaDetails.account_name} onChange={(e) => setChapaDetails((v) => ({ ...v, account_name: e.target.value }))} placeholder="Full account name" />
+              <Input label={t("wallets.accountNumber")} inputMode="numeric" maxLength={30} value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank account number" />
             </div>
             <Button
               size="sm"
@@ -188,7 +190,7 @@ export default function WalletsPage() {
               loading={chapaPayout.isPending}
               disabled={!chapaDetails.bank_code || !chapaDetails.account_name || chapaDetails.account_number.length < 5}
             >
-              Save ETB payout details
+              {t("wallets.saveEtbDetails")}
             </Button>
           </div>
         </Card>
@@ -200,7 +202,7 @@ export default function WalletsPage() {
             <div className="flex flex-wrap items-center justify-between gap-4 p-1">
               <div>
                 <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                  <Wallet className="h-4 w-4 text-brass" /> Available balance
+                  <Wallet className="h-4 w-4 text-brass" /> {t("wallets.availableBalance")}
                 </p>
                 {wLoading ? (
                   <Skeleton className="mt-2 h-9 w-36" />
@@ -212,7 +214,7 @@ export default function WalletsPage() {
               </div>
 
               <div className="text-right">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Pending</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{t("wallets.pending")}</p>
                 <p className="mt-1 font-mono text-base font-medium text-slate-300">
                   {formatCurrency(wallet?.pending ?? 0)}
                 </p>
@@ -232,7 +234,7 @@ export default function WalletsPage() {
                   }}
                   loading={withdraw.isPending}
                 >
-                  Withdraw
+                  {t("wallets.withdraw")}
                 </Button>
               )}
             </div>
@@ -240,7 +242,7 @@ export default function WalletsPage() {
             {isStudent && wallet?.payouts_enabled && (
               <div className="mt-5 border-t border-ink-300 pt-5">
                 <Input
-                  label="Withdrawal amount ($)"
+                  label={t("wallets.withdrawalAmount")}
                   id="wd-amount"
                   type="number"
                   min={1}
@@ -255,17 +257,17 @@ export default function WalletsPage() {
 
           {isStudent && (
             <Card>
-              <h2 className="font-display text-base font-semibold text-slate mb-4">Transaction history</h2>
+              <h2 className="font-display text-base font-semibold text-slate mb-4">{t("wallets.transactionHistory")}</h2>
               
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-ink-300 text-slate-300">
-                      <th className="pb-2.5 font-semibold">Type</th>
-                      <th className="pb-2.5 font-semibold">Description</th>
-                      <th className="pb-2.5 font-semibold">Status</th>
-                      <th className="pb-2.5 text-right font-semibold">Amount</th>
-                      <th className="pb-2.5 text-right font-semibold">Date</th>
+                      <th className="pb-2.5 font-semibold">{t("wallets.type")}</th>
+                      <th className="pb-2.5 font-semibold">{t("wallets.transactionDesc")}</th>
+                      <th className="pb-2.5 font-semibold">{t("wallets.status")}</th>
+                      <th className="pb-2.5 text-right font-semibold">{t("wallets.amount")}</th>
+                      <th className="pb-2.5 text-right font-semibold">{t("wallets.date")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-300">
@@ -281,7 +283,7 @@ export default function WalletsPage() {
                     {!tLoading && txs.length === 0 && (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-300">
-                          No transactions yet.
+                          {t("wallets.noTransactions")}
                         </td>
                       </tr>
                     )}
@@ -320,11 +322,11 @@ export default function WalletsPage() {
             <div className="space-y-3 text-xs leading-relaxed text-slate-300">
               <p className="flex items-start gap-2">
                 <ArrowDownLeft className="mt-0.5 h-4 w-4 shrink-0 text-escrow" />
-                <span>Milestone payments are released here after client approval.</span>
+                <span>{t("wallets.escrowNotice")}</span>
               </p>
               <p className="flex items-start gap-2">
                 <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-brick" />
-                <span>Withdrawals require a verified payout destination for the currency being withdrawn.</span>
+                <span>{t("wallets.withdrawalNotice")}</span>
               </p>
             </div>
           </Card>
@@ -333,3 +335,4 @@ export default function WalletsPage() {
     </div>
   );
 }
+

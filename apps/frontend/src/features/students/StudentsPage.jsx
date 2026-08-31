@@ -10,8 +10,10 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/avatar.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
+import { useTranslation } from "react-i18next";
 
 export default function StudentsPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("all");
   const { data, isLoading, error } = useQuery({
@@ -24,10 +26,10 @@ export default function StudentsPage() {
   return (
     <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Student marketplace</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Find verified student talent</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("students.marketplace")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("students.title")}</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Every profile is backed by a real university. Skills are certified or self-reported — always clearly marked.
+          {t("students.description")}
         </p>
       </header>
 
@@ -37,7 +39,7 @@ export default function StudentsPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by skill, department, or name"
+            placeholder={t("students.searchPlaceholder")}
             className="pl-9"
           />
         </div>
@@ -46,11 +48,11 @@ export default function StudentsPage() {
           onChange={(e) => setDepartment(e.target.value)}
           className="h-11 rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate outline-none focus:ring-2 focus:ring-ring"
         >
-          <option value="all">All departments</option>
-          <option value="cs">Computer Science</option>
-          <option value="software">Software Engineering</option>
-          <option value="it">Information Technology</option>
-          <option value="is">Information Systems</option>
+          <option value="all">{t("students.departments.all")}</option>
+          <option value="cs">{t("students.departments.cs")}</option>
+          <option value="software">{t("students.departments.software")}</option>
+          <option value="it">{t("students.departments.it")}</option>
+          <option value="is">{t("students.departments.is")}</option>
         </select>
       </div>
 
@@ -65,8 +67,8 @@ export default function StudentsPage() {
 
         {!isLoading && !error && students.length === 0 && (
           <Card className="col-span-full p-12 text-center">
-            <p className="font-display text-lg text-slate">No students found</p>
-            <p className="mt-2 text-sm text-slate-300">Try a broader search or clear your filters.</p>
+            <p className="font-display text-lg text-slate">{t("students.noResults")}</p>
+            <p className="mt-2 text-sm text-slate-300">{t("students.noResultsHint")}</p>
           </Card>
         )}
 
@@ -85,15 +87,15 @@ export default function StudentsPage() {
                   </div>
                 </div>
                 {s.verification_status === "verified" ? (
-                  <Badge variant="success"><BadgeCheck className="h-3 w-3" /> Verified</Badge>
+                  <Badge variant="success"><BadgeCheck className="h-3 w-3" /> {t("students.verified")}</Badge>
                 ) : (
                   <StatusBadge kind="verification" status={s.verification_status || "unverified"} showDot={false} />
                 )}
               </div>
 
               <div className="mt-4 space-y-1.5 text-xs text-slate-300">
-                <p className="flex items-center gap-2"><GraduationCap className="h-3.5 w-3.5 text-brass" /> {s.university || "University student"}</p>
-                <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-brass" /> {s.location || "Remote"}</p>
+                <p className="flex items-center gap-2"><GraduationCap className="h-3.5 w-3.5 text-brass" /> {s.university || t("students.universityStudent")}</p>
+                <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-brass" /> {s.location || t("students.remote")}</p>
               </div>
 
               {s.skills?.length > 0 && (
@@ -108,7 +110,7 @@ export default function StudentsPage() {
               )}
 
               <Link to={`/profile/${s._id}`} className="mt-5 block">
-                <Button variant="secondary" size="sm" fullWidth>View profile</Button>
+                <Button variant="secondary" size="sm" fullWidth>{t("students.viewProfile")}</Button>
               </Link>
             </CardContent>
           </Card>

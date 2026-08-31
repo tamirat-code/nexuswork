@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const SECTIONS = [
   {
@@ -54,6 +55,7 @@ const SECTIONS = [
 ];
 
 export default function TermsPage() {
+  const { t } = useTranslation();
   return (
     <div className="mx-auto max-w-6xl px-6 py-14">
       <div className="grid gap-10 lg:grid-cols-[1fr_220px] lg:items-start">
@@ -62,6 +64,7 @@ export default function TermsPage() {
           <h1 className="mt-2 font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">
             Terms of Service
           </h1>
+
           <p className="mt-2 text-xs text-slate-300">Version 1.0 · Last updated {new Date().getFullYear()}</p>
 
           <p className="mt-6 rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm leading-relaxed text-brick">

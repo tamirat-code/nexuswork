@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MessageSquare, Paperclip, Send } from "lucide-react";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
@@ -12,6 +13,7 @@ import { Card, Button, Input, PageHeader, Skeleton } from "../../components/ui/i
 import { formatTimeAgo } from "../../utils/date.utils.js";
 
 export default function ChatPage() {
+  const { t } = useTranslation();
   const { conversationId } = useParams();
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
@@ -104,9 +106,9 @@ export default function ChatPage() {
   return (
     <div className="mx-auto flex h-[calc(100vh-7.5rem)] max-w-6xl flex-col animate-fade-up">
       <PageHeader
-        eyebrow="Messages"
-        title="Contract chat"
-        description="Every conversation is scoped to a contract — both parties stay in context."
+        eyebrow={t("chat.eyebrow")}
+        title={t("chat.title")}
+        description={t("chat.subtitle")}
         className="mb-4"
       />
 
@@ -114,7 +116,7 @@ export default function ChatPage() {
         {/* Contract picker */}
         <Card padded={false} className="hidden w-64 shrink-0 overflow-y-auto p-3 md:block">
           <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-300">
-            Conversations
+            {t("chat.conversations")}
           </p>
           {contractsQuery.isLoading && (
             <div className="space-y-2 p-1">
@@ -125,7 +127,7 @@ export default function ChatPage() {
           )}
           {!contractsQuery.isLoading && contracts.length === 0 && (
             <p className="px-2 py-4 text-center text-xs text-slate-300">
-              No contracts yet.
+              {t("chat.noContracts")}
             </p>
           )}
           <div className="space-y-0.5">
@@ -156,13 +158,13 @@ export default function ChatPage() {
               <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full border border-ink-300 bg-ink-100 text-brass">
                 <MessageSquare className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-base font-semibold text-slate">Pick a contract</h3>
+              <h3 className="font-display text-base font-semibold text-slate">{t("chat.pickContractTitle")}</h3>
               <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-300">
-                Select a contract from the list to open its chat thread.
+                {t("chat.pickContractDesc")}
               </p>
               {contracts.length === 0 && (
                 <Link to="/contracts" className="mt-5 inline-block">
-                  <Button variant="secondary" size="sm">Go to contracts</Button>
+                  <Button variant="secondary" size="sm">{t("chat.goToContracts")}</Button>
                 </Link>
               )}
             </div>
@@ -174,13 +176,13 @@ export default function ChatPage() {
               <span className="truncate text-xs font-semibold text-slate">
                 {activeContract?.project_id?.title || "Contract"}
               </span>
-              <span className="ml-auto shrink-0 text-xs text-slate-300">with {partnerName}</span>
+              <span className="ml-auto shrink-0 text-xs text-slate-300">{t("chat.withPartner", { name: partnerName })}</span>
               <span
                 className={`ml-2 flex shrink-0 items-center gap-1.5 text-[11px] ${isLive ? "text-escrow" : "text-slate-300"}`}
-                title={isLive ? "Live — new messages arrive instantly" : "Reconnecting…"}
+                title={isLive ? t("chat.live") : t("chat.reconnecting")}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-escrow" : "bg-slate-300"}`} />
-                {isLive ? "Live" : "Reconnecting…"}
+                {isLive ? t("chat.live") : t("chat.reconnecting")}
               </span>
             </div>
 
@@ -194,7 +196,7 @@ export default function ChatPage() {
               )}
               {!isLoading && messages.length === 0 && (
                 <p className="py-10 text-center text-xs text-slate-300">
-                  No messages yet. Say hello and confirm the first milestone.
+                  {t("chat.noMessages")}
                 </p>
               )}
               {messages.map((m) => {
@@ -210,7 +212,7 @@ export default function ChatPage() {
                       }`}
                     >
                       <p className="text-[11px] font-semibold text-brass">
-                        {mine ? "You" : m.sender_id?.name || "User"}
+                        {mine ? t("chat.you") : m.sender_id?.name || "User"}
                       </p>
                       {m.body && (
                         <p className="mt-0.5 leading-relaxed text-slate">{m.body}</p>
@@ -237,7 +239,7 @@ export default function ChatPage() {
                 variant="ghost"
                 size="sm"
                 iconOnly
-                aria-label="Attach file"
+                aria-label={t("chat.attachFile")}
                 onClick={() => document.getElementById("chat-attachment")?.click()}
               >
                 <Paperclip className="h-4 w-4" />
@@ -247,7 +249,7 @@ export default function ChatPage() {
                 maxLength={5000}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Type a message…"
+                placeholder={t("chat.typeMessagePlaceholder")}
                 className="flex-1"
                 wrapperClassName="flex-1"
               />
@@ -256,7 +258,7 @@ export default function ChatPage() {
                 type="submit"
                 size="sm"
                 iconOnly
-                aria-label="Send message"
+                aria-label={t("chat.sendMessage")}
                 loading={sendMutation.isPending}
                 disabled={!draft.trim()}
               >
@@ -269,3 +271,4 @@ export default function ChatPage() {
     </div>
   );
 }
+

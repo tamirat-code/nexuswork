@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
+import { useTranslation } from "react-i18next";
 
 export default function GoogleAuthButton({ onCredential, disabled }) {
+  const { i18n } = useTranslation();
   const containerRef = useRef(null);
   
   const [width, setWidth] = useState(320);
@@ -25,6 +27,7 @@ export default function GoogleAuthButton({ onCredential, disabled }) {
         shape="rectangular"
         theme="outline"
         text="continue_with"
+        locale={i18n.language}
       />
     </div>
   );

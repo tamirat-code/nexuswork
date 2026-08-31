@@ -1,33 +1,38 @@
+import { useTranslation } from "react-i18next";
 import Button from "../ui/Button.jsx";
 import Modal from "../ui/Modal.jsx";
 
-
 export default function ConfirmDialog({
   open,
-  title = "Are you sure?",
+  title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   tone = "primary",
   loading = false,
   onConfirm,
   onCancel,
   children,
 }) {
+  const { t } = useTranslation();
+  const finalTitle = title || t("common.areYouSure");
+  const finalConfirmLabel = confirmLabel || t("common.confirm");
+  const finalCancelLabel = cancelLabel || t("common.cancel");
+
   return (
     <Modal
       open={open}
       onClose={loading ? undefined : onCancel}
-      title={title}
+      title={finalTitle}
       size="sm"
       dismissible={!loading}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} disabled={loading}>
-            {cancelLabel}
+            {finalCancelLabel}
           </Button>
           <Button variant={tone === "danger" ? "danger" : "primary"} onClick={onConfirm} loading={loading}>
-            {confirmLabel}
+            {finalConfirmLabel}
           </Button>
         </>
       }
@@ -37,3 +42,4 @@ export default function ConfirmDialog({
     </Modal>
   );
 }
+

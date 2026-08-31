@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { FileText, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { listMyInvoices, downloadInvoice } from "../../services/api/invoices.api.js";
@@ -13,6 +14,7 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/shadcn/table.jsx";
 
 export default function InvoicesPage() {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => listMyInvoices(token), enabled: !!token });
   const invoices = data?.data ?? [];
@@ -32,9 +34,9 @@ export default function InvoicesPage() {
   return (
     <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Money</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Invoices</h1>
-        <p className="mt-2 text-sm text-slate-300">Downloadable statements with exact commission breakdowns.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("invoices.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("invoices.title")}</h1>
+        <p className="mt-2 text-sm text-slate-300">{t("invoices.subtitle")}</p>
       </header>
 
       <Card className="mt-6 overflow-hidden">
@@ -42,19 +44,19 @@ export default function InvoicesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead className="text-right">Gross</TableHead>
-                <TableHead className="text-right">Commission</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-                <TableHead className="text-right">Date</TableHead>
+                <TableHead>{t("invoices.invoice")}</TableHead>
+                <TableHead>{t("invoices.client")}</TableHead>
+                <TableHead className="text-right">{t("invoices.gross")}</TableHead>
+                <TableHead className="text-right">{t("invoices.commission")}</TableHead>
+                <TableHead className="text-right">{t("invoices.net")}</TableHead>
+                <TableHead className="text-right">{t("invoices.date")}</TableHead>
                 <TableHead className="w-16" aria-label="Download" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && [...Array(4)].map((_, i) => <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)}
               {!isLoading && invoices.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="py-14 text-center text-slate-300">No invoices yet. They're generated per released milestone.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-14 text-center text-slate-300">{t("invoices.noInvoices")}</TableCell></TableRow>
               )}
               {invoices.map((inv) => (
                 <TableRow key={inv._id}>

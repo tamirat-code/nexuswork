@@ -35,6 +35,7 @@ import { getMyStaffVerifications, requestStaffVerification } from "../../service
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
 import { PROFILE_LIMITS, profileCompleteness, validateProfile } from "./profile.utils.js";
+import { useTranslation } from "react-i18next";
 
 const EMPTY = {
   name: "",
@@ -62,6 +63,7 @@ const fromUser = (user) => ({
 export default function ProfilePage() {
   const { user, token, setLocalUser } = useAuth();
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState("general");
 
@@ -129,10 +131,10 @@ export default function ProfilePage() {
       setTouched({});
       setSummary("");
       if (isStudent) qc.invalidateQueries({ queryKey: ["my-student-profile"] });
-      toast.show("Profile updated.");
+      toast.show(t("profile.updated", { defaultValue: "Profile updated." }));
     },
     onError: (err) => {
-      setSummary(err?.message || "We couldn't save your profile. Please try again.");
+      setSummary(err?.message || t("profile.saveError", { defaultValue: "We couldn't save your profile. Please try again." }));
     },
   });
 
@@ -143,7 +145,7 @@ export default function ProfilePage() {
     onMutate: () => setAvatarError(""),
     onSuccess: (res, dataUrl) => {
       setLocalUser?.({ ...user, avatarUrl: res?.data?.avatarUrl ?? dataUrl });
-      toast.show("Profile photo updated.");
+      toast.show(t("profile.photoUpdated", { defaultValue: "Profile photo updated." }));
     },
     onError: (err) => {
       setAvatarError(err?.message || "We couldn't upload that photo. Please try again.");
@@ -156,7 +158,7 @@ export default function ProfilePage() {
     onMutate: () => setAvatarError(""),
     onSuccess: () => {
       setLocalUser?.({ ...user, avatarUrl: null });
-      toast.show("Profile photo removed.");
+      toast.show(t("profile.photoRemoved", { defaultValue: "Profile photo removed." }));
     },
     onError: (err) => setAvatarError(err?.message || "We couldn't remove that photo. Please try again."),
   });
@@ -187,28 +189,28 @@ export default function ProfilePage() {
   }
 
   const tabItems = [
-    { value: "general", label: "General & Identity" },
+    { value: "general", label: t("profile.generalIdentity", { defaultValue: "General & Identity" }) },
     {
       value: "verification",
-      label: user?.universityVerified || user?.staffVerified ? "Verification ✓" : "Verification Request",
+      label: user?.universityVerified || user?.staffVerified ? t("profile.verification", { defaultValue: "Verification ✓" }) : t("profile.verificationRequest", { defaultValue: "Verification Request" }),
     },
-    { value: "strength", label: "Strength & Security" },
+    { value: "strength", label: t("profile.strengthSecurity", { defaultValue: "Strength & Security" }) },
   ];
 
   return (
     <div className="w-full">
       <PageHeader
-        eyebrow="Account"
-        title="Profile & settings"
-        description="Keep your profile up to date for client proposals and university verification."
+        eyebrow={t("common.account")}
+        title={t("profile.title", { defaultValue: "Profile & settings" })}
+        description={t("profile.description", { defaultValue: "Keep your profile up to date for client proposals and university verification." })}
         breadcrumbs={[{ label: "Workspace", to: "/dashboard" }, { label: "Profile" }]}
         actions={
           <>
             <Button variant="secondary" onClick={reset} disabled={!dirty || save.isPending}>
-              Discard changes
+              {t("profile.discard", { defaultValue: "Discard changes" })}
             </Button>
             <Button type="submit" form="profile-form" loading={save.isPending} disabled={!dirty}>
-              Save changes
+              {t("common.save")}
             </Button>
           </>
         }
@@ -216,14 +218,14 @@ export default function ProfilePage() {
 
       {/* ── Compact Tab Bar to eliminate vertical scrolling ── */}
       <div className="mb-6">
-        <Tabs items={tabItems} value={activeTab} onChange={setActiveTab} ariaLabel="Profile sections" />
+        <Tabs items={tabItems} value={activeTab} onChange={setActiveTab} ariaLabel={t("profile.sections", { defaultValue: "Profile sections" })} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <form id="profile-form" noValidate onSubmit={handleSubmit} className="space-y-6">
           <div aria-live="polite">
             {summary && (
-              <Alert live variant={save.isError ? "danger" : "warning"} title="Check your details">
+              <Alert live variant={save.isError ? "danger" : "warning"} title={t("profile.checkDetails", { defaultValue: "Check your details" })}>
                 {summary}
               </Alert>
             )}
@@ -234,12 +236,12 @@ export default function ProfilePage() {
             <Card as="section" className="p-6">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
                 <div>
-                  <h2 className="font-display text-xl font-extrabold text-slate">General Profile</h2>
-                  <p className="text-xs text-slate-300">Identity, bio, and portfolio details shown on your public profile.</p>
+                  <h2 className="font-display text-xl font-extrabold text-slate">{t("profile.generalProfile", { defaultValue: "General Profile" })}</h2>
+                  <p className="text-xs text-slate-300">{t("profile.generalProfileDescription", { defaultValue: "Identity, bio, and portfolio details shown on your public profile." })}</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge tone="brand">{ROLE_LABELS[user?.role] || "Member"}</Badge>
-                  {user?.universityVerified && <Badge tone="success">Verified ✓</Badge>}
+                  {user?.universityVerified && <Badge tone="success">{t("students.verified")} ✓</Badge>}
                 </div>
               </div>
               <CardDivider className="mb-5" />
@@ -260,7 +262,7 @@ export default function ProfilePage() {
 
                   <Input
                     id="profile-name"
-                    label="Full name"
+                    label={t("registration.fullName")}
                     required
                     value={form.name}
                     onChange={set("name")}
@@ -272,7 +274,7 @@ export default function ProfilePage() {
 
                   <Input
                     id="profile-email"
-                    label="Email address"
+                    label={t("profile.emailAddress", { defaultValue: "Email address" })}
                     type="email"
                     required
                     value={form.email}
@@ -284,13 +286,13 @@ export default function ProfilePage() {
 
                   <Input
                     id="profile-headline"
-                    label="Headline"
+                    label={t("profile.headline")}
                     optional
                     value={form.headline}
                     onChange={set("headline")}
                     onBlur={blur("headline")}
                     error={touched.headline ? errors.headline : undefined}
-                    placeholder="e.g. CS Student & Full-Stack Developer"
+                    placeholder={t("profile.headlinePlaceholder")}
                     maxLength={PROFILE_LIMITS.headline}
                   />
                 </div>
@@ -299,7 +301,7 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <Textarea
                     id="profile-bio"
-                    label="Short bio"
+                    label={t("profile.shortBio", { defaultValue: "Short bio" })}
                     optional
                     rows={3}
                     value={form.bio}
@@ -307,24 +309,24 @@ export default function ProfilePage() {
                     onBlur={blur("bio")}
                     error={touched.bio ? errors.bio : undefined}
                     maxLength={PROFILE_LIMITS.bio}
-                    placeholder="A brief overview of your expertise and goals..."
+                    placeholder={t("profile.bioPlaceholder", { defaultValue: "A brief overview of your expertise and goals..." })}
                   />
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
                       id="profile-location"
-                      label="Location"
+                      label={t("profile.location", { defaultValue: "Location" })}
                       optional
                       value={form.location}
                       onChange={set("location")}
                       onBlur={blur("location")}
                       error={touched.location ? errors.location : undefined}
-                      placeholder="Addis Ababa"
+                      placeholder={t("profile.locationPlaceholder", { defaultValue: "Addis Ababa" })}
                       maxLength={PROFILE_LIMITS.location}
                     />
                     <Input
                       id="profile-university"
-                      label="University"
+                      label={t("registration.university")}
                       optional
                       value={form.university}
                       onChange={set("university")}
@@ -337,31 +339,31 @@ export default function ProfilePage() {
                   {isStudent && (
                     <Select
                       id="profile-enrollment-status"
-                      label="Enrollment status"
+                      label={t("registration.enrollmentStatus")}
                       optional
                       value={enrollmentStatus}
                       onChange={(e) => setEnrollmentStatus(e.target.value)}
-                      options={ENROLLMENT_STATUSES}
+                      options={ENROLLMENT_STATUSES.map((option) => ({ ...option, label: t(`registration.enrollment.${option.value}`) }))}
                       disabled={studentProfileQuery.isLoading}
-                      hint="Shown to clients and used by your university for verification."
+                      hint={t("profile.enrollmentHint", { defaultValue: "Shown to clients and used by your university for verification." })}
                     />
                   )}
 
                   <Input
                     id="profile-skills"
-                    label="Skills"
+                    label={t("profile.skills")}
                     optional
                     value={form.skills}
                     onChange={set("skills")}
                     onBlur={blur("skills")}
                     error={touched.skills ? errors.skills : undefined}
-                    placeholder="React, Python, Figma"
+                    placeholder={t("profile.skillsExample", { defaultValue: "React, Python, Figma" })}
                     maxLength={PROFILE_LIMITS.skills}
                   />
 
                   <Input
                     id="profile-website"
-                    label="Portfolio URL"
+                    label={t("profile.portfolioUrl", { defaultValue: "Portfolio URL" })}
                     optional
                     type="url"
                     inputMode="url"
@@ -425,14 +427,14 @@ export default function ProfilePage() {
           <Card as="section">
             <CardHeader
               titleAs="h2"
-              title="Profile strength"
-              description="Complete profiles get more invitations."
+              title={t("profile.strengthTitle", { defaultValue: "Profile strength" })}
+              description={t("profile.strengthDescription", { defaultValue: "Complete profiles get more invitations." })}
             />
             <div className="mt-5">
               <ProgressBar
                 value={completeness.percent}
-                label={`${completeness.done} of ${completeness.total} sections complete`}
-                valueText={`${completeness.percent}% complete`}
+                label={t("profile.sectionsComplete", { done: completeness.done, total: completeness.total, defaultValue: `${completeness.done} of ${completeness.total} sections complete` })}
+                valueText={t("profile.percentComplete", { percent: completeness.percent, defaultValue: `${completeness.percent}% complete` })}
                 showValue
                 tone={completeness.percent >= 80 ? "success" : completeness.percent >= 50 ? "warning" : "danger"}
               />
@@ -440,7 +442,7 @@ export default function ProfilePage() {
 
             {completeness.missing.length > 0 ? (
               <>
-                <p className="mt-5 text-xs font-bold uppercase tracking-widest text-brass">Still to add</p>
+                <p className="mt-5 text-xs font-bold uppercase tracking-widest text-brass">{t("profile.stillToAdd", { defaultValue: "Still to add" })}</p>
                 <ul className="mt-2 space-y-1.5 text-sm font-medium text-slate-300">
                   {completeness.missing.map((item) => (
                     <li key={item.key} className="flex items-start gap-2">
@@ -452,7 +454,7 @@ export default function ProfilePage() {
               </>
             ) : (
               <p className="mt-4 text-sm font-medium text-slate-300">
-                Everything is filled in — nice work. Review it each term so it stays current.
+                {t("profile.everythingComplete", { defaultValue: "Everything is filled in — nice work. Review it each term so it stays current." })}
               </p>
             )}
           </Card>
@@ -476,6 +478,7 @@ function formatCredentialDate(value) {
 }
 
 function CredentialCardPreview({ verification, user }) {
+  const { t } = useTranslation();
   const university = verification?.university_id?.name || user?.university || "Verified university";
   const name = verification?.full_name || user?.name || "Verified student";
   const issued = formatCredentialDate(verification?.reviewed_at || verification?.updatedAt || verification?.createdAt);
@@ -491,7 +494,7 @@ function CredentialCardPreview({ verification, user }) {
             </span>
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-brass-300">NexusWork</p>
-              <p className="text-sm font-semibold text-content-primary">Verified Credential Card</p>
+              <p className="text-sm font-semibold text-content-primary">{t("profile.credentialCard", { defaultValue: "Verified Credential Card" })}</p>
             </div>
           </div>
           <p className="mt-8 text-3xl font-black leading-tight tracking-normal sm:text-4xl">{name}</p>
@@ -506,16 +509,16 @@ function CredentialCardPreview({ verification, user }) {
           </div>
           <dl className="mt-7 space-y-4">
             <div>
-              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Institution</dt>
+              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">{t("profile.institution", { defaultValue: "Institution" })}</dt>
               <dd className="mt-1 text-base font-bold text-slate">{university}</dd>
             </div>
             <div>
-              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Issued</dt>
+              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">{t("profile.issued", { defaultValue: "Issued" })}</dt>
               <dd className="mt-1 text-base font-bold text-slate">{issued}</dd>
             </div>
             <div>
-              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Proof</dt>
-              <dd className="mt-1 text-sm font-semibold text-slate-300">Cryptographic signature included in download</dd>
+              <dt className="text-xs font-extrabold uppercase tracking-widest text-slate-300">{t("profile.proof", { defaultValue: "Proof" })}</dt>
+              <dd className="mt-1 text-sm font-semibold text-slate-300">{t("profile.cryptographicProof", { defaultValue: "Cryptographic signature included in download" })}</dd>
             </div>
           </dl>
         </div>
@@ -525,6 +528,7 @@ function CredentialCardPreview({ verification, user }) {
 }
 
 function SkillCertificationCard({ token, profile, universityVerified }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
   const [skillName, setSkillName] = useState("");
@@ -573,14 +577,14 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
 
   return (
     <Card as="section">
-      <CardHeader title="Skill certification" description="Submit evidence for a university reviewer. A badge is issued only after a reviewer checks your work." />
+      <CardHeader title={t("profile.skillCertification", { defaultValue: "Skill certification" })} description={t("profile.skillCertificationDescription", { defaultValue: "Submit evidence for a university reviewer. A badge is issued only after a reviewer checks your work." })} />
       {!universityVerified ? (
-        <Alert variant="warning" title="Verify your university first">University skill certification is available after your enrollment verification is approved.</Alert>
+        <Alert variant="warning" title={t("profile.verifyUniversityFirst", { defaultValue: "Verify your university first" })}>{t("profile.skillCertificationLocked", { defaultValue: "University skill certification is available after your enrollment verification is approved." })}</Alert>
       ) : (
         <>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <Select label="Skill to certify" value={skillName} onChange={(event) => setSkillName(event.target.value)} options={[{ value: "", label: skills.length ? "Select a profile skill" : "Add a skill in General Profile first" }, ...skills.map((skill) => ({ value: skill.name, label: skill.name }))]} disabled={!skills.length} />
-            <Select label="Evidence type" value={method} onChange={(event) => setMethod(event.target.value)} options={[{ value: "practical_assessment", label: "Practical assessment" }, { value: "portfolio_review", label: "Portfolio review" }, { value: "coursework_linkage", label: "Coursework linkage" }]} />
+            <Select label={t("profile.skillToCertify", { defaultValue: "Skill to certify" })} value={skillName} onChange={(event) => setSkillName(event.target.value)} options={[{ value: "", label: skills.length ? t("profile.selectProfileSkill", { defaultValue: "Select a profile skill" }) : t("profile.addSkillFirst", { defaultValue: "Add a skill in General Profile first" }) }, ...skills.map((skill) => ({ value: skill.name, label: skill.name }))]} disabled={!skills.length} />
+            <Select label={t("profile.evidenceType", { defaultValue: "Evidence type" })} value={method} onChange={(event) => setMethod(event.target.value)} options={[{ value: "practical_assessment", label: t("profile.practicalAssessment", { defaultValue: "Practical assessment" }) }, { value: "portfolio_review", label: t("profile.portfolioReview", { defaultValue: "Portfolio review" }) }, { value: "coursework_linkage", label: t("profile.courseworkLinkage", { defaultValue: "Coursework linkage" }) }]} />
           </div>
           {method === "coursework_linkage" && <div className="mt-4 grid gap-4 md:grid-cols-3"><Input label="Course name" value={courseName} onChange={(event) => setCourseName(event.target.value)} maxLength={200} placeholder="Advanced Web Development" /><Input label="Course code (optional)" value={courseCode} onChange={(event) => setCourseCode(event.target.value)} maxLength={50} placeholder="CS-401" /><Input label="Completion date (optional)" type="date" value={courseCompletedAt} onChange={(event) => setCourseCompletedAt(event.target.value)} /></div>}
           <Textarea className="mt-4" label="What should the reviewer verify?" value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} maxLength={2000} placeholder="Describe the work, course, or assessment and what it demonstrates (at least 20 characters)." />
@@ -590,11 +594,11 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
             </label>
             {evidence && <p className="mt-1 text-xs text-escrow">Attached: {evidence.original_name}</p>}
           </div>
-          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!skillName || !evidence || notes.trim().length < 20 || (method === "coursework_linkage" && !courseName.trim())} onClick={() => submit.mutate()}>Request certification</Button>
+          <Button className="mt-4" loading={submit.isPending || uploading} disabled={!skillName || !evidence || notes.trim().length < 20 || (method === "coursework_linkage" && !courseName.trim())} onClick={() => submit.mutate()}>{t("profile.requestCertification", { defaultValue: "Request certification" })}</Button>
         </>
       )}
       <CardDivider className="my-5" />
-      <h3 className="font-semibold text-slate">Request history</h3>
+      <h3 className="font-semibold text-slate">{t("profile.requestHistory", { defaultValue: "Request history" })}</h3>
       {isLoading ? <p className="mt-2 text-sm text-slate-300">Loading requests…</p> : requests.length === 0 ? <p className="mt-2 text-sm text-slate-300">No certification requests yet.</p> : (
         <div className="mt-3 space-y-2">{requests.map((request) => <div key={request._id} className="rounded-control border border-ink-300 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate">{request.skill_name}</span><Badge tone={request.status === "approved" ? "success" : request.status === "rejected" ? "danger" : "warning"}>{request.status}</Badge></div>{request.review_notes && <p className="mt-1 text-slate-300">{request.review_notes}</p>}</div>)}</div>
       )}
@@ -603,6 +607,7 @@ function SkillCertificationCard({ token, profile, universityVerified }) {
 }
 
 function UniversityVerificationCard({ user, token }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
   const { refreshMe } = useAuth();
@@ -733,16 +738,16 @@ function UniversityVerificationCard({ user, token }) {
   return (
     <Card as="section">
       <CardHeader
-        title="University verification"
-        description="Verified students get a badge on their profile and proposals, and are required to be verified before submitting a proposal."
+        title={t("profile.universityVerification", { defaultValue: "University verification" })}
+        description={t("profile.universityVerificationDescription", { defaultValue: "Verified students get a badge on their profile and proposals, and are required to be verified before submitting a proposal." })}
       />
       <CardDivider className="my-5" />
 
       {loading ? (
-        <p className="text-sm text-slate-300">Loading verification status…</p>
+        <p className="text-sm text-slate-300">{t("common.loading")}</p>
       ) : isApproved ? (
         <>
-          <Alert variant="success" title="You're verified">
+          <Alert variant="success" title={t("profile.youAreVerified", { defaultValue: "You're verified" })}>
             {latest?.status === "approved" && latest?.university_id?.name
               ? `Confirmed by ${latest.university_id.name}. Your proposals now show a verified badge.`
               : "Your university has confirmed your enrollment. Your proposals now show a verified badge."}
@@ -751,8 +756,8 @@ function UniversityVerificationCard({ user, token }) {
             <div className="mt-4 rounded-card border border-ink-300 bg-ink-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate">Verified credential</p>
-                  <p className="mt-1 text-xs text-slate-300">Download a polished credential card or the signed VC/Open Badge data file.</p>
+                  <p className="text-sm font-semibold text-slate">{t("profile.verifiedCredential", { defaultValue: "Verified credential" })}</p>
+                  <p className="mt-1 text-xs text-slate-300">{t("profile.credentialDownloadDescription", { defaultValue: "Download a polished credential card or the signed VC/Open Badge data file." })}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => exportCredential.mutate("card")} loading={exportCredential.isPending}>
@@ -770,7 +775,7 @@ function UniversityVerificationCard({ user, token }) {
           )}
         </>
       ) : latest?.status === "pending" ? (
-        <Alert variant="warning" title="Verification pending">
+        <Alert variant="warning" title={t("profile.verificationPending", { defaultValue: "Verification pending" })}>
           Your request to {latest.university_id?.name || "your university"} was submitted on{" "}
           {new Date(latest.createdAt).toLocaleDateString()} and is awaiting review. You'll be notified once it's
           decided — you can't submit proposals until it's approved.
@@ -778,7 +783,7 @@ function UniversityVerificationCard({ user, token }) {
       ) : (
         <>
           {latest?.status === "rejected" && (
-            <Alert variant="danger" title="Your last request was declined" className="mb-4">
+            <Alert variant="danger" title={t("profile.requestDeclined", { defaultValue: "Your last request was declined" })} className="mb-4">
               {latest.university_id?.name ? `${latest.university_id.name}: ` : ""}
               {latest.rejection_reason || "No reason was given."} You can fix the details and submit again below.
             </Alert>
@@ -794,8 +799,8 @@ function UniversityVerificationCard({ user, token }) {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Select
               id="verification-university"
-              label="Your university"
-              placeholder="Select your university"
+              label={t("profile.yourUniversity", { defaultValue: "Your university" })}
+              placeholder={t("registration.selectUniversity")}
               value={universityId}
               onChange={(event) => setUniversityId(event.target.value)}
               options={universities.map((u) => ({ value: u._id, label: `${u.name} (${u.domain})` }))}
@@ -809,7 +814,7 @@ function UniversityVerificationCard({ user, token }) {
             />
             <Input
               id="verification-full-name"
-              label="Full legal name"
+              label={t("profile.fullLegalName", { defaultValue: "Full legal name" })}
               hint="As it appears on your student ID."
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
@@ -818,7 +823,7 @@ function UniversityVerificationCard({ user, token }) {
             />
             <Input
               id="verification-student-id"
-              label="Student ID number"
+              label={t("registration.studentId")}
               value={studentIdNumber}
               onChange={(event) => setStudentIdNumber(event.target.value)}
               error={fieldErrors.studentIdNumber}
@@ -826,8 +831,8 @@ function UniversityVerificationCard({ user, token }) {
             />
             <Input
               id="verification-program"
-              label="Program / field of study"
-              placeholder="e.g. B.Sc. Computer Science"
+              label={t("registration.program")}
+              placeholder={t("registration.programPlaceholder")}
               value={program}
               onChange={(event) => setProgram(event.target.value)}
               error={fieldErrors.program}
@@ -837,7 +842,7 @@ function UniversityVerificationCard({ user, token }) {
 
             <div className="sm:col-span-2">
               <FileUpload
-                label="Proof of enrollment"
+                label={t("profile.proofOfEnrollment", { defaultValue: "Proof of enrollment" })}
                 hint={`Student ID card, enrollment letter, or transcript · JPG, PNG or PDF · up to ${VERIFICATION_DOC_MAX_MB} MB`}
                 accept={VERIFICATION_DOC_ACCEPT}
                 maxSizeMb={VERIFICATION_DOC_MAX_MB}
@@ -846,7 +851,7 @@ function UniversityVerificationCard({ user, token }) {
                 onFilesSelected={(files) => files[0] && uploadDoc.mutate(files[0])}
                 onRemove={() => removeDoc.mutate()}
               />
-              {uploadDoc.isPending && <ProgressBar className="mt-2" value={60} label="Uploading document" showValue={false} />}
+              {uploadDoc.isPending && <ProgressBar className="mt-2" value={60} label={t("profile.uploadingDocument", { defaultValue: "Uploading document" })} showValue={false} />}
               {fieldErrors.document && !uploadDoc.isPending && (
                 <p className="mt-2 text-xs text-brick" role="alert">
                   {fieldErrors.document}
@@ -867,6 +872,7 @@ function UniversityVerificationCard({ user, token }) {
 }
 
 function StaffVerificationCard({ user, token }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const qc = useQueryClient();
   const { refreshMe } = useAuth();
@@ -960,28 +966,28 @@ function StaffVerificationCard({ user, token }) {
   return (
     <Card as="section">
       <CardHeader
-        title="Staff verification"
-        description="Secondary proof for platform admins."
+        title={t("profile.staffVerification", { defaultValue: "Staff verification" })}
+        description={t("profile.staffVerificationDescription", { defaultValue: "Secondary proof for platform admins." })}
       />
       <CardDivider className="my-5" />
 
       {verificationsLoading ? (
-        <p className="text-sm text-slate-300">Loading verification status…</p>
+        <p className="text-sm text-slate-300">{t("common.loading")}</p>
       ) : isApproved ? (
-        <Alert variant="success" title="You're approved">
+        <Alert variant="success" title={t("profile.youAreApproved", { defaultValue: "You're approved" })}>
           {universityName
             ? `Confirmed by a platform admin for ${universityName}. You now have full staff access.`
             : "A platform admin has confirmed your staff role. You now have full staff access."}
         </Alert>
       ) : latest?.status === "pending" ? (
-        <Alert variant="warning" title="Verification pending">
+        <Alert variant="warning" title={t("profile.verificationPending", { defaultValue: "Verification pending" })}>
           Your request was submitted on {new Date(latest.createdAt).toLocaleDateString()} and is awaiting admin
           review.
         </Alert>
       ) : (
         <>
           {latest?.status === "rejected" && (
-            <Alert variant="danger" title="Your last request was declined" className="mb-4">
+            <Alert variant="danger" title={t("profile.requestDeclined", { defaultValue: "Your last request was declined" })} className="mb-4">
               {latest.rejection_reason || "No reason was given."} You can fix the details and submit again below.
             </Alert>
           )}
@@ -989,7 +995,7 @@ function StaffVerificationCard({ user, token }) {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Input
               id="staff-verification-full-name"
-              label="Full legal name"
+              label={t("profile.fullLegalName", { defaultValue: "Full legal name" })}
               hint="As it appears on your staff ID."
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
@@ -999,8 +1005,8 @@ function StaffVerificationCard({ user, token }) {
             />
             <Input
               id="staff-verification-job-title"
-              label="Job title"
-              placeholder="e.g. Career Services Coordinator"
+              label={t("profile.jobTitle", { defaultValue: "Job title" })}
+              placeholder={t("profile.jobTitlePlaceholder", { defaultValue: "e.g. Career Services Coordinator" })}
               value={jobTitle}
               onChange={(event) => setJobTitle(event.target.value)}
               error={fieldErrors.jobTitle}
@@ -1008,8 +1014,8 @@ function StaffVerificationCard({ user, token }) {
             />
             <Input
               id="staff-verification-department"
-              label="Department"
-              placeholder="e.g. Office of Career Development"
+              label={t("profile.department")}
+              placeholder={t("profile.departmentPlaceholder", { defaultValue: "e.g. Office of Career Development" })}
               value={department}
               onChange={(event) => setDepartment(event.target.value)}
               error={fieldErrors.department}
@@ -1018,7 +1024,7 @@ function StaffVerificationCard({ user, token }) {
 
             <div className="sm:col-span-2">
               <FileUpload
-                label="Proof of employment"
+                label={t("profile.proofOfEmployment", { defaultValue: "Proof of employment" })}
                 hint={`Staff ID, HR/offer letter, or directory page · JPG, PNG or PDF · up to ${VERIFICATION_DOC_MAX_MB} MB`}
                 accept={VERIFICATION_DOC_ACCEPT}
                 maxSizeMb={VERIFICATION_DOC_MAX_MB}
@@ -1027,7 +1033,7 @@ function StaffVerificationCard({ user, token }) {
                 onFilesSelected={(files) => files[0] && uploadDoc.mutate(files[0])}
                 onRemove={() => removeDoc.mutate()}
               />
-              {uploadDoc.isPending && <ProgressBar className="mt-2" value={60} label="Uploading document" showValue={false} />}
+              {uploadDoc.isPending && <ProgressBar className="mt-2" value={60} label={t("profile.uploadingDocument", { defaultValue: "Uploading document" })} showValue={false} />}
               {fieldErrors.document && !uploadDoc.isPending && (
                 <p className="mt-2 text-xs text-brick" role="alert">
                   {fieldErrors.document}

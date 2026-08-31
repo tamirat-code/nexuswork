@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, Briefcase, GraduationCap, Search, Users } from "lucide-react";
 import { searchAll } from "../../services/api/search.api.js";
 import ProjectCard from "../../components/cards/ProjectCard.jsx";
@@ -11,12 +12,13 @@ import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
 const SUGGESTIONS = ["React", "Figma", "Data analysis", "Copywriting", "Video editing", "SEO"];
 
 const TABS = [
-  { value: "projects", label: "Projects", icon: Briefcase },
-  { value: "students", label: "Talent", icon: Users },
-  { value: "universities", label: "Universities", icon: GraduationCap },
+  { value: "projects", key: "search.tabProjects", label: "Projects", icon: Briefcase },
+  { value: "students", key: "search.tabTalent", label: "Talent", icon: Users },
+  { value: "universities", key: "search.tabUniversities", label: "Universities", icon: GraduationCap },
 ];
 
 function StudentResultCard({ result }) {
+  const { t } = useTranslation();
   const userId = result.user_id?._id;
   return (
     <Link
@@ -27,12 +29,12 @@ function StudentResultCard({ result }) {
         <div className="flex items-center gap-2">
           <p className="truncate font-semibold text-slate">{result.user_id?.name || "Student"}</p>
           {result.verification_status === "verified" && (
-            <Badge variant="success"><BadgeCheck className="h-3 w-3" /> Verified</Badge>
+            <Badge variant="success"><BadgeCheck className="h-3 w-3" /> {t("search.verified")}</Badge>
           )}
         </div>
         <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-300">
           <GraduationCap className="h-3.5 w-3.5 text-brass" />
-          {result.university_id?.name || "University student"}
+          {result.university_id?.name || t("search.universityStudent")}
           {result.program ? ` · ${result.program}` : ""}
         </p>
         {result.bio && <p className="mt-2 line-clamp-2 text-sm text-slate-300">{result.bio}</p>}
@@ -49,6 +51,8 @@ function StudentResultCard({ result }) {
 }
 
 function UniversityResultCard({ result }) {
+  const { t } = useTranslation();
+  const count = result.contact_staff?.length || 0;
   return (
     <div className="flex items-center justify-between rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card">
       <div className="flex items-center gap-3">
@@ -59,13 +63,14 @@ function UniversityResultCard({ result }) {
         </div>
       </div>
       <p className="text-xs text-slate-300">
-        {result.contact_staff?.length || 0} staff contact{result.contact_staff?.length === 1 ? "" : "s"}
+        {count === 1 ? t("search.staffContacts", { count }) : t("search.staffContacts_plural", { count })}
       </p>
     </div>
   );
 }
 
 export default function SearchPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const type = searchParams.get("type") || "projects";
@@ -108,15 +113,15 @@ export default function SearchPage() {
   return (
     <div className="w-full">
       <header className="border-b border-ink-300 pb-6">
-        <h1 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">Search</h1>
+        <h1 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">{t("search.title")}</h1>
         <p className="mt-1.5 text-sm text-slate-300">
-          Find open briefs, verified student talent, or partner universities.
+          {t("search.subtitle")}
         </p>
       </header>
 
       <form onSubmit={submit} className="mt-6 flex flex-col gap-3 sm:flex-row">
         <label htmlFor="site-search" className="sr-only">
-          Search
+          {t("search.title")}
         </label>
         <input
           id="site-search"
@@ -125,10 +130,10 @@ export default function SearchPage() {
           onChange={(e) => setInput(e.target.value)}
           placeholder={
             type === "students"
-              ? "e.g. Abebe, Hanna…"
+              ? t("search.inputPlaceholderStudents")
               : type === "universities"
-                ? "e.g. Addis Ababa University, aau.edu.et"
-                : "e.g. React dashboard, brand identity, survey analysis"
+                ? t("search.inputPlaceholderUniversities")
+                : t("search.inputPlaceholderProjects")
           }
           className="h-11 flex-1 rounded-control border border-ink-300 bg-ink-50 px-4 text-sm text-slate transition-colors placeholder:text-slate-300 focus:border-brass/50 focus:outline-none"
         />
@@ -136,30 +141,30 @@ export default function SearchPage() {
           type="submit"
           className="inline-flex h-11 items-center justify-center rounded-control bg-brass px-6 text-sm font-semibold tracking-tight text-ink transition-colors hover:bg-brass-300"
         >
-          Search
+          {t("search.searchBtn")}
         </button>
       </form>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {TABS.map((t) => (
+        {TABS.map((tabItem) => (
           <button
-            key={t.value}
+            key={tabItem.value}
             type="button"
-            onClick={() => setType(t.value)}
+            onClick={() => setType(tabItem.value)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-              type === t.value
+              type === tabItem.value
                 ? "border-brass bg-brass/10 text-brass"
                 : "border-ink-300 bg-ink-50 text-slate-300 hover:border-brass/40 hover:text-brass"
             }`}
           >
-            <t.icon className="h-3.5 w-3.5" /> {t.label}
+            <tabItem.icon className="h-3.5 w-3.5" /> {t(tabItem.key)}
           </button>
         ))}
       </div>
 
       {type === "projects" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-300">Try:</span>
+          <span className="text-xs text-slate-300">{t("search.tryLabel")}</span>
           {SUGGESTIONS.map((term) => (
             <button
               key={term}
@@ -181,9 +186,9 @@ export default function SearchPage() {
       <div className="mt-8">
         {!query && (
           <p className="rounded-card border border-ink-300 bg-ink-50 px-6 py-12 text-center text-sm text-slate-300">
-            Enter a keyword above to search {type === "projects" ? "open projects" : type === "students" ? "student talent" : "universities"}, or{" "}
+            {t("search.enterKeywordPrompt", { type: type === "projects" ? t("search.tabProjects") : type === "students" ? t("search.tabTalent") : t("search.tabUniversities") })}{" "}
             <Link to="/projects" className="font-semibold text-brass hover:text-brass-300">
-              browse everything
+              {t("search.browseEverything")}
             </Link>
             .
           </p>
@@ -204,19 +209,19 @@ export default function SearchPage() {
         {query && !isLoading && !error && (
           <>
             <p className="mb-4 text-sm text-slate-300">
-              {total} result{total === 1 ? "" : "s"} for "{query}"
+              {total === 1 ? t("search.resultsCount", { total, query }) : t("search.resultsCount_plural", { total, query })}
             </p>
             {results.length === 0 ? (
               <div className="rounded-card border border-ink-300 bg-ink-50 px-6 py-12 text-center">
-                <p className="font-display text-base tracking-tight text-slate">Nothing matched that search</p>
+                <p className="font-display text-base tracking-tight text-slate">{t("search.nothingMatched")}</p>
                 <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-300">
-                  Try a shorter keyword, a different tab, or browse everything directly.
+                  {t("search.nothingMatchedDesc")}
                 </p>
                 <Link
                   to={type === "students" ? "/students" : "/projects"}
                   className="mt-5 inline-flex h-11 items-center justify-center rounded-control border border-ink-300 px-6 text-sm font-semibold text-slate transition-colors hover:border-brass/40 hover:bg-ink-50"
                 >
-                  Browse all {type === "students" ? "talent" : "projects"}
+                  {t("search.browseAll", { type: type === "students" ? t("search.tabTalent") : t("search.tabProjects") })}
                 </Link>
               </div>
             ) : (

@@ -1,32 +1,13 @@
 import { Link } from "react-router-dom";
-
-const columns = [
-  {
-    title: "Marketplace",
-    links: [
-      { to: "/projects", label: "Browse projects" },
-      { to: "/students", label: "Find talent" },
-      { to: "/skills", label: "Skills directory" },
-    ],
-  },
-  {
-    title: "Community",
-    links: [
-      { to: "/universities", label: "For universities" },
-      { to: "/learning", label: "Learning hub" },
-      { to: "/portfolios", label: "Portfolios" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { to: "/terms", label: "Terms of service" },
-      { to: "/privacy", label: "Privacy policy" },
-    ],
-  },
-];
+import { useTranslation } from "react-i18next";
 
 export default function Footer() {
+  const { t } = useTranslation();
+  const columns = [
+    { title: t("footer.marketplace"), links: [["/projects", t("footer.browseProjects")], ["/students", t("footer.findTalent")], ["/skills", t("footer.skillsDirectory")]] },
+    { title: t("footer.community"), links: [["/universities", t("footer.forUniversities")], ["/learning", t("footer.learningHub")], ["/portfolios", t("footer.portfolios")]] },
+    { title: t("footer.legal"), links: [["/terms", t("footer.terms")], ["/privacy", t("footer.privacy")]] },
+  ];
   return (
     <footer className="border-t border-ink-300 bg-ink">
       <div className="mx-auto grid w-full max-w-7xl justify-items-center gap-10 px-6 py-14 text-center sm:grid-cols-2 sm:justify-items-stretch sm:text-left lg:grid-cols-4 sm:px-10 lg:px-16">
@@ -36,7 +17,7 @@ export default function Footer() {
             <span className="font-display text-lg font-extrabold tracking-tight text-slate">NexusWork</span>
           </Link>
           <p className="mt-3 max-w-xs text-xs leading-relaxed text-slate-300">
-            Student talent, real client work, milestones funded in escrow before anyone starts.
+            {t("footer.tagline")}
           </p>
         </div>
 
@@ -44,10 +25,10 @@ export default function Footer() {
           <nav key={col.title} aria-label={col.title}>
             <p className="text-[11px] font-bold uppercase tracking-widest text-brass">{col.title}</p>
             <ul className="mt-3.5 space-y-2 text-xs">
-              {col.links.map((l) => (
-                <li key={l.to}>
-                  <Link to={l.to} className="text-slate-300 transition-colors hover:text-brass">
-                    {l.label}
+              {col.links.map(([to, label]) => (
+                <li key={to}>
+                  <Link to={to} className="text-slate-300 transition-colors hover:text-brass">
+                    {label}
                   </Link>
                 </li>
               ))}
@@ -58,8 +39,8 @@ export default function Footer() {
 
       <div className="border-t border-ink-300">
         <div className="flex w-full flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-slate-300 sm:flex-row sm:px-10 lg:px-16">
-          <span>© {new Date().getFullYear()} NexusWork — Student Freelance Marketplace</span>
-          <span>Built for university talent · Escrow-backed payments</span>
+          <span>{t("footer.copyright", { year: new Date().getFullYear() })}</span>
+          <span>{t("footer.builtForTalent")}</span>
         </div>
       </div>
     </footer>

@@ -5,6 +5,7 @@ import AuthShell from "./components/AuthShell.jsx";
 import Input from "../../components/ui/Input.jsx";
 import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
+import { useTranslation } from "react-i18next";
 
 function passwordIssue(password) {
   if (password.length < 8) return "At least 8 characters";
@@ -15,6 +16,7 @@ function passwordIssue(password) {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const navigate = useNavigate();
@@ -27,12 +29,12 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthShell eyebrow="Password reset" title="This link is missing a token">
+      <AuthShell eyebrow={t("auth.passwordReset")} title={t("auth.missingResetToken")}>
         <p className="text-sm text-slate-300 mb-6">
-          Make sure you opened the full link from your email, or request a new one.
+          {t("auth.missingResetDescription")}
         </p>
         <Link to="/forgot-password" className="text-sm font-semibold text-brass hover:underline">
-          Request a new link
+          {t("auth.requestNewLink")}
         </Link>
       </AuthShell>
     );
@@ -64,26 +66,26 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthShell eyebrow="Success" title="Password reset">
-        <p className="text-sm text-slate-300">Redirecting you to log in…</p>
+      <AuthShell eyebrow={t("auth.success")} title={t("auth.passwordReset")}>
+        <p className="text-sm text-slate-300">{t("auth.redirectingLogin")}</p>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell eyebrow="Password reset" title="Choose a new password">
+    <AuthShell eyebrow={t("auth.passwordReset")} title={t("auth.chooseNewPassword")}>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <PasswordInput
-          label="New password"
+          label={t("auth.newPassword")}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
-          hint="At least 8 characters, with upper, lower, and a number"
+          hint={t("auth.passwordHint")}
           autoComplete="new-password"
         />
         <PasswordInput
-          label="Confirm new password"
+          label={t("auth.confirmNewPassword")}
           type="password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
@@ -91,7 +93,7 @@ export default function ResetPasswordPage() {
           autoComplete="new-password"
         />
         <Button type="submit" loading={submitting} className="w-full" size="lg">
-          Reset password
+          {t("auth.resetPassword")}
         </Button>
       </form>
     </AuthShell>

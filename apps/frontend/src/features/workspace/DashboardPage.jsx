@@ -16,6 +16,7 @@ import Card from "../../components/ui/Card.jsx";
 import Stat, { StatGrid } from "../../components/ui/Stat.jsx";
 import ActionCard from "../../components/ui/ActionCard.jsx";
 import EmptyState from "../../components/feedback/States.jsx";
+import { useTranslation } from "react-i18next";
 
 const ROLE_LABELS = {
   student: "Student",
@@ -87,6 +88,7 @@ const ROLE_CONFIG = {
 
 export default function DashboardPage() {
   const { user, token } = useAuth();
+  const { t } = useTranslation();
   const role = ROLE_CONFIG[user?.role] ? user.role : "student";
   const isUniversityStaff = role === "university_staff";
   const isStudent = role === "student";
@@ -131,7 +133,7 @@ export default function DashboardPage() {
   });
 
   const config = ROLE_CONFIG[role];
-  const firstName = user?.name?.split(" ")[0] ?? "there";
+  const firstName = user?.name?.split(" ")[0] ?? t("dashboard.there");
 
   const userMetrics = userMetricsRes?.data ?? {};
   const proposals = myProposalsRes?.data ?? [];
@@ -234,6 +236,28 @@ export default function DashboardPage() {
         ? config.stats.map((stat, i) => ({ ...stat, value: liveLoading ? "…" : i === 2 && isAdmin ? formatCurrency(liveStats[i], adminStats.revenue?.currency || "USD") : String(liveStats[i]) }))
         : config.stats;
   const pendingCount = verificationStatsRes?.data?.pending ?? 0;
+  const roleCopy = {
+    student: { heading: "dashboard.student.heading", body: "dashboard.student.body", primary: "dashboard.student.primary" },
+    client: { heading: "dashboard.client.heading", body: "dashboard.client.body", primary: "dashboard.client.primary" },
+    university_staff: { heading: "dashboard.staff.heading", body: "dashboard.staff.body", primary: null },
+    admin: { heading: "dashboard.admin.heading", body: "dashboard.admin.body", primary: null },
+  }[role];
+  const localizedConfig = {
+    ...config,
+    heading: t(roleCopy.heading),
+    body: t(roleCopy.body),
+    primary: config.primary ? { ...config.primary, label: t(roleCopy.primary) } : null,
+  };
+  const localizedStats = stats.map((stat, index) => ({
+    ...stat,
+    label: t(`dashboard.details.${role}.stat${index}.label`, { defaultValue: stat.label }),
+    hint: t(`dashboard.details.${role}.stat${index}.hint`, { defaultValue: stat.hint }),
+  }));
+  const localizedActions = config.actions.map((action, index) => ({
+    ...action,
+    label: t(`dashboard.details.${role}.action${index}.label`, { defaultValue: action.label }),
+    body: t(`dashboard.details.${role}.action${index}.body`, { defaultValue: action.body }),
+  }));
 
   return (
     <div className="w-full space-y-6">
@@ -241,18 +265,18 @@ export default function DashboardPage() {
       <header className="lm-dashboard-header flex flex-wrap items-center justify-between gap-4 rounded-card border border-border bg-surface p-6 shadow-card sm:p-7">
         <div>
           <span className="inline-flex items-center rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand">
-            {ROLE_LABELS[role]} Workspace
+            {t(`dashboard.roles.${role}`)} {t("dashboard.workspace")}
           </span>
           <h1 className="mt-2 font-display text-xl font-bold tracking-tight text-content-primary sm:text-2xl">
-            Welcome back, {firstName}
+            {t("dashboard.welcome", { name: firstName })}
           </h1>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-content-secondary sm:text-sm">
-            {config.body}
+            {localizedConfig.body}
           </p>
         </div>
-        {config.primary && (
-          <Link to={config.primary.to}>
-            <Button size="md">{config.primary.label}</Button>
+        {localizedConfig.primary && (
+          <Link to={localizedConfig.primary.to}>
+            <Button size="md">{localizedConfig.primary.label}</Button>
           </Link>
         )}
       </header>
@@ -261,21 +285,21 @@ export default function DashboardPage() {
       {isUniversityStaff && !user?.staffVerified && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-brand/30 bg-brand-soft p-5">
           <div>
-            <p className="text-sm font-bold tracking-tight text-brand">Staff access pending admin approval</p>
+            <p className="text-sm font-bold tracking-tight text-brand">{t("dashboard.staffPendingTitle")}</p>
             <p className="mt-1 max-w-xl text-xs leading-relaxed text-content-secondary">
-              Matching your university's email domain only confirmed eligibility. Submit your staff ID or HR letter from your profile so an admin can approve your account.
+              {t("dashboard.staffPendingDescription")}
             </p>
           </div>
           <Link to="/profile">
-            <Button size="sm">Submit verification</Button>
+            <Button size="sm">{t("dashboard.submitVerification")}</Button>
           </Link>
         </div>
       )}
 
       {/* ── Metrics Grid ── */}
-      <section aria-label="Overview">
+      <section aria-label={t("dashboard.overview")}>
         <StatGrid>
-          {stats.map((stat) => (
+          {localizedStats.map((stat) => (
             <Stat
               key={stat.label}
               label={stat.label}
@@ -287,12 +311,12 @@ export default function DashboardPage() {
         </StatGrid>
       </section>
 
-      <section aria-label="Dashboard analytics" className="grid gap-6 lg:grid-cols-2">
+      <section aria-label={t("dashboard.analytics")} className="grid gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="font-display text-base font-bold tracking-tight text-content-primary sm:text-lg">{dashboardChart.title}</h2>
           <div className="mt-3 h-56">
             {liveLoading ? (
-              <div className="grid h-full place-items-center text-sm text-content-muted">Loading live data…</div>
+              <div className="grid h-full place-items-center text-sm text-content-muted">{t("common.loading")}</div>
             ) : dashboardChart.data.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -306,21 +330,21 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="grid h-full place-items-center text-sm text-content-muted">No data yet.</div>
+              <div className="grid h-full place-items-center text-sm text-content-muted">{t("dashboard.noData")}</div>
             )}
           </div>
         </Card>
         <Card>
-          <h2 className="font-display text-base font-bold tracking-tight text-content-primary sm:text-lg">Live data sources</h2>
+          <h2 className="font-display text-base font-bold tracking-tight text-content-primary sm:text-lg">{t("dashboard.liveSources")}</h2>
           <div className="mt-4 space-y-3 text-sm text-content-secondary">
-            <p>Metrics update from your authenticated workspace data.</p>
+            <p>{t("dashboard.metricsDescription")}</p>
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <span>Records shown</span>
+              <span>{t("dashboard.recordsShown")}</span>
               <span className="font-semibold text-content-primary">{activityItems.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Last loaded</span>
-              <span className="font-semibold text-brand">{liveLoading ? "Loading…" : "Live"}</span>
+              <span>{t("dashboard.lastLoaded")}</span>
+              <span className="font-semibold text-brand">{liveLoading ? t("common.loading") : t("dashboard.live")}</span>
             </div>
           </div>
         </Card>
@@ -331,7 +355,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           <Card className="h-full">
             <h2 id="activity-heading" className="font-display text-base font-bold tracking-tight text-content-primary sm:text-lg mb-4">
-              {config.heading}
+              {localizedConfig.heading}
             </h2>
 
             {isUniversityStaff && pendingCount > 0 ? (
@@ -339,7 +363,7 @@ export default function DashboardPage() {
                 icon={ShieldAlert}
                 title={`${pendingCount} student${pendingCount === 1 ? "" : "s"} waiting on review`}
                 description="Confirm enrollment so these students can submit proposals and pick up work."
-                action={
+                        action={
                   <Link to="/universities">
                     <Button size="sm">Go to verification queue</Button>
                   </Link>
@@ -367,9 +391,9 @@ export default function DashboardPage() {
                     : "Activity will appear here as soon as proposals are submitted or contracts begin."
                 }
                 action={
-                  config.primary ? (
-                    <Link to={config.primary.to}>
-                      <Button size="sm">{config.primary.label}</Button>
+                  localizedConfig.primary ? (
+                    <Link to={localizedConfig.primary.to}>
+                      <Button size="sm">{localizedConfig.primary.label}</Button>
                     </Link>
                   ) : null
                 }
@@ -385,7 +409,7 @@ export default function DashboardPage() {
               Quick actions
             </h2>
             <div className="space-y-3">
-              {config.actions.map((action) => (
+              {localizedActions.map((action) => (
                 <ActionCard
                   key={action.label}
                   to={action.to}

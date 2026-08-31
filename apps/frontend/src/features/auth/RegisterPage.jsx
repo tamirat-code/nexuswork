@@ -13,12 +13,13 @@ import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
 import Select from "../../components/ui/Select.jsx";
 import { listUniversities } from "../../services/api/universities.api.js";
+import { useTranslation } from "react-i18next";
 
-function passwordIssue(password) {
-  if (password.length < 8) return "At least 8 characters";
-  if (!/[a-z]/.test(password)) return "Include at least one lowercase letter";
-  if (!/[A-Z]/.test(password)) return "Include at least one uppercase letter";
-  if (!/[0-9]/.test(password)) return "Include at least one number";
+function passwordIssue(password, t) {
+  if (password.length < 8) return t("registration.passwordLength");
+  if (!/[a-z]/.test(password)) return t("registration.passwordLower");
+  if (!/[A-Z]/.test(password)) return t("registration.passwordUpper");
+  if (!/[0-9]/.test(password)) return t("registration.passwordNumber");
   return null;
 }
 
@@ -39,6 +40,7 @@ const ENROLLMENT_STATUSES = [
 export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth();
   const { show } = useToast();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const recaptchaRef = useRef(null);
 
@@ -108,12 +110,12 @@ export default function RegisterPage() {
   function validatePrimaryStep() {
     const next = {};
 
-    if (!form.name.trim()) next.name = "Enter your name";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = "Enter a valid email";
+    if (!form.name.trim()) next.name = t("registration.nameRequired");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = t("registration.emailInvalid");
 
-    const pwIssue = passwordIssue(form.password);
+    const pwIssue = passwordIssue(form.password, t);
     if (pwIssue) next.password = pwIssue;
-    if (form.confirmPassword !== form.password) next.confirmPassword = "Passwords don't match";
+    if (form.confirmPassword !== form.password) next.confirmPassword = t("registration.passwordMismatch");
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -122,22 +124,22 @@ export default function RegisterPage() {
   function validate() {
     const next = {};
 
-    if (!form.name.trim()) next.name = "Enter your name";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = "Enter a valid email";
+    if (!form.name.trim()) next.name = t("registration.nameRequired");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = t("registration.emailInvalid");
 
-    const pwIssue = passwordIssue(form.password);
+    const pwIssue = passwordIssue(form.password, t);
     if (pwIssue) next.password = pwIssue;
-    if (form.confirmPassword !== form.password) next.confirmPassword = "Passwords don't match";
+    if (form.confirmPassword !== form.password) next.confirmPassword = t("registration.passwordMismatch");
 
     if (form.phone.trim() && !/^[+0-9()\-\s]{7,30}$/.test(form.phone.trim())) {
-      next.phone = "Enter a valid phone number";
+      next.phone = t("registration.phoneInvalid");
     }
 
     if (!termsAccepted) {
-      next.terms = "You must accept the Terms of Service and Privacy Policy";
+      next.terms = t("auth.termsRequired");
     }
 
-    if (!recaptchaToken) next.recaptcha = "Please complete the reCAPTCHA challenge";
+    if (!recaptchaToken) next.recaptcha = t("auth.recaptchaRequired");
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -145,8 +147,8 @@ export default function RegisterPage() {
 
   function validateGoogleRegistration() {
     const next = {};
-    if (!termsAccepted) next.terms = "You must accept the Terms of Service and Privacy Policy";
-    if (!googleRecaptchaToken) next.recaptcha = "Please complete the reCAPTCHA challenge";
+    if (!termsAccepted) next.terms = t("auth.termsRequired");
+    if (!googleRecaptchaToken) next.recaptcha = t("auth.recaptchaRequired");
     setErrors((prev) => ({ ...prev, ...next }));
     return Object.keys(next).length === 0;
   }
@@ -168,7 +170,7 @@ export default function RegisterPage() {
         ...roleFieldsPayload(),
       });
 
-      show("Account created. Check your email to verify it.");
+      show(t("registration.accountCreated"));
       navigate("/dashboard");
     } catch (err) {
       show(err.message, { variant: "error" });
@@ -213,7 +215,7 @@ export default function RegisterPage() {
         return;
       }
 
-      show(result.isNewUser ? "Account created with Google." : "Welcome back.");
+      show(result.isNewUser ? t("auth.accountCreatedGoogle") : t("auth.welcomeBack"));
       navigate("/dashboard");
     } catch (err) {
       show(err.message, { variant: "error" });
@@ -231,14 +233,14 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      eyebrow="Get started"
-      title="Create your account"
-      subtitle="Join as a student looking for work, a client with work to post, or university staff."
+      eyebrow={t("registration.getStarted")}
+      title={t("auth.createAccount")}
+      subtitle={t("registration.subtitle")}
       footer={
         <>
-          Already have an account?{" "}
+          {t("registration.haveAccount")}{" "}
           <Link to="/login" className="font-medium text-cyan-400 hover:text-cyan-300">
-            Log in
+            {t("auth.logIn")}
           </Link>
         </>
       }
@@ -253,16 +255,16 @@ export default function RegisterPage() {
           <div className="flex justify-center">
             <ReCAPTCHA ref={googleRecaptchaRef} sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setGoogleRecaptchaToken} onExpired={() => setGoogleRecaptchaToken(null)} />
           </div>
-          <Button onClick={continueGoogleRegistration} loading={googleLoading} disabled={!googleRecaptchaToken} className="w-full" size="lg">Continue with Google</Button>
-          <button type="button" onClick={() => { setPendingGoogleCredential(null); setGoogleRecaptchaToken(null); }} className="w-full text-sm text-slate-300 hover:underline">Use a different sign-in method</button>
+          <Button onClick={continueGoogleRegistration} loading={googleLoading} disabled={!googleRecaptchaToken} className="w-full" size="lg">{t("auth.continueGoogle")}</Button>
+          <button type="button" onClick={() => { setPendingGoogleCredential(null); setGoogleRecaptchaToken(null); }} className="w-full text-sm text-slate-300 hover:underline">{t("auth.differentSignIn")}</button>
         </>}
         <p className="text-center text-xs text-slate-400">
-          Sign up with Google and you're in — no extra fields needed right now.
+          {t("registration.googleHint")}
         </p>
 
         <div className="flex items-center gap-3 text-xs text-slate-300">
           <div className="h-px flex-1 bg-ink-300" />
-          or with email
+          {t("auth.orEmail")}
           <div className="h-px flex-1 bg-ink-300" />
         </div>
 
@@ -270,7 +272,7 @@ export default function RegisterPage() {
           {step === 1 && (
             <>
               <Input
-                label="Full name"
+                label={t("registration.fullName")}
                 required
                 value={form.name}
                 onChange={update("name")}
@@ -279,7 +281,7 @@ export default function RegisterPage() {
               />
 
               <Input
-                label="Email"
+                label={t("auth.email")}
                 required
                 type="email"
                 value={form.email}
@@ -289,18 +291,18 @@ export default function RegisterPage() {
               />
 
               <PasswordInput
-                label="Password"
+                label={t("auth.password")}
                 required
                 type="password"
                 value={form.password}
                 onChange={update("password")}
                 error={errors.password}
-                hint="At least 8 characters, with upper, lower, and a number"
+                hint={t("auth.passwordHint")}
                 autoComplete="new-password"
               />
 
               <PasswordInput
-                label="Confirm password"
+                label={t("registration.confirmPassword")}
                 required
                 type="password"
                 value={form.confirmPassword}
@@ -317,7 +319,7 @@ export default function RegisterPage() {
                   if (validatePrimaryStep()) setStep(2);
                 }}
               >
-                Next
+                {t("registration.next")}
               </Button>
             </>
           )}
@@ -325,16 +327,16 @@ export default function RegisterPage() {
           {step === 2 && (
             <>
               <Input
-                label="Phone number"
+                label={t("registration.phone")}
                 optional
                 type="tel"
                 value={form.phone}
                 onChange={update("phone")}
                 error={errors.phone}
                 autoComplete="tel"
-                placeholder="e.g. +251 9XX XXX XXX"
+                placeholder={t("registration.phonePlaceholder")}
                 maxLength={30}
-                hint="You can add this later from your profile if you'd rather skip it now."
+                hint={t("registration.phoneHint")}
               />
 
               <button
@@ -342,23 +344,22 @@ export default function RegisterPage() {
                 onClick={() => setShowOptionalDetails((v) => !v)}
                 className="text-xs font-medium text-cyan-400 hover:text-cyan-300"
               >
-                {showOptionalDetails ? "Hide" : "Add"} {role === "student" ? "student" : "client"} details (optional)
+                {showOptionalDetails ? t("registration.hide") : t("registration.add")} {role === "student" ? t("registration.student") : t("registration.client")} {t("registration.detailsOptional")}
               </button>
 
               {showOptionalDetails && role === "student" && (
                 <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate">Student information</p>
+                    <p className="text-sm font-semibold text-slate">{t("registration.studentInformation")}</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                      Optional for now — used later for university verification. You can fill this in
-                      any time from your profile settings.
+                      {t("registration.studentInfoHint")}
                     </p>
                   </div>
 
                   <Select
-                    label="University"
+                    label={t("registration.university")}
                     optional
-                    placeholder={universitiesLoading ? "Loading universities..." : "Select your university"}
+                    placeholder={universitiesLoading ? t("registration.loadingUniversities") : t("registration.selectUniversity")}
                     value={form.universityId}
                     onChange={update("universityId")}
                     options={universities.map((university) => ({
@@ -369,39 +370,39 @@ export default function RegisterPage() {
                     disabled={universitiesLoading || universities.length === 0}
                     hint={
                       universities.length === 0 && !universitiesLoading
-                        ? "No university is registered on NexusWork yet. Ask an administrator to add yours."
-                        : "Choose the university where you are enrolled."
+                        ? t("registration.noUniversity")
+                        : t("registration.chooseUniversity")
                     }
                   />
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
-                      label="Student ID number"
+                      label={t("registration.studentId")}
                       optional
                       value={form.studentIdNumber}
                       onChange={update("studentIdNumber")}
                       error={errors.studentIdNumber}
-                      placeholder="e.g. UGR/1234/15"
+                      placeholder={t("registration.studentIdPlaceholder")}
                       autoComplete="off"
                       maxLength={50}
                     />
                     <Select
-                      label="Enrollment status"
+                      label={t("registration.enrollmentStatus")}
                       optional
                       value={form.enrollmentStatus}
                       onChange={update("enrollmentStatus")}
-                      options={ENROLLMENT_STATUSES}
+                      options={ENROLLMENT_STATUSES.map((option) => ({ ...option, label: t(`registration.enrollment.${option.value}`) }))}
                       error={errors.enrollmentStatus}
                     />
                   </div>
 
                   <Input
-                    label="Program / field of study"
+                    label={t("registration.program")}
                     optional
                     value={form.program}
                     onChange={update("program")}
                     error={errors.program}
-                    placeholder="e.g. BSc Computer Science"
+                    placeholder={t("registration.programPlaceholder")}
                     maxLength={150}
                   />
                 </div>
@@ -410,30 +411,29 @@ export default function RegisterPage() {
               {showOptionalDetails && role === "client" && (
                 <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate">Client information</p>
+                    <p className="text-sm font-semibold text-slate">{t("registration.clientInformation")}</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                      Optional — tell students whether you're hiring personally or on behalf of an
-                      organization. You can add this later from your profile settings.
+                      {t("registration.clientInfoHint")}
                     </p>
                   </div>
 
                   <Select
-                    label="Client type"
+                    label={t("registration.clientType")}
                     value={form.organizationType}
                     onChange={update("organizationType")}
-                    options={CLIENT_ORGANIZATION_TYPES}
+                    options={CLIENT_ORGANIZATION_TYPES.map((option) => ({ ...option, label: t(`registration.organization.${option.value}`) }))}
                     error={errors.organizationType}
                   />
 
                   {form.organizationType !== "individual" && (
                     <Input
-                      label="Organization name"
+                      label={t("registration.organizationName")}
                       optional
                       value={form.organizationName}
                       onChange={update("organizationName")}
                       error={errors.organizationName}
                       autoComplete="organization"
-                      placeholder="Your company, NGO, department, or organization"
+                      placeholder={t("registration.organizationPlaceholder")}
                       maxLength={200}
                     />
                   )}
@@ -465,10 +465,10 @@ export default function RegisterPage() {
                     setStep(1);
                   }}
                 >
-                  Back
+                  {t("registration.back")}
                 </Button>
                 <Button type="submit" loading={submitting} className="flex-1" size="lg">
-                  Finish registration
+                  {t("registration.finish")}
                 </Button>
               </div>
             </>

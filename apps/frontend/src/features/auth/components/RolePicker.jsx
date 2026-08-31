@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
+
 const options = [
-  { value: "student", label: "I'm a student", hint: "Find real, paid project work" },
-  { value: "client", label: "I'm hiring", hint: "Post work for verified students" },
-  { value: "university_staff", label: "University staff", hint: "Verify students at your university" },
+  { value: "student", label: "auth.studentRole", hint: "auth.studentRoleHint" },
+  { value: "client", label: "auth.clientRole", hint: "auth.clientRoleHint" },
+  { value: "university_staff", label: "auth.staffRole", hint: "auth.staffRoleHint" },
 ];
 
 function Check({ className = "" }) {
@@ -14,8 +16,9 @@ function Check({ className = "" }) {
 }
 
 export default function RolePicker({ value, onChange }) {
+  const { t } = useTranslation();
   return (
-    <div role="radiogroup" aria-label="I am a..." className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+    <div role="radiogroup" aria-label={t("auth.rolePickerLabel")} className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
       {options.map((opt) => {
         const selected = value === opt.value;
         return (
@@ -34,9 +37,9 @@ export default function RolePicker({ value, onChange }) {
           >
             {selected && <Check className="absolute right-3 top-3 h-4 w-4 text-brass" />}
             <p className={`text-sm font-semibold tracking-tight ${selected ? "text-brass" : "text-slate"}`}>
-              {opt.label}
+              {t(opt.label)}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-300">{opt.hint}</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-300">{t(opt.hint)}</p>
           </button>
         );
       })}

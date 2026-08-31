@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useTranslation } from "react-i18next";
 
 export default function EditProfilePage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-ink px-6 py-10 text-slate">
@@ -13,22 +15,21 @@ export default function EditProfilePage() {
           to="/profile"
           className="text-sm text-slate-300 transition hover:text-brass"
         >
-          ← Back to profile
+          ← {t("profile.backToProfile")}
         </Link>
 
         {/* Header */}
         <div className="mt-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brass">
-            Profile settings
+            {t("profile.settings")}
           </p>
 
           <h1 className="mt-2 font-display text-3xl tracking-tight sm:text-4xl">
-            Edit your profile
+            {t("profile.editTitle")}
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-            Keep your professional information up to date so clients and
-            universities can understand your skills and experience.
+            {t("profile.editDescription")}
           </p>
         </div>
 
@@ -38,7 +39,7 @@ export default function EditProfilePage() {
           {/* Profile image */}
           <div className="border-b border-ink-300 pb-7">
             <p className="text-sm font-semibold text-slate">
-              Profile photo
+              {t("profile.photo")}
             </p>
 
             <div className="mt-4 flex items-center gap-5">
@@ -59,11 +60,11 @@ export default function EditProfilePage() {
                   type="button"
                   className="rounded-lg border border-ink-300 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-brass hover:text-brass"
                 >
-                  Change photo
+                  {t("profile.changePhoto")}
                 </button>
 
                 <p className="mt-2 text-xs text-slate-400">
-                  JPG, PNG or WEBP. Maximum 5MB.
+                  {t("profile.photoHint")}
                 </p>
               </div>
 
@@ -74,27 +75,27 @@ export default function EditProfilePage() {
           <div className="mt-7">
 
             <h2 className="text-lg font-semibold">
-              Basic information
+              {t("profile.basicInformation")}
             </h2>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
 
               <div>
                 <label className="text-sm text-slate-300">
-                  Full name
+                  {t("registration.fullName")}
                 </label>
 
                 <input
                   type="text"
                   defaultValue={user?.name || ""}
                   className="mt-2 w-full rounded-lg border border-ink-300 bg-ink px-4 py-3 text-sm text-slate outline-none transition focus:border-brass"
-                  placeholder="Your full name"
+                  placeholder={t("profile.fullNamePlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="text-sm text-slate-300">
-                  Email
+                  {t("auth.email")}
                 </label>
 
                 <input
@@ -105,31 +106,31 @@ export default function EditProfilePage() {
                 />
 
                 <p className="mt-2 text-xs text-slate-400">
-                  Your university email cannot be changed here.
+                  {t("profile.emailCannotChange")}
                 </p>
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-sm text-slate-300">
-                  Professional headline
+                  {t("profile.headline")}
                 </label>
 
                 <input
                   type="text"
                   className="mt-2 w-full rounded-lg border border-ink-300 bg-ink px-4 py-3 text-sm text-slate outline-none transition focus:border-brass"
-                  placeholder="e.g. Computer Science Student & Full-Stack Developer"
+                  placeholder={t("profile.headlinePlaceholder")}
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-sm text-slate-300">
-                  About you
+                  {t("profile.about")}
                 </label>
 
                 <textarea
                   rows="6"
                   className="mt-2 w-full resize-none rounded-lg border border-ink-300 bg-ink px-4 py-3 text-sm leading-relaxed text-slate outline-none transition focus:border-brass"
-                  placeholder="Tell clients about yourself, your experience, and what you can help them with..."
+                  placeholder={t("profile.aboutPlaceholder")}
                 />
               </div>
 
@@ -140,14 +141,14 @@ export default function EditProfilePage() {
           <div className="mt-8 border-t border-ink-300 pt-7">
 
             <h2 className="text-lg font-semibold">
-              Education
+              {t("profile.education")}
             </h2>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
 
               <div>
                 <label className="text-sm text-slate-300">
-                  University
+                  {t("registration.university")}
                 </label>
 
                 <input
@@ -159,7 +160,7 @@ export default function EditProfilePage() {
 
               <div>
                 <label className="text-sm text-slate-300">
-                  Department
+                  {t("profile.department")}
                 </label>
 
                 <input
@@ -176,17 +177,17 @@ export default function EditProfilePage() {
           <div className="mt-8 border-t border-ink-300 pt-7">
 
             <h2 className="text-lg font-semibold">
-              Skills
+              {t("profile.skills")}
             </h2>
 
             <p className="mt-2 text-sm text-slate-400">
-              Add the skills you want clients to discover you for.
+              {t("profile.skillsHint")}
             </p>
 
             <input
               type="text"
               className="mt-5 w-full rounded-lg border border-ink-300 bg-ink px-4 py-3 text-sm text-slate outline-none focus:border-brass"
-              placeholder="React, Node.js, MongoDB, UI/UX..."
+              placeholder={t("profile.skillsPlaceholder")}
             />
 
           </div>
@@ -198,14 +199,14 @@ export default function EditProfilePage() {
               to="/profile"
               className="rounded-lg border border-ink-300 px-5 py-3 text-center text-sm font-medium text-slate-300 transition hover:border-slate-400 hover:text-slate"
             >
-              Cancel
+              {t("common.cancel")}
             </Link>
 
             <button
               type="button"
               className="rounded-lg bg-brass px-5 py-3 text-sm font-semibold text-ink transition hover:opacity-90"
             >
-              Save changes
+              {t("profile.saveChanges")}
             </button>
 
           </div>

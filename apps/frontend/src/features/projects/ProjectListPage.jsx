@@ -5,6 +5,7 @@ import { listProjects } from "../../services/api/projects.api.js";
 import ProjectCard from "../../components/cards/ProjectCard.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import Button from "../../components/ui/Button.jsx";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = ["Development", "Design", "Data & Research", "Writing", "Video & Motion", "Marketing"];
 
@@ -37,6 +38,7 @@ function CardSkeleton() {
 
 export default function ProjectListPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const category = searchParams.get("category") || "All";
@@ -94,21 +96,21 @@ export default function ProjectListPage() {
       <header className="lm-dashboard-header flex flex-col items-start justify-between gap-4 rounded-2xl border border-ink-300 bg-ink-50 px-7 py-7 shadow-card sm:flex-row sm:items-center">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">
-            Marketplace Briefs
+            {t("projects.marketplace", { defaultValue: "Marketplace Briefs" })}
           </p>
           <h1 className="mt-1 font-display font-extrabold text-2xl leading-tight tracking-tight text-slate sm:text-3xl">
-            Explore Open Projects
+            {t("projects.title", { defaultValue: "Explore Open Projects" })}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-300">
             {isLoading
-              ? "Loading briefs…"
-              : `Showing ${projects.length} brief${projects.length === 1 ? "" : "s"} matching your criteria`}
+              ? t("common.loading")
+              : t("projects.showing", { count: projects.length, defaultValue: `Showing ${projects.length} brief${projects.length === 1 ? "" : "s"} matching your criteria` })}
           </p>
         </div>
         {user?.role === "client" && (
           <Link to="/projects/new">
             <Button size="md" className="shadow-elevated">
-              Post a project
+              {t("projects.post", { defaultValue: "Post a project" })}
             </Button>
           </Link>
         )}
@@ -116,19 +118,19 @@ export default function ProjectListPage() {
 
       <div className="mt-7 flex flex-wrap items-center gap-3 rounded-card border border-ink-300 bg-ink-50 p-4 shadow-card">
         <label htmlFor="project-search" className="sr-only">
-          Search projects
+          {t("projects.search", { defaultValue: "Search projects" })}
         </label>
         <input
           id="project-search"
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search by title, skill or keyword..."
+          placeholder={t("projects.searchPlaceholder", { defaultValue: "Search by title, skill or keyword..." })}
           className="h-10 min-w-[240px] flex-1 rounded-control border border-ink-300 bg-ink-100 px-4 text-sm text-slate transition-colors placeholder:text-slate-400 focus:border-brass/60 focus:bg-ink-50 focus:outline-none"
         />
 
         <label htmlFor="project-category" className="sr-only">
-          Category
+          {t("projects.category", { defaultValue: "Category" })}
         </label>
         <select
           id="project-category"
@@ -136,7 +138,7 @@ export default function ProjectListPage() {
           onChange={(e) => updateParam("category", e.target.value)}
           className={selectClasses}
         >
-          <option value="All">All categories</option>
+          <option value="All">{t("projects.allCategories", { defaultValue: "All categories" })}</option>
           {CATEGORIES.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
@@ -145,7 +147,7 @@ export default function ProjectListPage() {
         </select>
 
         <label htmlFor="project-experience" className="sr-only">
-          Experience level
+          {t("projects.experience", { defaultValue: "Experience level" })}
         </label>
         <select
           id="project-experience"
@@ -161,7 +163,7 @@ export default function ProjectListPage() {
         </select>
 
         <label htmlFor="project-sort" className="sr-only">
-          Sort by
+          {t("projects.sortBy", { defaultValue: "Sort by" })}
         </label>
         <select
           id="project-sort"
@@ -182,7 +184,7 @@ export default function ProjectListPage() {
             onClick={clearFilters}
             className="shrink-0 text-sm font-bold text-brass transition-colors hover:text-brass-300"
           >
-            Clear filters
+            {t("projects.clearFilters", { defaultValue: "Clear filters" })}
           </button>
         )}
       </div>
@@ -204,13 +206,13 @@ export default function ProjectListPage() {
 
         {!isLoading && !error && projects.length === 0 && (
           <div className="rounded-card border border-ink-300 bg-ink-50 px-6 py-16 text-center shadow-card">
-            <p className="font-display text-lg font-bold tracking-tight text-slate">No projects match your filters</p>
+            <p className="font-display text-lg font-bold tracking-tight text-slate">{t("projects.noMatches", { defaultValue: "No projects match your filters" })}</p>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-300">
-              Try a broader category or clear the filters to see every open brief.
+              {t("projects.noMatchesHint", { defaultValue: "Try a broader category or clear the filters to see every open brief." })}
             </p>
             {hasFilters && (
               <Button variant="secondary" className="mt-5" onClick={clearFilters}>
-                Clear filters
+                {t("projects.clearFilters", { defaultValue: "Clear filters" })}
               </Button>
             )}
           </div>
@@ -230,18 +232,18 @@ export default function ProjectListPage() {
         <div className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
           <div className="max-w-xl">
             <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">
-              Hiring for a project?
+              {t("projects.hiring", { defaultValue: "Hiring for a project?" })}
             </span>
             <h2 className="mt-1.5 font-display text-2xl font-extrabold text-slate sm:text-3xl">
-              Post a brief & connect with verified student talent
+              {t("projects.ctaTitle", { defaultValue: "Post a brief & connect with verified student talent" })}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Posting is free. Escrow keeps your funds safe until deliverables are approved.
+              {t("projects.ctaDescription", { defaultValue: "Posting is free. Escrow keeps your funds safe until deliverables are approved." })}
             </p>
           </div>
           <Link to="/projects/new" className="shrink-0">
             <Button size="lg" className="shadow-elevated">
-              Post a brief now
+              {t("projects.postNow", { defaultValue: "Post a brief now" })}
             </Button>
           </Link>
         </div>

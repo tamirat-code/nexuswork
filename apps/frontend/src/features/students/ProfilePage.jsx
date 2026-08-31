@@ -13,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getStudentProfile } from "../../services/api/students.api.js";
@@ -41,6 +42,7 @@ function initialsOf(name) {
 }
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
@@ -84,12 +86,12 @@ export default function ProfilePage() {
     return (
       <div className="mx-auto max-w-2xl px-6 py-20 text-center text-slate">
         <h1 className="font-display text-2xl">
-          {notFound ? "Student not found" : "We couldn't load this profile"}
+          {notFound ? t("studentProfile.notFound", { defaultValue: "Student not found" }) : t("studentProfile.loadError", { defaultValue: "We couldn't load this profile" })}
         </h1>
         <p className="mt-3 text-sm text-slate-300">
           {notFound
-            ? "This profile doesn't exist, or the student is no longer active."
-            : profileQuery.error?.message || "Something went wrong. Please try again."}
+            ? t("studentProfile.notFoundHint", { defaultValue: "This profile doesn't exist, or the student is no longer active." })
+            : profileQuery.error?.message || t("studentProfile.genericError", { defaultValue: "Something went wrong. Please try again." })}
         </p>
         <div className="mt-6 flex justify-center gap-3">
           {!notFound && (
@@ -98,14 +100,14 @@ export default function ProfilePage() {
               onClick={() => profileQuery.refetch()}
               className="rounded-lg border border-ink-300 px-4 py-2 text-sm font-medium text-slate-300 hover:border-brass hover:text-brass"
             >
-              Try again
+              {t("common.tryAgain", { defaultValue: "Try again" })}
             </button>
           )}
           <Link
             to="/students"
             className="rounded-lg bg-brass px-4 py-2 text-sm font-semibold text-ink hover:opacity-90"
           >
-            Back to directory
+            {t("studentProfile.backToDirectory", { defaultValue: "Back to directory" })}
           </Link>
         </div>
       </div>
@@ -121,9 +123,9 @@ export default function ProfilePage() {
   const avgRating = reputation?.average_rating;
 
   const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "portfolio", label: `Portfolio (${portfolio.length})` },
-    { id: "reviews", label: `Reviews (${reviewCount})` },
+    { id: "overview", label: t("studentProfile.overview", { defaultValue: "Overview" }) },
+    { id: "portfolio", label: t("studentProfile.portfolioCount", { count: portfolio.length, defaultValue: `Portfolio (${portfolio.length})` }) },
+    { id: "reviews", label: t("studentProfile.reviewsCount", { count: reviewCount, defaultValue: `Reviews (${reviewCount})` }) },
   ];
 
   return (
@@ -135,7 +137,7 @@ export default function ProfilePage() {
         <div className="mx-auto max-w-7xl px-6 pb-0 pt-8">
           <div className="mb-6 flex items-center gap-2 text-xs text-slate-500">
             <Link to="/students" className="transition hover:text-brass">
-              Students
+              {t("studentProfile.students", { defaultValue: "Students" })}
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
             <span className="text-slate-400">{profile.name}</span>
@@ -198,7 +200,7 @@ export default function ProfilePage() {
                       to="/profile"
                       className="inline-flex items-center gap-2 rounded-lg border border-ink-300 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-brass hover:text-brass"
                     >
-                      Edit profile
+                      {t("studentProfile.editProfile", { defaultValue: "Edit profile" })}
                     </Link>
                   ) : (
                     user?.role === ROLES.CLIENT && (
@@ -206,7 +208,7 @@ export default function ProfilePage() {
                         to="/projects/new"
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-brass px-5 py-2.5 text-sm font-semibold text-ink transition hover:opacity-90"
                       >
-                        Post a project
+                        {t("projects.post", { defaultValue: "Post a project" })}
                       </Link>
                     )
                   )}
@@ -222,17 +224,17 @@ export default function ProfilePage() {
                       {avgRating != null ? avgRating.toFixed(1) : "—"}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{reviewCount} reviews</p>
+                  <p className="mt-1 text-xs text-slate-500">{t("studentProfile.reviewCount", { count: reviewCount, defaultValue: `${reviewCount} reviews` })}</p>
                 </div>
 
                 <div className="px-4">
                   <p className="text-lg font-semibold">{portfolio.length}</p>
-                  <p className="mt-1 text-xs text-slate-500">Portfolio items</p>
+                  <p className="mt-1 text-xs text-slate-500">{t("studentProfile.portfolioItems", { defaultValue: "Portfolio items" })}</p>
                 </div>
 
                 <div className="border-t border-ink-300 px-4 pt-4 sm:border-t-0 sm:pt-0">
                   <p className="text-lg font-semibold">{profile.completedContracts ?? 0}</p>
-                  <p className="mt-1 text-xs text-slate-500">Completed contracts</p>
+                  <p className="mt-1 text-xs text-slate-500">{t("studentProfile.completedContracts", { defaultValue: "Completed contracts" })}</p>
                 </div>
               </div>
             </div>
@@ -271,15 +273,15 @@ export default function ProfilePage() {
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brass/10">
                         <UserRound className="h-4 w-4 text-brass" />
                       </div>
-                      <h2 className="font-display text-xl font-semibold">About me</h2>
+                      <h2 className="font-display text-xl font-semibold">{t("studentProfile.aboutMe", { defaultValue: "About me" })}</h2>
                     </div>
                     <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300">{profile.bio}</p>
                   </section>
                 )}
 
                 <section className="rounded-2xl border border-ink-300 bg-ink-50 p-6 sm:p-7">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">Expertise</p>
-                  <h2 className="mt-1 font-display text-xl font-semibold">Skills & expertise</h2>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">{t("studentProfile.expertise", { defaultValue: "Expertise" })}</p>
+                  <h2 className="mt-1 font-display text-xl font-semibold">{t("studentProfile.skillsExpertise", { defaultValue: "Skills & expertise" })}</h2>
 
                   {profile.skills?.length > 0 ? (
                     <div className="mt-6 flex flex-wrap gap-2">
@@ -300,7 +302,7 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-4 text-sm text-slate-500">No skills listed yet.</p>
+                    <p className="mt-4 text-sm text-slate-500">{t("studentProfile.noSkills", { defaultValue: "No skills listed yet." })}</p>
                   )}
                 </section>
 
@@ -309,7 +311,7 @@ export default function ProfilePage() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brass/10">
                       <GraduationCap className="h-4 w-4 text-brass" />
                     </div>
-                    <h2 className="font-display text-xl font-semibold">Education</h2>
+                    <h2 className="font-display text-xl font-semibold">{t("studentProfile.education", { defaultValue: "Education" })}</h2>
                   </div>
 
                   <div className="mt-6 flex gap-4">
@@ -408,7 +410,7 @@ export default function ProfilePage() {
                   <div className="flex items-start gap-3">
                     <GraduationCap className="mt-0.5 h-4 w-4 text-brass" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-600">University</p>
+                        <p className="text-[10px] uppercase tracking-wider text-slate-600">{t("studentProfile.university", { defaultValue: "University" })}</p>
                       <p className="mt-1 text-xs text-slate-300">{profile.university}</p>
                     </div>
                   </div>
@@ -417,7 +419,7 @@ export default function ProfilePage() {
                   <div className="flex items-start gap-3">
                     <Globe className="mt-0.5 h-4 w-4 text-brass" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-600">Website</p>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-600">{t("studentProfile.website", { defaultValue: "Website" })}</p>
                       <a
                         href={profile.website}
                         target="_blank"
@@ -433,7 +435,7 @@ export default function ProfilePage() {
                   <div className="flex items-start gap-3">
                     <CalendarDays className="mt-0.5 h-4 w-4 text-brass" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-600">Member since</p>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-600">{t("studentProfile.memberSince", { defaultValue: "Member since" })}</p>
                       <p className="mt-1 text-xs text-slate-300">{formatDate(profile.memberSince)}</p>
                     </div>
                   </div>

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText } from "lucide-react";
+
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
@@ -321,12 +323,14 @@ function ReviewStaffVerificationDialog({ verification, token, defaultOpen = fals
 }
 
 export default function AdminPage() {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const [searchParams] = useSearchParams();
-  const highlightStaffVerificationId = searchParams.get("staffVerificationId");
+  const focusStaffId = searchParams.get("staff_id");
+
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
-  const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => listAdminUsers("?limit=10", token), enabled: !!token });
-  const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes("?limit=10", token), enabled: !!token });
+  const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => listAdminUsers(token), enabled: !!token });
+  const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes(token), enabled: !!token });
   const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
   const { data: staffVerificationsData, isLoading: staffVerificationsLoading } = useQuery({
     queryKey: ["admin-staff-verifications"],
@@ -378,8 +382,8 @@ export default function AdminPage() {
       icon: TrendingUp,
     },
     {
-      label: "Total paid out to students",
-      value: formatMultiCurrency(revenue.withdrawn_by_currency, revenue.total_withdrawn ?? 0),
+      label: "Escrow funds held",
+      value: formatMultiCurrency(revenue.escrow_held_by_currency, revenue.escrow_held ?? 0),
       icon: Wallet,
     },
   ];
@@ -387,16 +391,16 @@ export default function AdminPage() {
   return (
     <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Platform</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Admin</h1>
-        <p className="mt-2 text-sm text-slate-300">Manage users, resolve disputes, and monitor platform health.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("admin.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("admin.title")}</h1>
+        <p className="mt-2 text-sm text-slate-300">{t("admin.subtitle")}</p>
       </header>
 
       <Tabs defaultValue="overview" className="mt-6">
         <TabsList>
-          <TabsTrigger value="overview"><LayoutDashboard className="h-4 w-4" /> Overview</TabsTrigger>
-          <TabsTrigger value="categories"><Tag className="h-4 w-4" /> Categories</TabsTrigger>
-          <TabsTrigger value="audit-log"><ScrollText className="h-4 w-4" /> Audit log</TabsTrigger>
+          <TabsTrigger value="overview"><LayoutDashboard className="h-4 w-4" /> {t("admin.tabDashboard")}</TabsTrigger>
+          <TabsTrigger value="categories"><Tag className="h-4 w-4" /> {t("admin.tabCategories")}</TabsTrigger>
+          <TabsTrigger value="audit-log"><ScrollText className="h-4 w-4" /> {t("admin.tabAuditLogs")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories">

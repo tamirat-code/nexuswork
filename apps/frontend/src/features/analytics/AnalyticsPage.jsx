@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { BarChart3, TrendingUp, Users, Briefcase } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { getPlatformAnalytics, getMyUniversityAnalytics } from "../../services/api/analytics.api.js";
@@ -11,6 +12,7 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
 
@@ -48,24 +50,24 @@ export default function AnalyticsPage() {
 
   const cards = isAdmin
     ? [
-        { label: "Active projects", value: a.active_projects ?? 0, icon: Briefcase },
-        { label: "Freelancers", value: a.students ?? 0, icon: Users },
-        { label: "Platform income", value: formatCurrency(a.income ?? 0), icon: TrendingUp },
-        { label: "Popular skills", value: a.popular_skills?.length ?? 0, icon: BarChart3 },
+        { label: t("analytics.activeProjects"), value: a.active_projects ?? 0, icon: Briefcase },
+        { label: t("analytics.freelancers"), value: a.students ?? 0, icon: Users },
+        { label: t("analytics.platformIncome"), value: formatCurrency(a.income ?? 0), icon: TrendingUp },
+        { label: t("analytics.popularSkills"), value: a.popular_skills?.length ?? 0, icon: BarChart3 },
       ]
     : [
-        { label: "Verified students", value: universitySuppressed ? "—" : a.verified_students ?? 0, icon: Users },
-        { label: "On-time delivery", value: universitySuppressed ? "—" : a.on_time_rate != null ? `${a.on_time_rate}%` : "—", icon: TrendingUp },
-        { label: "Active projects", value: universitySuppressed ? "—" : a.active_projects ?? 0, icon: Briefcase },
+        { label: t("analytics.verifiedStudents"), value: universitySuppressed ? "—" : a.verified_students ?? 0, icon: Users },
+        { label: t("analytics.onTimeDelivery"), value: universitySuppressed ? "—" : a.on_time_rate != null ? `${a.on_time_rate}%` : "—", icon: TrendingUp },
+        { label: t("analytics.activeProjects"), value: universitySuppressed ? "—" : a.active_projects ?? 0, icon: Briefcase },
       ];
 
   return (
     <div className="w-full animate-fade-up">
       <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">Insights</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">Analytics</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("analytics.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("analytics.title")}</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          {isAdmin ? "Full platform metrics — projects, freelancers, income, and demand." : "Aggregate, anonymized outcomes for your institution only."}
+          {isAdmin ? t("analytics.subtitlePlatform") : t("analytics.subtitleUniversity")}
         </p>
       </header>
 
@@ -84,7 +86,7 @@ export default function AnalyticsPage() {
       {!isAdmin && a.privacy_suppressed && (
         <Card className="mt-6 border-brass/40">
           <CardContent className="p-5 text-sm text-slate-300">
-            <p className="font-semibold text-slate">Privacy threshold applied</p>
+            <p className="font-semibold text-slate">{t("analytics.privacyTitle")}</p>
             <p className="mt-1">{a.message || `University outcomes require at least ${a.minimum_cohort_size || 5} verified students.`}</p>
           </CardContent>
         </Card>
@@ -92,7 +94,7 @@ export default function AnalyticsPage() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-lg">{isAdmin ? "Popular skills" : "Top skills at your institution"}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg">{isAdmin ? t("analytics.topSkillsTitle") : t("analytics.topSkillsUniTitle")}</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-40 w-full" /> : (() => {
               const skills = isAdmin ? a.popular_skills : a.top_skills;
@@ -105,13 +107,13 @@ export default function AnalyticsPage() {
                     </li>
                   ))}
                 </ul>
-              ) : <p className="text-sm text-slate-300">No data yet.</p>;
+              ) : <p className="text-sm text-slate-300">{t("analytics.noData")}</p>;
             })()}
           </CardContent>
         </Card>
         {isAdmin ? (
           <Card>
-            <CardHeader><CardTitle className="text-lg">Market demand</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">{t("analytics.marketDemand")}</CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-40 w-full" /> : (a.demand_by_category?.length ? (
                 <ul className="space-y-2">
@@ -122,25 +124,25 @@ export default function AnalyticsPage() {
                     </li>
                   ))}
                 </ul>
-              ) : <p className="text-sm text-slate-300">No data yet.</p>)}
+              ) : <p className="text-sm text-slate-300">{t("analytics.noData")}</p>)}
             </CardContent>
           </Card>
         ) : (
           <Card>
-            <CardHeader><CardTitle className="text-lg">Outcomes</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">{t("analytics.outcomes")}</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">Employment rate</span>
+                <span className="text-slate-300">{t("analytics.employmentRate")}</span>
                 <span className="font-mono text-brass">
                   {universitySuppressed ? "—" : a.employment_rate != null ? `${Math.round(a.employment_rate * 100)}%` : "—"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">Aggregate earnings</span>
+                <span className="text-slate-300">{t("analytics.aggregateEarnings")}</span>
                 <span className="font-mono text-brass">{universitySuppressed ? "—" : formatCurrency(a.aggregate_earnings ?? 0)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">Released milestones</span>
+                <span className="text-slate-300">{t("analytics.releasedMilestones")}</span>
                 <span className="font-mono text-brass">{universitySuppressed ? "—" : a.released_milestone_count ?? 0}</span>
               </div>
             </CardContent>
@@ -150,7 +152,7 @@ export default function AnalyticsPage() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-lg">{isAdmin ? "User mix" : "Employment mix"}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg">{isAdmin ? t("analytics.userMix") : t("analytics.employmentMix")}</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-56 w-full" /> : (isAdmin ? adminRoleData : universityOutcomeData).length ? (
               <div className="h-56">
@@ -164,12 +166,12 @@ export default function AnalyticsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            ) : <p className="py-16 text-center text-sm text-slate-300">No chart data yet.</p>}
+            ) : <p className="py-16 text-center text-sm text-slate-300">{t("analytics.noData")}</p>}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-lg">{isAdmin ? "Dispute status" : "Delivery outcomes"}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg">{isAdmin ? t("analytics.disputeStatus") : t("analytics.deliveryOutcomes")}</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-56 w-full" /> : (() => {
               const dataSet = isAdmin
@@ -193,14 +195,14 @@ export default function AnalyticsPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-              ) : <p className="py-16 text-center text-sm text-slate-300">No chart data yet.</p>;
+              ) : <p className="py-16 text-center text-sm text-slate-300">{t("analytics.noData")}</p>;
             })()}
           </CardContent>
         </Card>
       </div>
 
       <Card className="mt-6">
-        <CardHeader><CardTitle className="text-lg">{isAdmin ? "Demand by category" : "Skills represented"}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">{isAdmin ? t("analytics.demandByCategory") : t("analytics.skillsRepresented")}</CardTitle></CardHeader>
         <CardContent>
           {isLoading ? <Skeleton className="h-56 w-full" /> : secondaryChartData.length ? (
             <div className="h-56">
@@ -214,9 +216,10 @@ export default function AnalyticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="py-16 text-center text-sm text-slate-300">No chart data yet.</p>}
+          ) : <p className="py-16 text-center text-sm text-slate-300">{t("analytics.noData")}</p>}
         </CardContent>
       </Card>
     </div>
   );
 }
+

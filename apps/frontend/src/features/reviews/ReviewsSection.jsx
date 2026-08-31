@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { reportValidation } from "../../lib/validation.js";
 import { Star } from "lucide-react";
@@ -33,6 +34,7 @@ function StarRating({ value, onChange, readOnly = false }) {
 }
 
 function ReviewForm({ contractId, revieweeId, onDone }) {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const qc = useQueryClient();
   const [rating, setRating] = useState(0);
@@ -51,16 +53,16 @@ function ReviewForm({ contractId, revieweeId, onDone }) {
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <p className="text-sm font-semibold text-slate">Your rating</p>
+        <p className="text-sm font-semibold text-slate">{t("reviews.yourRating")}</p>
         <StarRating value={rating} onChange={setRating} />
       </div>
       <div className="space-y-1.5">
-        <label htmlFor="review-comment" className="text-sm font-semibold text-slate">Written review</label>
-        <Textarea id="review-comment" maxLength={2000} rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="How was the collaboration? Timeliness, quality, communication…" />
+        <label htmlFor="review-comment" className="text-sm font-semibold text-slate">{t("reviews.writtenReview")}</label>
+        <Textarea id="review-comment" maxLength={2000} rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("reviews.placeholder")} />
         <p className="text-xs text-slate-300">{text.length}/2000 characters</p>
       </div>
       <Button className="w-full" disabled={rating === 0 || text.length > 2000} loading={mutation.isPending} onClick={() => { if (!rating) { const message = "Choose a rating before submitting."; reportValidation(message, { form: "review" }); return; } mutation.mutate(); }}>
-        Submit review
+        {t("reviews.submitReview")}
       </Button>
     </div>
   );
@@ -68,6 +70,7 @@ function ReviewForm({ contractId, revieweeId, onDone }) {
 
 
 export default function ReviewsSection({ userId, contractId, showForm = false }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const currentUserId = user?.id ?? user?._id;
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -77,7 +80,6 @@ export default function ReviewsSection({ userId, contractId, showForm = false })
     queryFn: () => getUserReviews(userId),
     enabled: !!userId,
   });
-  // GET /reviews/user/:userId responds with { success, data: { reviews, total, limit, skip } }.
   const reviews = data?.data?.reviews ?? [];
 
   const alreadyReviewed = reviews.some((r) => String(r.reviewer_id) === String(currentUserId));
@@ -86,27 +88,27 @@ export default function ReviewsSection({ userId, contractId, showForm = false })
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-lg">Reviews</CardTitle>
+        <CardTitle className="text-lg">{t("reviews.title")}</CardTitle>
         {canLeaveReview && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild><Button size="sm">Leave a review</Button></DialogTrigger>
+            <DialogTrigger asChild><Button size="sm">{t("reviews.leaveReview")}</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Review this collaboration</DialogTitle>
-                <DialogDescription>Your rating and feedback help the community trust verified work.</DialogDescription>
+                <DialogTitle>{t("reviews.reviewTitle")}</DialogTitle>
+                <DialogDescription>{t("reviews.reviewDesc")}</DialogDescription>
               </DialogHeader>
               <ReviewForm contractId={contractId} revieweeId={userId} onDone={() => setDialogOpen(false)} />
             </DialogContent>
           </Dialog>
         )}
         {showForm && contractId && alreadyReviewed && (
-          <span className="text-xs text-slate-300">You've already reviewed this collaboration</span>
+          <span className="text-xs text-slate-300">{t("reviews.alreadyReviewed")}</span>
         )}
       </CardHeader>
       <CardContent>
         {isLoading && <Skeleton className="h-24 w-full" />}
         {!isLoading && reviews.length === 0 && (
-          <p className="py-6 text-center text-sm text-slate-300">No reviews yet.</p>
+          <p className="py-6 text-center text-sm text-slate-300">{t("reviews.noReviews")}</p>
         )}
         <div className="space-y-4">
           {reviews.map((r) => (
@@ -127,3 +129,4 @@ export default function ReviewsSection({ userId, contractId, showForm = false })
     </Card>
   );
 }
+

@@ -5,8 +5,10 @@ import { useAuth } from "../../hooks/useAuth.js";
 import AuthShell from "./components/AuthShell.jsx";
 import { SealMark } from "./components/AuthShell.jsx";
 import Skeleton from "../../components/loaders/Skeleton.jsx";
+import { useTranslation } from "react-i18next";
 
 export default function VerifyEmailPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const { user, setLocalUser, refreshMe } = useAuth();
@@ -16,7 +18,7 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setError("This link is missing a verification token.");
+      setError(t("auth.missingVerificationToken"));
       return;
     }
     verifyEmail(token)
@@ -38,7 +40,7 @@ export default function VerifyEmailPage() {
 
   if (status === "verifying") {
     return (
-      <AuthShell eyebrow="One moment" title="Verifying your email…">
+      <AuthShell eyebrow={t("auth.oneMoment")} title={t("auth.verifyingEmail")}>
         <Skeleton className="h-11 w-full" />
       </AuthShell>
     );
@@ -46,25 +48,25 @@ export default function VerifyEmailPage() {
 
   if (status === "success") {
     return (
-      <AuthShell eyebrow="Verified" title="Email confirmed">
+      <AuthShell eyebrow={t("auth.verified")} title={t("auth.emailConfirmed")}>
         <div className="rounded-card border border-escrow bg-escrow-100 p-5 flex gap-3">
           <SealMark className="h-5 w-5 shrink-0 text-escrow mt-0.5" />
-          <p className="text-sm text-slate">Your email is verified. You're all set.</p>
+          <p className="text-sm text-slate">{t("auth.emailVerifiedDescription")}</p>
         </div>
         <Link to="/dashboard" className="mt-6 inline-block text-sm font-semibold text-brass hover:underline">
-          Go to dashboard
+          {t("navigation.dashboard")}
         </Link>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell eyebrow="Verification failed" title="This link didn't work">
+    <AuthShell eyebrow={t("auth.verificationFailed")} title={t("auth.linkDidNotWork")}>
       <div className="rounded-card border border-brick bg-brick-100 p-5">
         <p className="text-sm text-slate">{error}</p>
       </div>
       <Link to="/login" className="mt-6 inline-block text-sm font-semibold text-brass hover:underline">
-        Back to login
+        {t("auth.backToLogin")}
       </Link>
     </AuthShell>
   );

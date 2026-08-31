@@ -1,5 +1,6 @@
 import { useTheme } from "../../app/providers/ThemeProvider.jsx";
 import { cn } from "../../lib/cn.js";
+import { useTranslation } from "react-i18next";
 
 /**
  * Accessible theme-toggle icon button.
@@ -8,14 +9,15 @@ import { cn } from "../../lib/cn.js";
  */
 export default function ThemeToggle({ className = "" }) {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const isDark = theme === "dark";
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-      title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      aria-label={isDark ? t("common.switchToLight") : t("common.switchToDark")}
+      title={isDark ? t("common.switchToLight") : t("common.switchToDark")}
       className={cn(
         "relative grid h-10 w-10 place-items-center rounded-control",
         "text-slate-300 transition-colors duration-150",

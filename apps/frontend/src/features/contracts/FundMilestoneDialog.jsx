@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { stripePromise } from "../../lib/stripeClient.js";
@@ -9,6 +10,7 @@ import { Button } from "../../components/ui/shadcn/button.jsx";
 import { formatCurrency } from "../../utils/currency.utils.js";
 
 function CardForm({ contractId, milestone, token, onDone }) {
+  const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
   const queryClient = useQueryClient();
@@ -23,7 +25,6 @@ function CardForm({ contractId, milestone, token, onDone }) {
       onDone();
     },
     onError: (err) => {
-     
       toast.error(
         err.message ||
           "Payment went through, but we couldn't confirm it immediately. It should update shortly — refresh in a moment."
@@ -55,7 +56,6 @@ function CardForm({ contractId, milestone, token, onDone }) {
       return;
     }
 
-    
     setStripeError(`Payment status: ${paymentIntent?.status || "unknown"}. Please try again.`);
     setSubmitting(false);
   }
@@ -72,7 +72,7 @@ function CardForm({ contractId, milestone, token, onDone }) {
       )}
       <DialogFooter>
         <Button type="submit" disabled={!stripe || busy} className="w-full sm:w-auto">
-          {busy ? "Processing…" : `Pay ${formatCurrency(milestone?.amount ?? 0, milestone?.currency || "USD")} into escrow`}
+          {busy ? t("contracts.preparingPayment") : `${t("contracts.fundMilestone")} (${formatCurrency(milestone?.amount ?? 0, milestone?.currency || "USD")})`}
         </Button>
       </DialogFooter>
     </form>
@@ -80,6 +80,7 @@ function CardForm({ contractId, milestone, token, onDone }) {
 }
 
 function ChapaCheckout({ contractId, milestone, paymentIntentId, checkoutUrl, token, onDone }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [checking, setChecking] = useState(false);
 
@@ -113,14 +114,11 @@ function ChapaCheckout({ contractId, milestone, paymentIntentId, checkoutUrl, to
             if (paymentIntentId) {
               window.localStorage.setItem("nexuswork:chapa-payment-reference", paymentIntentId);
             }
-            // Keep checkout in the current tab so Chapa returns to the same
-            // NexusWork session and the payment-complete verifier can run
-            // without leaving a second app tab behind.
             window.location.assign(checkoutUrl);
           }}
           disabled={!checkoutUrl}
         >
-          Continue to Chapa
+          {t("contracts.continuePayment")}
         </Button>
       </DialogFooter>
     </div>
@@ -128,6 +126,7 @@ function ChapaCheckout({ contractId, milestone, paymentIntentId, checkoutUrl, to
 }
 
 export default function FundMilestoneDialog({ contractId, funding, token, onClose }) {
+  const { t } = useTranslation();
   const open = Boolean(funding?.clientSecret);
   const provider = funding?.provider || "stripe";
 
@@ -135,11 +134,11 @@ export default function FundMilestoneDialog({ contractId, funding, token, onClos
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Fund milestone</DialogTitle>
+          <DialogTitle>{t("contracts.fundMilestone")}</DialogTitle>
           <DialogDescription>
             {funding?.milestone
               ? `${formatCurrency(funding.milestone.amount, funding.milestone.currency || "USD")} will be held in escrow until you approve "${funding.milestone.title}".`
-              : "Securely fund this milestone."}
+              : t("contracts.fundMilestone")}
           </DialogDescription>
         </DialogHeader>
 
@@ -167,3 +166,4 @@ export default function FundMilestoneDialog({ contractId, funding, token, onClos
     </Dialog>
   );
 }
+
