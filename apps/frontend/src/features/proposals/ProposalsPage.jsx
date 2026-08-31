@@ -72,7 +72,7 @@ import {
 
 import { ROLES } from "../../constants/roles.constants.js";
 import { PROPOSAL_STATUS } from "../../constants/status.constants.js";
-import { fetchFileBlob } from "../../services/api/files.api.js";
+import { getFileContentUrl } from "../../services/api/files.api.js";
 
 
 function EmptyProposals({ isClient }) {
@@ -118,14 +118,16 @@ function ProposalReviewDialog({
   cvViewed,
   onCvViewed,
 }) {
-  const { token } = useAuth();
   if (!proposal) return null;
   const openCv = async () => {
+    // Top-level navigation uses the HttpOnly session cookie and avoids
+    // requiring JavaScript to expose a large cross-origin response to fetch.
+    const cvWindow = window.open(getFileContentUrl(proposal.cv_file_id._id), "_blank", "noopener,noreferrer");
+    if (!cvWindow) {
+      toast.error("Please allow pop-ups to open the student's CV");
+      return;
+    }
     try {
-      const blob = await fetchFileBlob(proposal.cv_file_id._id, token);
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       await onCvViewed?.(proposal._id);
     } catch (error) {
       toast.error(error.message || "Could not open the student's CV");

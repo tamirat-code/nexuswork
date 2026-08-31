@@ -3,6 +3,8 @@ import { logger } from "../../lib/logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
 
+export const getFileContentUrl = (id) => `${API_BASE_URL}/files/content/${encodeURIComponent(id)}`;
+
 export const uploadFile = (file, { relatedType, relatedId, token } = {}) => {
   const form = new FormData();
   form.append("file", file);
@@ -24,7 +26,7 @@ export const deleteFile = (id, token) =>
   apiRequest(`/files/${id}`, { method: "DELETE", token });
 
 export const fetchFileBlob = async (id, token) => {
-  const res = await authenticatedFetch(`${API_BASE_URL}/files/content/${id}`, {
+  const res = await authenticatedFetch(getFileContentUrl(id), {
     token,
   });
   if (!res.ok) {
@@ -39,7 +41,7 @@ export const fetchFileBlob = async (id, token) => {
 };
 
 export const downloadFile = async (id, token, filename = "download") => {
-  const res = await authenticatedFetch(`${API_BASE_URL}/files/content/${id}?download=1`, {
+  const res = await authenticatedFetch(`${getFileContentUrl(id)}?download=1`, {
     token,
   });
   if (!res.ok) {
