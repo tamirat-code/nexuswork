@@ -637,6 +637,89 @@ export async function refundClient(milestoneId, auditContext = {}) {
 }
 
 /**
+ * Reconcile refunds that a provider accepted asynchronously. A refund is not
+ * treated as financially complete until the provider status lookup confirms
+ * it, so pending dispute resolutions can safely be retried later.
+ */
+export async function reconcilePendingRefunds({ limit = 100, auditContext = {} } = {}) {
+  const pending = await Payment.find({
+    direction: "refund",
+    status: "pending",
+    provider_refund_id: { $type: "string" },
+  }).sort({ createdAt: 1 }).limit(Number(limit));
+
+  const results = { checked: pending.length, succeeded: 0, failed: 0 };
+  for (const payment of pending) {
+    try {
+      const provider = getPaymentProvider(payment.provider || (payment.currency === "etb" ? "chapa" : "stripe"));
+      const refund = await provider.getRefund(payment.provider_refund_id);
+
+      if (refund.status === "pending") continue;
+      if (refund.status !== "succeeded") {
+        throw new ValidationError(
+          `Refund provider rejected the refund (status: ${refund.providerStatus || refund.status})`
+        );
+      }
+
+      payment.status = "succeeded";
+      if (provider.name === "stripe") payment.stripe_refund_id = refund.id;
+      payment.processing_at = undefined;
+      payment.failure_code = undefined;
+      payment.failure_message = undefined;
+      await payment.save();
+
+      const refundMoney = moneyFromRecord(payment);
+      await postJournal({
+        eventType: "payment.refunded",
+        idempotencyKey: `payment-refunded:${payment._id}`,
+        sourceType: "payment",
+        sourceId: payment._id,
+        requestId: auditContext.requestId || auditContext.correlationId || "system",
+        actorId: auditContext.actor?._id || auditContext.actor?.id,
+        actorRole: auditContext.actor?.role || "system",
+        entries: [
+          { accountBase: "escrow_liability", debitMinor: refundMoney.amountMinor, creditMinor: 0, currency: refundMoney.currency },
+          { accountBase: "provider_clearing", debitMinor: 0, creditMinor: refundMoney.amountMinor, currency: refundMoney.currency },
+        ],
+        metadata: { milestoneId: payment.milestone_id, refundId: refund.id },
+      });
+
+      await Milestone.updateOne(
+        { _id: payment.milestone_id, status: "disputed" },
+        { $set: { status: "not_funded" } }
+      );
+      await logAction({
+        action_type: "REFUND_SUCCEEDED",
+        eventType: "REFUND_SUCCEEDED",
+        action: "refund.succeeded",
+        entity_type: "milestone",
+        entity_id: payment.milestone_id,
+        metadata: { amount: payment.amount, currency: payment.currency, refund_id: refund.id },
+        correlationId: auditContext.correlationId || crypto.randomUUID(),
+      });
+      results.succeeded += 1;
+    } catch (err) {
+      results.failed += 1;
+      await Payment.updateOne(
+        { _id: payment._id, status: "pending" },
+        { $set: { status: "failed", failure_message: err.message, processing_at: undefined } }
+      );
+      await logAction({
+        action_type: "REFUND_FAILED",
+        eventType: "REFUND_FAILED",
+        action: "refund.failed",
+        entity_type: "payment",
+        entity_id: payment._id,
+        metadata: { milestoneId: payment.milestone_id, error: err.message },
+        correlationId: auditContext.correlationId || crypto.randomUUID(),
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Reconcile release payments left pending by a provider timeout or process
  * crash. Stripe idempotency makes retrying the same operation safe.
  */
