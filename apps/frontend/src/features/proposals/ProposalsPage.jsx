@@ -118,15 +118,18 @@ function ProposalReviewDialog({
   cvViewed,
   onCvViewed,
 }) {
+  const [cvUrl, setCvUrl] = useState(null);
+
+  useEffect(() => {
+    setCvUrl(null);
+  }, [proposal?._id, open]);
+
   if (!proposal) return null;
   const openCv = async () => {
-    // Top-level navigation uses the HttpOnly session cookie and avoids
-    // requiring JavaScript to expose a large cross-origin response to fetch.
-    const cvWindow = window.open(getFileContentUrl(proposal.cv_file_id._id, { direct: true }), "_blank", "noopener,noreferrer");
-    if (!cvWindow) {
-      toast.error("Please allow pop-ups to open the student's CV");
-      return;
-    }
+    // An iframe navigation sends the HttpOnly session cookie without asking
+    // JavaScript to read the cross-origin file response, keeping the client
+    // on this proposal page while reviewing the CV.
+    setCvUrl(getFileContentUrl(proposal.cv_file_id._id, { direct: true }));
     try {
       await onCvViewed?.(proposal._id);
     } catch (error) {
@@ -303,6 +306,16 @@ function ProposalReviewDialog({
               <FileText className="h-4 w-4" /> {cvViewed ? "CV reviewed" : "View student CV"} ({proposal.cv_file_id.original_name})
             </button>
           ) : <p className="text-sm text-brick">This proposal has no CV attached and cannot be accepted.</p>}
+
+          {cvUrl && (
+            <div className="overflow-hidden rounded-card border border-ink-300 bg-white">
+              <iframe
+                title={`CV for ${student.name || "student"}`}
+                src={cvUrl}
+                className="h-[min(65vh,720px)] w-full"
+              />
+            </div>
+          )}
 
 
           {/* Status */}
