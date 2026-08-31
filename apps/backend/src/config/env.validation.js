@@ -69,6 +69,15 @@ export function validateEnv(config = env) {
     requireUrl(missing, config.clientUrl, "CLIENT_URL");
     requireValue(missing, config.credentialIssuerPrivateKey, "CREDENTIAL_ISSUER_PRIVATE_KEY");
     if (config.clientUrl === "*") missing.push("CLIENT_URL (wildcard is not allowed in production)");
+    if (!config.clientUrls.length) missing.push("CLIENT_URLS (must contain at least one allowed browser origin)");
+    for (const origin of config.clientUrls) {
+      try {
+        const parsed = new URL(origin);
+        if (!/^https?:$/.test(parsed.protocol)) missing.push(`CLIENT_URLS origin is invalid: ${origin}`);
+      } catch {
+        missing.push(`CLIENT_URLS origin is invalid: ${origin}`);
+      }
+    }
     if (config.storageDriver === "local") {
       missing.push("STORAGE_DRIVER (production must use durable object storage, not local disk)");
     }

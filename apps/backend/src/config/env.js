@@ -3,6 +3,13 @@ function optional(value) {
   return normalized || undefined;
 }
 
+function urlList(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+}
+
 function number(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -30,6 +37,10 @@ export function buildEnv(source = process.env) {
 
     mongoUri: optional(source.MONGO_URI),
     clientUrl: optional(source.CLIENT_URL),
+    // CLIENT_URL remains the primary origin for backwards compatibility.
+    // CLIENT_URLS allows Vercel preview/custom domains without weakening
+    // credentialed CORS to a wildcard.
+    clientUrls: urlList(source.CLIENT_URLS || source.CLIENT_URL),
     credentialIssuerUrl: optional(source.CREDENTIAL_ISSUER_URL) || "http://localhost:5000",
     credentialIssuerPrivateKey: optional(source.CREDENTIAL_ISSUER_PRIVATE_KEY),
     credentialIssuerPublicKey: optional(source.CREDENTIAL_ISSUER_PUBLIC_KEY),

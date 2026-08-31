@@ -24,6 +24,12 @@ export function AuthProvider({ children }) {
     authApi.getMe().then(({ data }) => persist(data)).catch(() => clear()).finally(() => setReady(true));
   }, [clear, persist]);
 
+  useEffect(() => {
+    const handleInvalidSession = () => clear();
+    window.addEventListener("nw:auth-invalid", handleInvalidSession);
+    return () => window.removeEventListener("nw:auth-invalid", handleInvalidSession);
+  }, [clear]);
+
   const login = useCallback(
     async (email, password) => {
       const { data } = await authApi.login(email, password);

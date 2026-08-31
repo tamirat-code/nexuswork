@@ -1,4 +1,4 @@
-import { apiRequest, csrfHeaders } from "../../lib/http.js";
+import { apiRequest, authenticatedFetch, csrfHeaders } from "../../lib/http.js";
 import { logger } from "../../lib/logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
@@ -7,9 +7,9 @@ export const listMyInvoices = (token) => apiRequest("/invoices", { token });
 export const getInvoice = (id, token) => apiRequest(`/invoices/${id}`, { token });
 
 export async function downloadInvoice(id, token, format = "pdf") {
-  const res = await fetch(`${API_BASE_URL}/invoices/${id}/download?format=${format}`, {
-    credentials: "include",
-    headers: { ...csrfHeaders() },
+  const res = await authenticatedFetch(`${API_BASE_URL}/invoices/${id}/download?format=${format}`, {
+    token,
+    headers: csrfHeaders(),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

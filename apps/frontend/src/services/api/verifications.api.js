@@ -1,4 +1,4 @@
-import { apiRequest, csrfHeaders } from "../../lib/http.js";
+import { apiRequest, authenticatedFetch, csrfHeaders } from "../../lib/http.js";
 import { logger } from "../../lib/logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
@@ -32,9 +32,9 @@ export const reviewSkillCertificationRequest = (id, payload, token) =>
   apiRequest(`/verifications/skill-requests/${id}/review`, { method: "PATCH", body: payload, token });
 
 export async function downloadCredentialCardPdf(verificationId, token) {
-  const res = await fetch(`${API_BASE_URL}/verifications/mine/${verificationId}/credential/card`, {
-    credentials: "include",
-    headers: { ...csrfHeaders() },
+  const res = await authenticatedFetch(`${API_BASE_URL}/verifications/mine/${verificationId}/credential/card`, {
+    token,
+    headers: csrfHeaders(),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

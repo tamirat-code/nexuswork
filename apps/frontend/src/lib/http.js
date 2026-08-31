@@ -3,6 +3,18 @@ import { logger } from "./logger.js";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
 let csrfToken = null;
 
+function authHeader(token) {
+  return token && typeof token === "string" && token.trim()
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+}
+
+function notifyInvalidSession(status) {
+  if (status === 401 && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("nw:auth-invalid"));
+  }
+}
+
 export function csrfHeaders() {
   if (csrfToken) return { "X-CSRF-Token": csrfToken };
   if (typeof document === "undefined") return {};
@@ -29,7 +41,7 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
     method,
     credentials: "include",
     headers: {
-      ...(token && typeof token === "string" ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeader(token),
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...csrfHeaders(),
     },
@@ -44,6 +56,7 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
     }
     const err = new Error(message);
     err.status = res.status;
+    notifyInvalidSession(res.status);
     Object.assign(err, data);
     logger.error("API request failed", err, { method, path, status: res.status, code: data.code });
     throw err;
@@ -52,4 +65,15 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
   // session cookie. Force the next mutation to read the newly issued token.
   if (path.startsWith("/auth/") && method.toUpperCase() === "POST") csrfToken = null;
   return data;
+}
+
+/** Fetch a private non-JSON resource using the same cookie/JWT rules as apiRequest. */
+export async function authenticatedFetch(url, { token, headers = {}, ...options } = {}) {
+  const res = await fetch(url, {
+    credentials: "include",
+    ...options,
+    headers: { ...authHeader(token), ...headers },
+  });
+  notifyInvalidSession(res.status);
+  return res;
 }
