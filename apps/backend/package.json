@@ -10,6 +10,8 @@
     "seed": "node src/seed/index.js",
     "ledger:migration:dry-run": "node src/modules/financial-ledger/migration-dry-run.js",
     "ledger:migration:apply": "MIGRATION_APPROVED=true node src/modules/financial-ledger/migration-dry-run.js --apply",
+    "project-skills:migration:dry-run": "node src/modules/projects/migrate-project-skills.js",
+    "project-skills:migration:apply": "MIGRATION_APPROVED=true node src/modules/projects/migrate-project-skills.js",
     "syntax": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
   },

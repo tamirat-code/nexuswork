@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
-import { getProject } from "../../services/api/projects.api.js";
+import { getProject, updateProject } from "../../services/api/projects.api.js";
+import { listSkills } from "../../services/api/skills.api.js";
 import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
 import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -258,6 +259,89 @@ function RecommendedStudents({ projectId, token }) {
   );
 }
 
+function EditProjectDialog({ project, token, projectId }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState("intermediate");
+  const [budgetType, setBudgetType] = useState("fixed");
+  const [budget, setBudget] = useState("");
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const { data: skillsResponse } = useQuery({
+    queryKey: ["skills", "project-edit"],
+    queryFn: () => listSkills(),
+    enabled: open,
+  });
+  const skillCatalog = skillsResponse?.data || [];
+
+  useEffect(() => {
+    if (!open || project.required_skill_ids?.length || !project.required_skills?.length || !skillCatalog.length) return;
+    setSelectedSkills(skillCatalog
+      .filter((skill) => project.required_skills.some((name) => name.toLowerCase() === skill.name.toLowerCase() || name.toLowerCase() === skill.slug.toLowerCase()))
+      .map((skill) => String(skill._id)));
+  }, [open, project.required_skill_ids, project.required_skills, skillCatalog]);
+
+  function openEditor() {
+    setTitle(project.title || "");
+    setDescription(project.description || "");
+    setCategory(project.category || "");
+    setExperienceLevel(project.experience_level || "intermediate");
+    setBudgetType(project.budget_type || "fixed");
+    setBudget(project.budget ?? "");
+    setBudgetMin(project.budget_min ?? "");
+    setBudgetMax(project.budget_max ?? project.budget ?? "");
+    setSelectedSkills((project.required_skill_ids || []).map((id) => String(id)));
+    setOpen(true);
+  }
+
+  const mutation = useMutation({
+    mutationFn: () => updateProject(projectId, {
+      title,
+      description,
+      category,
+      experience_level: experienceLevel,
+      budget_type: budgetType,
+      budget: Number(budgetType === "range" ? budgetMax : budget),
+      ...(budgetType === "range" ? { budget_min: Number(budgetMin), budget_max: Number(budgetMax) } : {}),
+      required_skill_ids: selectedSkills,
+    }, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setOpen(false);
+      toast.success("Project updated");
+    },
+    onError: (error) => toast.error(error.message || "Could not update project"),
+  });
+
+  const availableSkills = skillCatalog.filter((skill) => !selectedSkills.includes(String(skill._id)));
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button size="sm" variant="outline" onClick={openEditor}>Edit project</Button>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit project</DialogTitle><DialogDescription>Only open projects can be edited.</DialogDescription></DialogHeader>
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+          <div><label className="text-sm font-medium text-slate">Title</label><Input className="mt-1" value={title} onChange={(event) => setTitle(event.target.value)} /></div>
+          <div><label className="text-sm font-medium text-slate">Description</label><Textarea className="mt-1" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><label className="text-sm font-medium text-slate">Category</label><Input className="mt-1" value={category} onChange={(event) => setCategory(event.target.value)} /></div>
+            <div><label className="text-sm font-medium text-slate">Experience</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value={experienceLevel} onChange={(event) => setExperienceLevel(event.target.value)}>{["beginner", "intermediate", "advanced", "expert"].map((level) => <option key={level} value={level}>{level}</option>)}</select></div>
+          </div>
+          <div><label className="text-sm font-medium text-slate">Budget type</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value={budgetType} onChange={(event) => setBudgetType(event.target.value)}><option value="fixed">Fixed budget</option><option value="range">Budget range</option></select></div>
+          {budgetType === "range" ? (
+            <div className="grid gap-3 sm:grid-cols-2"><div><label className="text-sm font-medium text-slate">Minimum</label><Input className="mt-1" type="number" min="10" value={budgetMin} onChange={(event) => setBudgetMin(event.target.value)} /></div><div><label className="text-sm font-medium text-slate">Maximum</label><Input className="mt-1" type="number" min="10" value={budgetMax} onChange={(event) => setBudgetMax(event.target.value)} /></div></div>
+          ) : <div><label className="text-sm font-medium text-slate">Budget</label><Input className="mt-1" type="number" min="10" value={budget} onChange={(event) => setBudget(event.target.value)} /></div>}
+          <div><label className="text-sm font-medium text-slate">Required skills</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value="" onChange={(event) => { if (event.target.value) setSelectedSkills([...selectedSkills, event.target.value]); }}><option value="">Add a skill</option>{availableSkills.map((skill) => <option key={skill._id} value={skill._id}>{skill.name}</option>)}</select><div className="mt-2 flex flex-wrap gap-1.5">{selectedSkills.map((id) => { const skill = skillCatalog.find((item) => String(item._id) === id); return skill ? <Badge key={id} variant="secondary">{skill.name}<button type="button" className="ml-1" onClick={() => setSelectedSkills(selectedSkills.filter((item) => item !== id))}>×</button></Badge> : null; })}</div></div>
+        </div>
+        <DialogFooter><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button loading={mutation.isPending} onClick={() => mutation.mutate()}>Save changes</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const { user, token, refreshMe } = useAuth();
@@ -304,7 +388,7 @@ export default function ProjectDetailPage() {
   }
 
   const project = data.data;
-  const isClientOwner = user?.role === ROLES.CLIENT && String(project.client_id) === String(user._id);
+  const isClientOwner = user?.role === ROLES.CLIENT && String(project.client_id?._id || project.client_id) === String(user._id);
   const isStudent = user?.role === ROLES.STUDENT;
   const clientName = project.client_id?.client_profile?.organization_name || project.client_id?.name || "Client";
 
@@ -326,7 +410,7 @@ export default function ProjectDetailPage() {
             {typeof project.proposals_count === "number" && <span>{project.proposals_count} proposals</span>}
           </div>
         </div>
-        <StatusBadge kind="project" status={project.status} showDot />
+        <div className="flex items-center gap-2"><StatusBadge kind="project" status={project.status} showDot />{isClientOwner && project.status === "open" && <EditProjectDialog project={project} projectId={id} token={token} />}</div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
@@ -358,8 +442,12 @@ export default function ProjectDetailPage() {
           <Card>
             <CardContent className="p-6">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Budget</p>
-              <p className="mt-1 font-display text-3xl tracking-tight text-brass">{formatCurrency(project.budget, project.currency || "USD")}</p>
-              <p className="text-xs text-slate-300">Fixed price</p>
+              <p className="mt-1 font-display text-3xl tracking-tight text-brass">
+                {project.budget_type === "range"
+                  ? `${formatCurrency(project.budget_min, project.currency || "USD")} – ${formatCurrency(project.budget_max, project.currency || "USD")}`
+                  : formatCurrency(project.budget, project.currency || "USD")}
+              </p>
+              <p className="text-xs text-slate-300">{project.budget_type === "range" ? "Budget range" : "Fixed price"}</p>
 
               {isStudent ? (
                 <div className="mt-6"><ProposalSubmitDialog projectId={id} token={token} verified={Boolean(user?.universityVerified)} currency={project.currency || "USD"} projectStatus={project.status} /></div>

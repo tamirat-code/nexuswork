@@ -1,11 +1,12 @@
 import Project from "./projects.model.js";
 import ClientProfile from "../clients/clients.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
-import { ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import File from "../files/files.model.js";
+import Skill from "../skills/skills.model.js";
 
 export async function createProject(actingUserId, data) {
-  const { on_behalf_of_client_id, ...projectData } = data;
+  const { on_behalf_of_client_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
 
   let ownerId = actingUserId;
   if (on_behalf_of_client_id && String(on_behalf_of_client_id) !== String(actingUserId)) {
@@ -27,6 +28,30 @@ export async function createProject(actingUserId, data) {
     delete projectData.attachments;
   }
 
+  const requestedSkillIds = [...new Set(required_skill_ids.map(String))];
+  const requestedSkillNames = [...new Set(required_skills.map((skill) => String(skill).trim()).filter(Boolean))];
+  let skills = [];
+  if (requestedSkillIds.length) {
+    skills = await Skill.find({ _id: { $in: requestedSkillIds }, is_active: true })
+      .select("_id name slug")
+      .lean();
+    if (skills.length !== requestedSkillIds.length) {
+      throw new ForbiddenError("One or more selected skills are unavailable");
+    }
+  } else if (requestedSkillNames.length) {
+    const normalized = requestedSkillNames.map((skill) => skill.toLowerCase());
+    skills = await Skill.find({
+      is_active: true,
+      $or: [{ name: { $in: requestedSkillNames } }, { slug: { $in: normalized } }],
+    }).select("_id name slug").lean();
+    if (skills.length !== requestedSkillNames.length) {
+      throw new ForbiddenError("Required skills must be selected from the shared skill catalogue");
+    }
+  }
+  projectData.required_skill_ids = skills.map((skill) => skill._id);
+  projectData.required_skills = skills.map((skill) => skill.name);
+  if (projectData.budget_type === "range") projectData.budget = projectData.budget_max;
+
   const project = await Project.create({ client_id: ownerId, created_by: actingUserId, ...projectData });
   if (attachmentIds.length) {
     await File.updateMany(
@@ -34,6 +59,64 @@ export async function createProject(actingUserId, data) {
       { $set: { related_type: "project_attachment", related_id: project._id } }
     );
   }
+  return project;
+}
+
+export async function updateProject(projectId, actingUserId, data) {
+  const project = await Project.findById(projectId);
+  if (!project) throw new NotFoundError("Project not found");
+  if (String(project.client_id) !== String(actingUserId) && !(await isOrgMember(project.client_id, actingUserId))) {
+    throw new ForbiddenError("Not authorized to edit this project");
+  }
+  if (project.status !== "open") {
+    throw new ValidationError("Only open projects can be edited");
+  }
+
+  const { required_skill_ids, required_skills, attachments, ...updates } = data;
+  const requestedSkillIds = [...new Set((required_skill_ids || []).map(String))];
+  const requestedSkillNames = [...new Set((required_skills || []).map((skill) => String(skill).trim()).filter(Boolean))];
+  let skills = [];
+  if (requestedSkillIds.length) {
+    skills = await Skill.find({ _id: { $in: requestedSkillIds }, is_active: true }).select("_id name").lean();
+    if (skills.length !== requestedSkillIds.length) throw new ForbiddenError("One or more selected skills are unavailable");
+  } else if (requestedSkillNames.length) {
+    skills = await Skill.find({ is_active: true, $or: [
+      { name: { $in: requestedSkillNames } },
+      { slug: { $in: requestedSkillNames.map((skill) => skill.toLowerCase()) } },
+    ] }).select("_id name").lean();
+    if (skills.length !== requestedSkillNames.length) throw new ForbiddenError("Required skills must be selected from the shared skill catalogue");
+  }
+
+  if (required_skill_ids !== undefined || required_skills !== undefined) {
+    updates.required_skill_ids = skills.map((skill) => skill._id);
+    updates.required_skills = skills.map((skill) => skill.name);
+  }
+  if (attachments !== undefined) {
+    const attachmentIds = [...new Set(attachments.map(String))];
+    const files = await File.find({ _id: { $in: attachmentIds }, owner_id: actingUserId });
+    if (files.length !== attachmentIds.length) throw new ForbiddenError("One or more project attachments do not belong to you");
+    updates.attachments = attachmentIds;
+  }
+
+  const effectiveBudgetType = updates.budget_type ?? project.budget_type ?? "fixed";
+  if (effectiveBudgetType === "range") {
+    const effectiveBudgetMin = updates.budget_min ?? project.budget_min;
+    const effectiveBudgetMax = updates.budget_max ?? project.budget_max;
+    if (!(effectiveBudgetMin > 0) || !(effectiveBudgetMax >= effectiveBudgetMin)) {
+      throw new ValidationError("A range budget requires a valid minimum and maximum");
+    }
+    updates.budget_min = effectiveBudgetMin;
+    updates.budget_max = effectiveBudgetMax;
+    updates.budget = effectiveBudgetMax;
+  } else if (updates.budget_min !== undefined || updates.budget_max !== undefined) {
+    throw new ValidationError("Budget minimum and maximum require a range budget");
+  } else if (effectiveBudgetType === "fixed") {
+    updates.budget_min = undefined;
+    updates.budget_max = undefined;
+  }
+
+  Object.assign(project, updates);
+  await project.save();
   return project;
 }
 
@@ -47,13 +130,24 @@ export async function searchProjects(query) {
   const { skill, minBudget, maxBudget, q, search, status, category, experience_level, sort } = query;
 
   const match = { status: status || "open" };
-  if (skill) match.required_skills = skill;
+  if (skill) {
+    match.required_skill_ids = skill.match(/^[0-9a-fA-F]{24}$/)
+      ? skill
+      : { $in: [skill] };
+    if (!skill.match(/^[0-9a-fA-F]{24}$/)) delete match.required_skill_ids;
+    if (!skill.match(/^[0-9a-fA-F]{24}$/)) match.required_skills = skill;
+  }
   if (category && category !== "All") match.category = category;
   if (experience_level && experience_level !== "any") match.experience_level = experience_level;
   if (minBudget || maxBudget) {
-    match.budget = {};
-    if (minBudget) match.budget.$gte = Number(minBudget);
-    if (maxBudget) match.budget.$lte = Number(maxBudget);
+    const minimum = minBudget ? Number(minBudget) : 0;
+    const maximum = maxBudget ? Number(maxBudget) : Number.MAX_SAFE_INTEGER;
+    match.$or = [
+      { budget_type: "fixed", budget: { $gte: minimum, $lte: maximum } },
+      { budget_type: "range", budget_min: { $lte: maximum }, budget_max: { $gte: minimum } },
+      // Legacy projects have only budget and are treated as fixed.
+      { budget_type: { $exists: false }, budget: { $gte: minimum, $lte: maximum } },
+    ];
   }
 
   const searchTerm = search || q;

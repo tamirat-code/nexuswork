@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { createProject } from "../../services/api/projects.api.js";
+import { listSkills } from "../../services/api/skills.api.js";
 import { getSuggestedPrice } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -27,38 +28,56 @@ const projectSchema = z.object({
   description: z.string().min(40, "Describe the work in more detail (min 40 characters)").max(5000),
   category: z.string().min(1, "Choose a category"),
   experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]),
-  budget: z.coerce.number().min(10, "Budget must be at least $10").max(1000000, "Budget looks too high"),
+  budget_type: z.enum(["fixed", "range"]),
+  budget: z.coerce.number().min(10, "Budget must be at least $10").max(1000000, "Budget looks too high").optional(),
+  budget_min: z.coerce.number().min(10, "Minimum budget must be at least $10").max(1000000).optional(),
+  budget_max: z.coerce.number().min(10, "Maximum budget must be at least $10").max(1000000).optional(),
   currency: z.enum(["USD", "ETB"]),
   deadline: z.string().min(1, "Pick a deadline"),
+}).superRefine((value, context) => {
+  if (value.budget_type === "fixed" && value.budget === undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget"], message: "Enter a budget" });
+  }
+  if (value.budget_type === "range") {
+    if (value.budget_min === undefined || value.budget_max === undefined) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget_min"], message: "Enter both budget values" });
+    } else if (value.budget_min > value.budget_max) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget_max"], message: "Maximum must be at least minimum" });
+    }
+  }
 });
 
-function SkillPicker({ value, onChange }) {
+function SkillPicker({ value, onChange, catalog = [] }) {
   const [input, setInput] = useState("");
   const skills = value || [];
 
   function addSkill() {
-    const t = input.trim();
-    if (!t || skills.includes(t)) { setInput(""); return; }
-    onChange([...skills, t]);
+    const selected = catalog.find((skill) => skill._id === input);
+    if (!selected || skills.some((skill) => skill._id === selected._id)) { setInput(""); return; }
+    onChange([...skills, selected]);
     setInput("");
   }
 
   return (
     <div>
       <div className="flex gap-2">
-        <Input value={input} onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
-          placeholder="Type a skill and press Enter" aria-label="Add required skill" />
+        <select value={input} onChange={(e) => setInput(e.target.value)} aria-label="Choose required skill"
+          className="h-11 min-w-0 flex-1 rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate">
+          <option value="">Choose a skill from the catalogue</option>
+          {catalog.filter((skill) => !skills.some((selected) => selected._id === skill._id)).map((skill) => (
+            <option key={skill._id} value={skill._id}>{skill.name}</option>
+          ))}
+        </select>
         <Button type="button" variant="secondary" className="h-11 shrink-0" onClick={addSkill}>Add</Button>
       </div>
       {skills.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {skills.map((s) => (
-            <Badge key={s} variant="secondary" className="gap-1 pr-1">
-              {s}
-              <button type="button" onClick={() => onChange(skills.filter((x) => x !== s))}
+            <Badge key={s._id} variant="secondary" className="gap-1 pr-1">
+              {s.name}
+              <button type="button" onClick={() => onChange(skills.filter((x) => x._id !== s._id))}
                 className="ml-1 rounded-full p-0.5 hover:bg-brick/20 hover:text-brick"
-                aria-label={`Remove ${s}`}>×</button>
+                aria-label={`Remove ${s.name}`}>×</button>
             </Badge>
           ))}
         </div>
@@ -111,10 +130,12 @@ export default function PostProjectPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [skills, setSkills] = useState([]);
+  const { data: skillsResponse } = useQuery({ queryKey: ["skills", "project-picker"], queryFn: () => listSkills() });
+  const skillCatalog = skillsResponse?.data || [];
 
   const form = useForm({
     resolver: zodResolver(projectSchema),
-    defaultValues: { title: "", description: "", category: "", experience_level: "intermediate", budget: "", currency: "USD", deadline: "" },
+    defaultValues: { title: "", description: "", category: "", experience_level: "intermediate", budget_type: "fixed", budget: "", budget_min: "", budget_max: "", currency: "USD", deadline: "" },
   });
 
   const mutation = useMutation({
@@ -124,7 +145,14 @@ export default function PostProjectPage() {
   });
 
   async function handleSubmit(values) {
-    mutation.mutate({ ...values, required_skills: skills, budget: Number(values.budget) });
+    mutation.mutate({
+      ...values,
+      required_skills: skills.map((skill) => skill.name),
+      required_skill_ids: skills.map((skill) => skill._id),
+      budget: Number(values.budget_type === "range" ? values.budget_max : values.budget),
+      budget_min: values.budget_type === "range" ? Number(values.budget_min) : undefined,
+      budget_max: values.budget_type === "range" ? Number(values.budget_max) : undefined,
+    });
   }
 
   return (
@@ -186,7 +214,7 @@ export default function PostProjectPage() {
                   <div>
                     <Label>Required skills</Label>
                     <p className="mb-2 text-xs text-slate-300">Structured skills drive our matching engine.</p>
-                    <SkillPicker value={skills} onChange={setSkills} />
+                    <SkillPicker value={skills} catalog={skillCatalog} onChange={setSkills} />
                   </div>
                   <FormField control={form.control} name="experience_level" render={({ field }) => (
                     <FormItem><FormLabel>Experience level</FormLabel>
@@ -208,17 +236,30 @@ export default function PostProjectPage() {
                       <FormDescription>This currency is locked into the contract and its milestones.</FormDescription>
                       <FormMessage /></FormItem>
                   )} />
-                  <FormField control={form.control} name="budget" render={({ field }) => (
-                    <FormItem><FormLabel>Budget ({form.watch("currency")})</FormLabel>
-                      <FormControl><Input type="number" min={10} placeholder="750" className="font-mono" {...field} /></FormControl>
-                      <PriceSuggestion
-                        skills={skills}
-                        category={form.watch("category")}
-                        token={token}
-                        onApply={(price) => form.setValue("budget", price, { shouldValidate: true })}
-                      />
-                      <FormMessage /></FormItem>
+                  <FormField control={form.control} name="budget_type" render={({ field }) => (
+                    <FormItem><FormLabel>Budget type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent><SelectItem value="fixed">Fixed budget</SelectItem><SelectItem value="range">Budget range</SelectItem></SelectContent>
+                      </Select><FormMessage /></FormItem>
                   )} />
+                  {form.watch("budget_type") === "range" ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FormField control={form.control} name="budget_min" render={({ field }) => (
+                        <FormItem><FormLabel>Minimum ({form.watch("currency")})</FormLabel><FormControl><Input type="number" min={10} placeholder="500" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="budget_max" render={({ field }) => (
+                        <FormItem><FormLabel>Maximum ({form.watch("currency")})</FormLabel><FormControl><Input type="number" min={10} placeholder="1000" className="font-mono" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                  ) : (
+                    <FormField control={form.control} name="budget" render={({ field }) => (
+                      <FormItem><FormLabel>Budget ({form.watch("currency")})</FormLabel>
+                        <FormControl><Input type="number" min={10} placeholder="750" className="font-mono" {...field} /></FormControl>
+                        <PriceSuggestion skills={skills.map((skill) => skill.name)} category={form.watch("category")} token={token} onApply={(price) => form.setValue("budget", price, { shouldValidate: true })} />
+                        <FormMessage /></FormItem>
+                    )} />
+                  )}
                   <FormField control={form.control} name="deadline" render={({ field }) => (
                     <FormItem><FormLabel>Deadline</FormLabel>
                       <FormControl><Input type="date" {...field} /></FormControl>
@@ -233,7 +274,7 @@ export default function PostProjectPage() {
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">Title</dt><dd className="font-semibold text-slate">{form.watch("title")}</dd></div>
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">Category</dt><dd className="font-semibold text-slate">{form.watch("category")}</dd></div>
                     <div className="flex justify-between gap-4"><dt className="text-slate-300">Budget</dt><dd className="font-mono text-brass">{form.watch("currency")} {form.watch("budget")}</dd></div>
-                    {skills.length > 0 && <div className="flex flex-wrap gap-1.5 pt-2">{skills.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}</div>}
+                    {skills.length > 0 && <div className="flex flex-wrap gap-1.5 pt-2">{skills.map((s) => <Badge key={s._id} variant="secondary">{s.name}</Badge>)}</div>}
                   </dl>
                 </div>
               )}

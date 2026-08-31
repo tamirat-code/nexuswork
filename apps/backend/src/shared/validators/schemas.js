@@ -238,23 +238,39 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema = createCategorySchema.partial();
 
 // --- Projects ---
-export const createProjectSchema = z.object({
+const projectFieldsSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters").max(200),
   description: z.string().trim().min(10, "Description must be at least 10 characters").max(10000),
-  required_skills: z.array(z.string().trim().min(1).max(100)).max(50).optional().default([]),
+  required_skills: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  required_skill_ids: z.array(objectId).max(50).optional(),
   budget: positiveNumber,
-  currency: z.enum(["USD", "ETB"]).optional().default("USD"),
+  budget_type: z.enum(["fixed", "range"]).optional(),
+  budget_min: positiveNumber.optional(),
+  budget_max: positiveNumber.optional(),
+  currency: z.enum(["USD", "ETB"]).optional(),
   deadline: z.coerce.date("Invalid deadline"),
   category: z.string().trim().max(100).optional(),
   experience_level: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
-  attachments: z.array(objectId).optional().default([]),
+  attachments: z.array(objectId).optional(),
   // If the caller is a designated additional poster (see clients module),
   // this attributes the project to the org owner's account instead of
   // their own. Ignored (and unnecessary) when posting for yourself.
   on_behalf_of_client_id: optionalObjectId,
 });
 
-export const updateProjectSchema = createProjectSchema.partial();
+function validateProjectBudget(value, context) {
+  if (value.budget_type === "range") {
+    if (value.budget_min === undefined || value.budget_max === undefined) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget_min"], message: "Both range budget values are required" });
+    } else if (value.budget_min > value.budget_max) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["budget_max"], message: "Maximum budget must be at least the minimum" });
+    }
+  }
+}
+
+export const createProjectSchema = projectFieldsSchema.superRefine(validateProjectBudget);
+
+export const updateProjectSchema = projectFieldsSchema.partial().superRefine(validateProjectBudget);
 
 // --- Proposals ---
 export const submitProposalSchema = z.object({
@@ -330,7 +346,14 @@ export const submitSkillCertificationRequestSchema = z.object({
   skill_name: z.string().trim().min(1).max(100),
   evidence_file_id: objectId,
   assessment_method: z.enum(["practical_assessment", "portfolio_review", "coursework_linkage"]),
+  course_name: z.string().trim().max(200).optional(),
+  course_code: z.string().trim().max(50).optional(),
+  course_completed_at: z.coerce.date().optional(),
   student_notes: z.string().trim().min(20, "Explain what the evidence demonstrates in at least 20 characters").max(2000),
+}).superRefine((value, context) => {
+  if (value.assessment_method === "coursework_linkage" && !value.course_name) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["course_name"], message: "Course name is required for coursework evidence" });
+  }
 });
 
 export const reviewSkillCertificationRequestSchema = z.object({
