@@ -21,7 +21,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/shadcn/form.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
 
-const CATEGORIES = ["Development", "Design", "Data & Research", "Writing", "Video & Motion", "Marketing"];
+const CATEGORIES = [
+  { slug: "web-development", name: "Web Development" },
+  { slug: "mobile-development", name: "Mobile Development" },
+  { slug: "data-science-ml", name: "Data Science & ML" },
+  { slug: "ui-ux-design", name: "UI/UX Design" },
+  { slug: "graphic-design", name: "Graphic Design" },
+  { slug: "writing-content", name: "Writing & Content" },
+  { slug: "marketing-seo", name: "Marketing & SEO" },
+  { slug: "research-analysis", name: "Research & Analysis" },
+  { slug: "engineering-cad", name: "Engineering & CAD" },
+  { slug: "video-animation", name: "Video & Animation" },
+  { slug: "translation-languages", name: "Translation & Languages" },
+  { slug: "other", name: "Other" },
+];
 const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced", "expert"];
 
 const parseOptionalNumber = (val) => (val === "" || val === null || val === undefined ? undefined : Number(val));
@@ -232,7 +245,7 @@ export default function PostProjectPage() {
                     <FormItem><FormLabel>{t("projectsForm.category")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder={t("projectsForm.chooseCategory")} /></SelectTrigger></FormControl>
-                        <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        <SelectContent>{CATEGORIES.map((category) => <SelectItem key={category.slug} value={category.slug}>{category.name}</SelectItem>)}</SelectContent>
                       </Select>
                       <FormMessage /></FormItem>
                   )} />

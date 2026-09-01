@@ -63,23 +63,50 @@ const templates = {
   ],
 };
 
-export function getDeliverableTemplate(category) {
+const CATEGORY_ALIASES = {
+  development: "web-development",
+  design: "ui-ux-design",
+  "data & research": "data-science-ml",
+  writing: "writing-content",
+  "video & motion": "video-animation",
+  marketing: "marketing-seo",
+  "web development": "web-development",
+  "mobile development": "mobile-development",
+  "data science & ml": "data-science-ml",
+  "data science and ml": "data-science-ml",
+  "ui/ux design": "ui-ux-design",
+  "graphic design": "graphic-design",
+  "writing & content": "writing-content",
+  "marketing & seo": "marketing-seo",
+  "research & analysis": "research-analysis",
+  "engineering & cad": "engineering-cad",
+  "video & animation": "video-animation",
+  "translation & languages": "translation-languages",
+};
+
+const LEGACY_CATEGORY_LABELS = {
+  "web-development": "Development",
+  "ui-ux-design": "Design",
+  "data-science-ml": "Data & Research",
+  "writing-content": "Writing",
+  "video-animation": "Video & Motion",
+  "marketing-seo": "Marketing",
+};
+
+export function normalizeCategory(category) {
   const rawKey = String(category || "other").trim().toLowerCase();
-  const aliases = {
-    "web development": "web-development",
-    "mobile development": "mobile-development",
-    "data science & ml": "data-science-ml",
-    "data science and ml": "data-science-ml",
-    "ui/ux design": "ui-ux-design",
-    "graphic design": "graphic-design",
-    "writing & content": "writing-content",
-    "marketing & seo": "marketing-seo",
-    "research & analysis": "research-analysis",
-    "engineering & cad": "engineering-cad",
-    "video & animation": "video-animation",
-    "translation & languages": "translation-languages",
-  };
-  const key = aliases[rawKey] || rawKey;
+  return CATEGORY_ALIASES[rawKey] || rawKey;
+}
+
+export function getCategoryMatchValues(category) {
+  const normalized = normalizeCategory(category);
+  return [normalized, LEGACY_CATEGORY_LABELS[normalized], ...Object.entries(CATEGORY_ALIASES)
+    .filter(([, value]) => value === normalized)
+    .map(([alias]) => alias)].filter(Boolean);
+}
+
+export function getDeliverableTemplate(category) {
+  const key = normalizeCategory(category);
   return (templates[key] || templates.other).map(([keyName, title, description]) => ({
     key: keyName,
     title,

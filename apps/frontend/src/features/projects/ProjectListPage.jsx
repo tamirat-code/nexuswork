@@ -7,7 +7,20 @@ import { useAuth } from "../../hooks/useAuth.js";
 import Button from "../../components/ui/Button.jsx";
 import { useTranslation } from "react-i18next";
 
-const CATEGORIES = ["Development", "Design", "Data & Research", "Writing", "Video & Motion", "Marketing"];
+const CATEGORIES = [
+  { slug: "web-development", name: "Web Development" },
+  { slug: "mobile-development", name: "Mobile Development" },
+  { slug: "data-science-ml", name: "Data Science & ML" },
+  { slug: "ui-ux-design", name: "UI/UX Design" },
+  { slug: "graphic-design", name: "Graphic Design" },
+  { slug: "writing-content", name: "Writing & Content" },
+  { slug: "marketing-seo", name: "Marketing & SEO" },
+  { slug: "research-analysis", name: "Research & Analysis" },
+  { slug: "engineering-cad", name: "Engineering & CAD" },
+  { slug: "video-animation", name: "Video & Animation" },
+  { slug: "translation-languages", name: "Translation & Languages" },
+  { slug: "other", name: "Other" },
+];
 
 const EXPERIENCE_LEVELS = [
   { value: "any", label: "Any level" },
@@ -139,9 +152,9 @@ export default function ProjectListPage() {
           className={selectClasses}
         >
           <option value="All">{t("projects.allCategories", { defaultValue: "All categories" })}</option>
-          {CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+          {CATEGORIES.map((categoryOption) => (
+            <option key={categoryOption.slug} value={categoryOption.slug}>
+              {categoryOption.name}
             </option>
           ))}
         </select>

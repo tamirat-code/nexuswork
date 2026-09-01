@@ -4,9 +4,12 @@ import { isOrgMember } from "../clients/clients.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import File from "../files/files.model.js";
 import Skill from "../skills/skills.model.js";
+import { getCategoryMatchValues, normalizeCategory } from "../milestones/deliverable-templates.js";
 
 export async function createProject(actingUserId, data) {
   const { on_behalf_of_client_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
+
+  if (projectData.category) projectData.category = normalizeCategory(projectData.category);
 
   let ownerId = actingUserId;
   if (on_behalf_of_client_id && String(on_behalf_of_client_id) !== String(actingUserId)) {
@@ -73,6 +76,7 @@ export async function updateProject(projectId, actingUserId, data) {
   }
 
   const { required_skill_ids, required_skills, attachments, ...updates } = data;
+  if (updates.category) updates.category = normalizeCategory(updates.category);
   const requestedSkillIds = [...new Set((required_skill_ids || []).map(String))];
   const requestedSkillNames = [...new Set((required_skills || []).map((skill) => String(skill).trim()).filter(Boolean))];
   let skills = [];
@@ -137,7 +141,7 @@ export async function searchProjects(query) {
     if (!skill.match(/^[0-9a-fA-F]{24}$/)) delete match.required_skill_ids;
     if (!skill.match(/^[0-9a-fA-F]{24}$/)) match.required_skills = skill;
   }
-  if (category && category !== "All") match.category = category;
+  if (category && category !== "All") match.category = { $in: getCategoryMatchValues(category) };
   if (experience_level && experience_level !== "any") match.experience_level = experience_level;
   if (minBudget || maxBudget) {
     const minimum = minBudget ? Number(minBudget) : 0;

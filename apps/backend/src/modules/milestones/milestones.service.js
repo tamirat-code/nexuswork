@@ -7,7 +7,7 @@ import Payment from "../payments/payments.model.js";
 import Submission from "../submissions/submissions.model.js";
 import { createDepositIntent, markDepositSucceeded, releaseToStudent } from "../payments/payments.service.js";
 import { getChapaPayoutDestination } from "../wallets/wallets.service.js";
-import { addSubmission } from "../submissions/submissions.service.js";
+import { addSubmission, approveSubmission } from "../submissions/submissions.service.js";
 import { createInvoice } from "../invoices/invoices.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
@@ -335,11 +335,15 @@ export async function listForContract(contractId, requestingUserId, { limit = 10
 export async function getById(id, requestingUserId) {
   const milestone = await Milestone.findById(id);
   if (!milestone) throw new NotFoundError("Milestone not found");
-  const contract = await Contract.findById(milestone.contract_id).select("client_id student_id");
+  const contract = await Contract.findById(milestone.contract_id).select("client_id student_id project_id");
   if (!contract) throw new NotFoundError("Contract not found");
   if (![String(contract.client_id), String(contract.student_id)].includes(String(requestingUserId))) {
     const allowed = await isOrgMember(contract.client_id, requestingUserId);
     if (!allowed) throw new ForbiddenError("You are not a party to this contract");
+  }
+  if (!milestone.deliverables?.length) {
+    const project = await Project.findById(contract.project_id).select("category").lean();
+    milestone.deliverables = getDeliverableTemplate(project?.category);
   }
   return milestone;
 }
@@ -447,7 +451,7 @@ export async function startWork(milestoneId, requestingUserId, auditContext = {}
   return milestone;
 }
 
-export async function submitWork(milestoneId, requestingUserId, { file_ids = [], file_url, note } = {}, auditContext = {}) {
+export async function submitWork(milestoneId, requestingUserId, { file_ids = [], file_url, note, deliverable_items = [] } = {}, auditContext = {}) {
   const milestone = await Milestone.findById(milestoneId).populate("contract_id");
   if (!milestone) throw new NotFoundError("Milestone not found");
 
@@ -461,7 +465,7 @@ export async function submitWork(milestoneId, requestingUserId, { file_ids = [],
     throw new ValidationError("Milestone must be funded or awaiting revision before work is submitted");
   }
 
-  const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note }, auditContext);
+  const submission = await addSubmission(milestone._id, requestingUserId, { file_ids, file_url, note, deliverable_items }, auditContext);
 
   const previousState = milestone.status;
   milestone.status = "submitted";
@@ -499,14 +503,9 @@ export async function approveMilestone(milestoneId, requestingUserId, auditConte
     throw new ValidationError("Milestone must have submitted work before approval");
   }
 
-  // Mark the latest submission as approved so the review flow stays consistent.
-  const latest = await Submission.findOne({ milestone_id: milestone._id }).sort({ version: -1 });
-  if (latest && latest.review_status === "pending_review") {
-    latest.review_status = "approved";
-    latest.reviewer_id = requestingUserId;
-    latest.reviewed_at = new Date();
-    await latest.save();
-  }
+  // Validate and approve the submission before changing the milestone state.
+  // This keeps the API approval path consistent with the review dialog.
+  await approveSubmission(milestone._id, requestingUserId, auditContext);
 
   const previousState = milestone.status;
   milestone.status = "approved";

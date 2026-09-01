@@ -29,6 +29,30 @@ import { ROLES } from "../../constants/roles.constants.js";
 import { uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
 import { reportValidation } from "../../lib/validation.js";
 
+const PROJECT_CATEGORIES = [
+  ["web-development", "Web Development"],
+  ["mobile-development", "Mobile Development"],
+  ["data-science-ml", "Data Science & ML"],
+  ["ui-ux-design", "UI/UX Design"],
+  ["graphic-design", "Graphic Design"],
+  ["writing-content", "Writing & Content"],
+  ["marketing-seo", "Marketing & SEO"],
+  ["research-analysis", "Research & Analysis"],
+  ["engineering-cad", "Engineering & CAD"],
+  ["video-animation", "Video & Animation"],
+  ["translation-languages", "Translation & Languages"],
+  ["other", "Other"],
+];
+
+const LEGACY_CATEGORY_VALUES = {
+  Development: "web-development",
+  Design: "ui-ux-design",
+  "Data & Research": "data-science-ml",
+  Writing: "writing-content",
+  "Video & Motion": "video-animation",
+  Marketing: "marketing-seo",
+};
+
 const proposalSchema = z.object({
   price: z.coerce.number().min(1, "Enter a price").max(1000000),
   delivery_time_days: z.coerce.number().int().min(1, "Enter delivery time in days").max(365),
@@ -293,7 +317,7 @@ function EditProjectDialog({ project, token, projectId }) {
   function openEditor() {
     setTitle(project.title || "");
     setDescription(project.description || "");
-    setCategory(project.category || "");
+    setCategory(LEGACY_CATEGORY_VALUES[project.category] || project.category || "");
     setExperienceLevel(project.experience_level || "intermediate");
     setBudgetType(project.budget_type || "fixed");
     setBudget(project.budget ?? "");
@@ -332,7 +356,7 @@ function EditProjectDialog({ project, token, projectId }) {
           <div><label className="text-sm font-medium text-slate">Title</label><Input className="mt-1" value={title} onChange={(event) => setTitle(event.target.value)} /></div>
           <div><label className="text-sm font-medium text-slate">Description</label><Textarea className="mt-1" rows={5} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div><label className="text-sm font-medium text-slate">Category</label><Input className="mt-1" value={category} onChange={(event) => setCategory(event.target.value)} /></div>
+            <div><label className="text-sm font-medium text-slate">Category</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value={category} onChange={(event) => setCategory(event.target.value)}>{PROJECT_CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
             <div><label className="text-sm font-medium text-slate">Experience</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value={experienceLevel} onChange={(event) => setExperienceLevel(event.target.value)}>{["beginner", "intermediate", "advanced", "expert"].map((level) => <option key={level} value={level}>{level}</option>)}</select></div>
           </div>
           <div><label className="text-sm font-medium text-slate">Budget type</label><select className="mt-1 h-11 w-full rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate" value={budgetType} onChange={(event) => setBudgetType(event.target.value)}><option value="fixed">Fixed budget</option><option value="range">Budget range</option></select></div>
