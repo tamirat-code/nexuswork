@@ -30,7 +30,7 @@ export function registerMeetingNamespace(io) {
       existingParticipants.forEach((userId) => socket.emit("meeting:participant-joined", { userId }));
       socket.to(meetingRoom).emit("meeting:participant-joined", { userId: socket.userId });
     });
-    safe("meeting:leave", async () => { const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting); if (!meeting) return; socket.to(room(meeting.room_id)).emit("meeting:participant-left", { userId: socket.userId }); socket.leave(room(meeting.room_id)); socket.data.meeting = null; });
+    safe("meeting:leave", async () => { const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting); if (!meeting) return; const entry = meeting.participants.find((participant) => String(participant.user_id) === String(socket.userId)); if (entry) { entry.left_at = new Date(); await meeting.save(); } socket.to(room(meeting.room_id)).emit("meeting:participant-left", { userId: socket.userId }); socket.leave(room(meeting.room_id)); socket.data.meeting = null; });
     for (const event of ["webrtc:offer", "webrtc:answer", "webrtc:ice-candidate"]) safe(event, async (payload = {}) => {
       const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting);
       if (!meeting || !canAccessMeeting(meeting, socket.userId) || !valid(payload.targetUserId) || JSON.stringify(payload).length > 200000) return socket.emit("meeting:error", { code: "INVALID_SIGNAL" });
@@ -38,6 +38,6 @@ export function registerMeetingNamespace(io) {
       if (target) target.emit(event, { ...payload, fromUserId: socket.userId });
     });
     for (const event of ["meeting:mute", "meeting:unmute", "meeting:camera-on", "meeting:camera-off"]) safe(event, async () => { const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting); if (meeting && canAccessMeeting(meeting, socket.userId)) socket.to(room(meeting.room_id)).emit(event, { userId: socket.userId }); });
-    socket.on("disconnect", async () => { try { const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting); if (meeting) socket.to(room(meeting.room_id)).emit("meeting:participant-left", { userId: socket.userId }); } catch (error) { logger.error("Meeting disconnect handler failed", error, { userId: socket.userId }); } });
+    socket.on("disconnect", async () => { try { const meeting = socket.data.meeting && await Meeting.findById(socket.data.meeting); if (!meeting) return; const entry = meeting.participants.find((participant) => String(participant.user_id) === String(socket.userId)); if (entry && !entry.left_at) { entry.left_at = new Date(); await meeting.save(); } socket.to(room(meeting.room_id)).emit("meeting:participant-left", { userId: socket.userId }); } catch (error) { logger.error("Meeting disconnect handler failed", error, { userId: socket.userId }); } });
   });
 }
