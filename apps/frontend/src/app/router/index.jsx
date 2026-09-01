@@ -76,6 +76,7 @@ export default function AppRouter() {
       <Route path="/students" element={<StudentsPage />} />
       <Route path="/profile/:id" element={<StudentProfilePage />} />
       <Route path="/universities" element={<UniversitiesPage />} />
+      <Route path="/verifications" element={protect(<UniversitiesPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
       <Route path="/verify-credential" element={<CredentialVerifyPage />} />
       <Route path="/search" element={<SearchPage />} />
 
@@ -102,6 +103,9 @@ export default function AppRouter() {
       <Route path="/clients" element={protect(<ClientsPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
       <Route path="/analytics" element={protect(<AnalyticsPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
       <Route path="/admin" element={protect(<AdminPage />, [ROLES.ADMIN])} />
+      <Route path="/admin/users" element={protect(<AdminPage />, [ROLES.ADMIN])} />
+      <Route path="/admin/disputes" element={protect(<AdminPage />, [ROLES.ADMIN])} />
+      <Route path="/admin/analytics" element={protect(<AdminPage />, [ROLES.ADMIN])} />
       <Route path="/settings" element={protect(<SettingsPage />)} />
       <Route path="/profile" element={protect(<ProfilePage />)} />
       <Route path="/meetings/:meetingId" element={protect(<MeetingPage />)} />

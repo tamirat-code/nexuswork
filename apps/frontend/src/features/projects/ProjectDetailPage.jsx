@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
-import { getProject, updateProject } from "../../services/api/projects.api.js";
+import { getProject, updateProject, closeProject } from "../../services/api/projects.api.js";
 import { listSkills } from "../../services/api/skills.api.js";
 import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
 import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/shadcn/
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/shadcn/dialog.jsx";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/shadcn/form.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
-import { uploadFile, fetchFileBlob } from "../../services/api/files.api.js";
+import { uploadFile, openFilePreview } from "../../services/api/files.api.js";
 import { reportValidation } from "../../lib/validation.js";
 
 const PROJECT_CATEGORIES = [
@@ -178,10 +178,7 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
     const file = proposal.cv_file_id;
     if (!file?._id) { const message = "This proposal has no CV attached and cannot be approved."; toast.error(message); reportValidation(message, { form: "proposal-approval", proposalId: proposal._id }); return; }
     try {
-      const blob = await fetchFileBlob(file._id, token);
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    await openFilePreview(file._id, token);
       await markProposalCvViewed(proposal._id, token);
       setCvViewed((current) => ({ ...current, [proposal._id]: true }));
     } catch (error) { toast.error(error.message || "Could not open CV"); }
@@ -375,7 +372,17 @@ export default function ProjectDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams();
   const { user, token, refreshMe } = useAuth();
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({ queryKey: ["project", id], queryFn: () => getProject(id) });
+  const closeMutation = useMutation({
+    mutationFn: () => closeProject(id, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project closed");
+    },
+    onError: (closeError) => toast.error(closeError.message || "Could not close project"),
+  });
 
   // The "submit proposal" gate below reads user.universityVerified from the cached auth
   // object, which is only set at login and doesn't track server-side changes on its own.
@@ -440,7 +447,7 @@ export default function ProjectDetailPage() {
             {typeof project.proposals_count === "number" && <span>{t("projects.proposals", { count: project.proposals_count, defaultValue: `${project.proposals_count} proposals` })}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-2"><StatusBadge kind="project" status={project.status} showDot />{isClientOwner && project.status === "open" && <EditProjectDialog project={project} projectId={id} token={token} />}</div>
+        <div className="flex items-center gap-2"><StatusBadge kind="project" status={project.status} showDot />{isClientOwner && project.status === "open" && <><EditProjectDialog project={project} projectId={id} token={token} /><Button size="sm" variant="outline" loading={closeMutation.isPending} onClick={() => { if (window.confirm("Close this project? It will stop accepting proposals.")) closeMutation.mutate(); }}>Close project</Button></>}</div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">

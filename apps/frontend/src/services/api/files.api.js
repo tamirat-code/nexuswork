@@ -41,6 +41,22 @@ export const fetchFileBlob = async (id, token) => {
   return res.blob();
 };
 
+// Open the tab synchronously from the user's click before awaiting the
+// authenticated request so browser popup blockers do not reject the preview.
+export const openFilePreview = async (id, token) => {
+  const previewWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+  if (!previewWindow) throw new Error("Please allow pop-ups to open this file");
+  try {
+    const blob = await fetchFileBlob(id, token);
+    const url = URL.createObjectURL(blob);
+    previewWindow.location.href = url;
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    previewWindow.close();
+    throw error;
+  }
+};
+
 export const downloadFile = async (id, token, filename = "download") => {
   const res = await authenticatedFetch(`${getFileContentUrl(id)}?download=1`, {
     token,

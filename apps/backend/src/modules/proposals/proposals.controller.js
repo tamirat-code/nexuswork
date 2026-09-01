@@ -16,6 +16,7 @@ import {
   acceptProposal,
   rejectProposal,
   markCvViewed,
+  withdrawProposal,
 } from "./proposals.service.js";
 import { getCommissionPreview } from "../payments/commission.service.js";
 
@@ -215,3 +216,10 @@ export const reject =
     });
 
   });
+
+export const withdraw = asyncHandler(async (req, res) => {
+  const proposal = await withdrawProposal(req.params.id, req.user, {
+    correlationId: req.correlationId,
+  });
+  res.json({ success: true, data: proposal });
+});

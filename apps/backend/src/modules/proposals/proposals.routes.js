@@ -9,6 +9,7 @@ import {
   accept,
   reject,
   cvViewed,
+  withdraw,
 } from "./proposals.controller.js";
 
 import { requireAuth } from "../../middleware/auth.middleware.js";
@@ -79,6 +80,13 @@ router.post(
   requireAuth,
   requireRole("client", "admin"),
   reject
+);
+
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRole("student"),
+  withdraw
 );
 
 export default router;

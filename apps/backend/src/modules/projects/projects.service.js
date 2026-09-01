@@ -124,6 +124,20 @@ export async function updateProject(projectId, actingUserId, data) {
   return project;
 }
 
+export async function closeProjectById(projectId, actingUserId) {
+  const project = await Project.findById(projectId);
+  if (!project) throw new NotFoundError("Project not found");
+  if (String(project.client_id) !== String(actingUserId) && !(await isOrgMember(project.client_id, actingUserId))) {
+    throw new ForbiddenError("Not authorized to close this project");
+  }
+  if (project.status !== "open") {
+    throw new ValidationError("Only open projects can be closed");
+  }
+  project.status = "cancelled";
+  await project.save();
+  return project;
+}
+
 const SORT_STAGES = {
   newest: { createdAt: -1 },
   budget: { budget: -1 },

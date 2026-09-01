@@ -1,7 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
 import { ForbiddenError, NotFoundError } from "../../shared/exceptions/AppError.js";
-import { createProject, updateProject, searchProjects, getProjectById } from "./projects.service.js";
+import { createProject, updateProject, searchProjects, getProjectById, closeProjectById } from "./projects.service.js";
 
 export const postProject = asyncHandler(async (req, res) => {
   if (req.user.role !== "client") throw new ForbiddenError("Only clients can post projects");
@@ -23,5 +23,10 @@ export const getProject = asyncHandler(async (req, res) => {
 
 export const patchProject = asyncHandler(async (req, res) => {
   const project = await updateProject(req.params.id, req.user._id, req.body);
+  res.json({ success: true, data: project });
+});
+
+export const closeProject = asyncHandler(async (req, res) => {
+  const project = await closeProjectById(req.params.id, req.user._id);
   res.json({ success: true, data: project });
 });

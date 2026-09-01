@@ -8,7 +8,7 @@ import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, Trendi
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
-import { fetchFileBlob } from "../../services/api/files.api.js";
+import { openFilePreview } from "../../services/api/files.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/shadcn/card.jsx";
@@ -199,10 +199,7 @@ function ResolveDisputeDialog({ dispute, token }) {
 // (see staff-verifications.service.js reviewStaffVerification).
 async function openPrivateFile(file, token) {
   try {
-    const blob = await fetchFileBlob(file._id, token);
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    await openFilePreview(file._id, token);
   } catch (error) {
     toast.error(error.message || "Could not open document");
   }

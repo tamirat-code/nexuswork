@@ -653,3 +653,30 @@ export async function rejectProposal(
 
   return proposal;
 }
+
+export async function withdrawProposal(proposalId, requestingUser, auditContext = {}) {
+  const proposal = await Proposal.findById(proposalId).populate("project_id", "title status client_id");
+  if (!proposal) throw new NotFoundError("Proposal not found");
+  if (String(proposal.student_id) !== String(requestingUser._id)) {
+    throw new ForbiddenError("Only the proposal owner can withdraw this proposal");
+  }
+  if (proposal.status !== "pending") {
+    throw new ValidationError(`Cannot withdraw a proposal with status "${proposal.status}"`);
+  }
+
+  const previousState = proposal.status;
+  proposal.status = "withdrawn";
+  await proposal.save();
+  await recordEvent({
+    actor: requestingUser,
+    eventType: "PROPOSAL_WITHDRAWN",
+    action: "proposal.withdrawn",
+    entityType: "proposal",
+    entityId: proposal._id,
+    previousState,
+    newState: proposal.status,
+    correlationId: auditContext.correlationId || crypto.randomUUID(),
+    metadata: { projectId: proposal.project_id?._id },
+  });
+  return proposal;
+}
