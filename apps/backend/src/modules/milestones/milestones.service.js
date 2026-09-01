@@ -146,7 +146,22 @@ async function completeRelease(milestone, contract, requestingUserId, auditConte
         contract_id: contract._id,
         status: { $ne: "released" },
       });
-      if (outstanding === 0) {
+      const releasedMilestones = await Milestone.find({
+        contract_id: contract._id,
+        status: "released",
+      }).select("amount amount_minor currency").lean();
+      const releasedMinor = releasedMilestones.reduce((sum, item) => {
+        const itemMoney = Number.isSafeInteger(item.amount_minor)
+          ? money(item.amount_minor, item.currency || contract.terms.currency || paymentConfig.currency)
+          : moneyFromLegacyMajorUnits(item.amount, item.currency || contract.terms.currency || paymentConfig.currency, "milestone.amount");
+        return sum + itemMoney.amountMinor;
+      }, 0);
+      const contractTotal = moneyFromLegacyMajorUnits(
+        contract.terms.total_amount,
+        contract.terms.currency || paymentConfig.currency,
+        "contract.terms.total_amount"
+      );
+      if (outstanding === 0 && releasedMinor >= contractTotal.amountMinor) {
         contract.status = "completed";
         await contract.save();
         await Project.findByIdAndUpdate(contract.project_id, { status: "completed" });
@@ -503,9 +518,11 @@ export async function approveMilestone(milestoneId, requestingUserId, auditConte
     throw new ValidationError("Milestone must have submitted work before approval");
   }
 
-  // Validate and approve the submission before changing the milestone state.
-  // This keeps the API approval path consistent with the review dialog.
-  await approveSubmission(milestone._id, requestingUserId, auditContext);
+  // Validate and approve a modern submission before changing the milestone
+  // state. A submitted milestone without a submission document is retained as
+  // a legacy-compatible state for older records and integrations.
+  const latest = await Submission.findOne({ milestone_id: milestone._id }).sort({ version: -1 });
+  if (latest) await approveSubmission(milestone._id, requestingUserId, auditContext);
 
   const previousState = milestone.status;
   milestone.status = "approved";

@@ -1050,19 +1050,21 @@ export default function ContractDetailPage() {
   const mySignature = isClient ? contract?.client_signature : contract?.student_signature;
   const hasSigned = Boolean(mySignature?.signed_at);
 
-  const milestoneProgress = useMemo(() => {
-    if (!milestones.length) return 0;
-    const done = milestones.filter((m) => [MILESTONE_STATUS.APPROVED, MILESTONE_STATUS.RELEASED].includes(m.status)).length;
-    return Math.round((done / milestones.length) * 100);
-  }, [milestones]);
-
   const agreedAmount = Number(contract?.terms?.total_amount ?? 0);
   const milestoneTotal = milestones.reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0);
   const totalAmount = agreedAmount > 0 ? agreedAmount : milestoneTotal;
   const contractCurrency = contract?.terms?.currency || "USD";
-  const fundedAmount = milestones
+  const releasedAmount = milestones
+    .filter((m) => m.status === MILESTONE_STATUS.RELEASED)
+    .reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0);
+  const allocatedAmount = milestones
     .filter((m) => [MILESTONE_STATUS.FUNDED, MILESTONE_STATUS.IN_PROGRESS, MILESTONE_STATUS.SUBMITTED, MILESTONE_STATUS.DELIVERED, MILESTONE_STATUS.APPROVED, MILESTONE_STATUS.RELEASED, MILESTONE_STATUS.DISPUTED].includes(m.status))
     .reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0);
+  const completedMilestones = milestones.filter((m) => m.status === MILESTONE_STATUS.RELEASED).length;
+  const milestoneProgress = useMemo(() => {
+    if (!totalAmount) return 0;
+    return Math.min(100, Math.round((releasedAmount / totalAmount) * 100));
+  }, [releasedAmount, totalAmount]);
 
   const createMilestoneMutation = useMutation({
     mutationFn: (payload) => createMilestone(id, payload, token),
@@ -1261,8 +1263,12 @@ export default function ContractDetailPage() {
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-lg">Milestones</CardTitle>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-sm text-slate-300">{formatCurrency(fundedAmount, contractCurrency)} / {formatCurrency(totalAmount, contractCurrency)}</span>
-                <Badge variant="secondary">{milestoneProgress}%</Badge>
+                <div className="text-right text-xs text-slate-300">
+                  <p><span className="text-slate-400">Released:</span> <span className="font-mono text-escrow">{formatCurrency(releasedAmount, contractCurrency)} / {formatCurrency(totalAmount, contractCurrency)}</span></p>
+                  <p className="mt-0.5"><span className="text-slate-400">Allocated:</span> <span className="font-mono">{formatCurrency(allocatedAmount, contractCurrency)}</span></p>
+                </div>
+                <Badge variant="secondary">{milestoneProgress}% released</Badge>
+                <span className="whitespace-nowrap text-xs text-slate-300">{completedMilestones} / {milestones.length} milestones</span>
                 {isClient && contract.status === "active" && (
                   <Dialog open={createMilestoneOpen} onOpenChange={setCreateMilestoneOpen}>
                     <DialogTrigger asChild><Button size="sm">+ Create milestone</Button></DialogTrigger>

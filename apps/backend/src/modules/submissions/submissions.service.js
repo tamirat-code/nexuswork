@@ -106,7 +106,9 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
     file_ids: normalizedFileIds,
     file_url,
     file_urls: files.map((file) => file.url).concat(file_url ? [file_url] : []),
-    deliverable_items: requirements.map((requirement) => {
+    // Keep old top-level-only submissions compatible. New submissions send
+    // deliverable_items and receive the category checklist representation.
+    deliverable_items: hasStructuredItems ? requirements.map((requirement) => {
       const item = itemByKey.get(String(requirement.key));
       return {
         key: requirement.key,
@@ -115,7 +117,7 @@ export async function addSubmission(milestoneId, studentId, { file_ids = [], fil
         links: item?.links || [],
         note: item?.note || "",
       };
-    }),
+    }) : [],
     note: normalizedNote,
     review_status: "pending_review",
     submitted_at: new Date(),
