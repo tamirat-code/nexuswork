@@ -48,10 +48,15 @@ export default function MeetingPage() {
           if (remoteRef.current && !remoteAudioEnabledRef.current) { remoteRef.current.defaultMuted = true; remoteRef.current.muted = true; }
           localRef.current?.play().catch(() => {});
           remoteRef.current?.play().catch(() => {});
+          // Do not re-emit meeting:join on every focus/pageshow event. The
+          // server announces each join to the room, so duplicate joins cause
+          // duplicate offers and can leave the peer connection stuck in a
+          // non-stable signaling state. The connect handler performs the
+          // join once after an actual socket reconnect.
           if (!socket.connected) {
             setStatus("reconnecting");
             socket.connect();
-          } else socket.emit("meeting:join", { room_id: join.data.room_id });
+          }
           if (["disconnected", "failed"].includes(pc.connectionState)) {
             setStatus("reconnecting");
             window.clearTimeout(reconnectTimerRef.current);
