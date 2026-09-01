@@ -120,7 +120,7 @@ function SkillPicker({ value, onChange, catalog = [], t }) {
   );
 }
 
-function PriceSuggestion({ skills, category, token, onApply }) {
+function PriceSuggestion({ skills, category, currency = "USD", token, onApply }) {
   const { t } = useTranslation();
   const enabled = skills.length > 0 || Boolean(category);
   const { data, isFetching } = useQuery({
@@ -149,7 +149,7 @@ function PriceSuggestion({ skills, category, token, onApply }) {
       ) : (
         <span className="text-slate-300">
           {t("projectsForm.similarPrice")} {" "}
-          <span className="font-mono font-semibold text-brass">{formatCurrency(suggestion.suggested_price)}</span>
+          <span className="font-mono font-semibold text-brass">{formatCurrency(suggestion.suggested_price, currency)}</span>
           {" "}({suggestion.sample_size} {t("projectsForm.sample")}{suggestion.sample_size === 1 ? "" : "s"}).{" "}
           <button type="button" onClick={() => onApply(suggestion.suggested_price)} className="font-semibold text-brass hover:underline">
             {t("projectsForm.usePrice")}
@@ -299,7 +299,7 @@ export default function PostProjectPage() {
                     <FormField control={form.control} name="budget" render={({ field }) => (
                       <FormItem><FormLabel>{t("projectsForm.budget", { currency: form.watch("currency") })}</FormLabel>
                         <FormControl><Input type="number" min={10} placeholder="750" className="font-mono" {...field} /></FormControl>
-                        <PriceSuggestion skills={skills.map((skill) => skill.name)} category={form.watch("category")} token={token} onApply={(price) => form.setValue("budget", price, { shouldValidate: true })} />
+                        <PriceSuggestion skills={skills.map((skill) => skill.name)} category={form.watch("category")} currency={form.watch("currency")} token={token} onApply={(price) => form.setValue("budget", price, { shouldValidate: true })} />
                         <FormMessage /></FormItem>
                     )} />
                   )}

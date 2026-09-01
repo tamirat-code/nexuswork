@@ -140,7 +140,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
               <p className="font-semibold text-slate">Your estimated payout</p>
               <p className="mt-1">
                 {commissionLoading ? "Checking your current commission rate…" : commissionPreview
-                  ? `${commissionPreview.waived ? "Commission waived" : `${(commissionPreview.rateBps / 100).toFixed(2)}% commission`} · Estimated payout ${Number(commissionPreview.studentPayout ?? 0).toFixed(2)} ${currency}`
+                  ? `${commissionPreview.waived ? "Commission waived" : `${(commissionPreview.rateBps / 100).toFixed(2)}% commission`} · Estimated payout ${formatCurrency(commissionPreview.studentPayout ?? 0, currency)}`
                   : "Commission details will appear before submission."}
               </p>
             </div>

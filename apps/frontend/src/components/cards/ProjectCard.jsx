@@ -41,7 +41,7 @@ export default function ProjectCard({ project }) {
 
         <div className="shrink-0 rounded-control border border-brand/25 bg-brand-soft px-3.5 py-2 text-right">
           <p className="font-mono text-base font-extrabold tracking-tight text-brand-dark sm:text-lg">
-            {formatCurrency(project.budget)}
+            {formatCurrency(project.budget, project.currency || "USD")}
           </p>
           <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-content-muted">{t("projects.fixedPrice", { defaultValue: "Fixed price" })}</p>
         </div>
