@@ -12,11 +12,11 @@ export default function MeetingPage() {
   const { meetingId } = useParams(); const { token, user } = useAuth(); const navigate = useNavigate(); const { t } = useTranslation();
   const localRef = useRef(null); const remoteRef = useRef(null); const remoteStreamRef = useRef(null); const remoteAudioEnabledRef = useRef(false); const pcRef = useRef(null); const streamRef = useRef(null); const displayStreamRef = useRef(null); const videoSenderRef = useRef(null); const socketRef = useRef(null); const remoteUserRef = useRef(null); const pendingCandidatesRef = useRef([]); const remoteDescSetRef = useRef(false); const renegotiatingRef = useRef(false); const renegotiateRef = useRef(null); const reconnectTimerRef = useRef(null);
   const [joined, setJoined] = useState(false); const [ready, setReady] = useState(false); const [peerPresent, setPeerPresent] = useState(false); const [elapsed, setElapsed] = useState(0); const [muted, setMuted] = useState(false); const [cameraOff, setCameraOff] = useState(false); const [sharing, setSharing] = useState(false); const [status, setStatus] = useState("connecting"); const [error, setError] = useState(""); const [meetingStatus, setMeetingStatus] = useState(null);
-  const { data, isLoading, error: meetingError } = useQuery({ queryKey: ["meeting", meetingId], queryFn: () => getMeeting(meetingId, token), enabled: !!token }); const meeting = data?.data;
+  const { data, isLoading, error: meetingError } = useQuery({ queryKey: ["meeting", meetingId], queryFn: () => getMeeting(meetingId, token), enabled: !!token }); const meeting = data?.data; const meetingAvailable = Boolean(meeting);
   useEffect(() => { if (meeting?.status) setMeetingStatus(meeting.status); }, [meeting?.status]);
 
   useEffect(() => {
-    if (!meeting || joined || !ready) return undefined; let disposed = false; let restoreAfterVisibility = null;
+    if (!meetingAvailable || joined || !ready) return undefined; let disposed = false; let restoreAfterVisibility = null;
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) throw new Error("unsupported");
@@ -67,7 +67,7 @@ export default function MeetingPage() {
       } catch (joinError) { logger.error("Failed to initialize meeting", joinError, { meetingId }); setError(joinError.message === "unsupported" ? t("meetings.unsupported") : t("meetings.permission")); }
     })();
     return () => { disposed = true; if (restoreAfterVisibility) { document.removeEventListener("visibilitychange", restoreAfterVisibility); window.removeEventListener("focus", restoreAfterVisibility); window.removeEventListener("pageshow", restoreAfterVisibility); } window.clearTimeout(reconnectTimerRef.current); displayStreamRef.current?.getTracks().forEach((track) => track.stop()); socketRef.current?.disconnect(); pcRef.current?.close(); streamRef.current?.getTracks().forEach((track) => track.stop()); videoSenderRef.current = null; renegotiateRef.current = null; remoteStreamRef.current = null; pendingCandidatesRef.current = []; remoteDescSetRef.current = false; };
-  }, [meeting, meetingId, token, t, ready]);
+  }, [meetingAvailable, meetingId, token, t, ready]);
 
   const enableRemoteAudio = () => { const video = remoteRef.current; if (!video) return; remoteAudioEnabledRef.current = true; video.defaultMuted = false; video.muted = false; video.play().catch((playError) => logger.warn("Remote meeting audio is waiting for browser permission", { meetingId, error: playError?.message })); };
   const toggle = (kind) => { const track = streamRef.current?.getTracks().find((candidate) => candidate.kind === kind); if (!track) return; track.enabled = !track.enabled; if (kind === "audio") setMuted(!track.enabled); else setCameraOff(!track.enabled); socketRef.current?.emit(track.enabled ? `meeting:${kind === "audio" ? "unmute" : "camera-on"}` : `meeting:${kind === "audio" ? "mute" : "camera-off"}`); };
