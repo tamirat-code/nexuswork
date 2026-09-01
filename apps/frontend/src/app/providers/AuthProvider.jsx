@@ -98,6 +98,10 @@ export function AuthProvider({ children }) {
     if (!token || !ready) return;
 
     const maybeRefresh = () => {
+      // Browser tab restoration fires focus while a native media picker or an
+      // active WebRTC call is being resumed. Do not let a background auth
+      // refresh unmount an active meeting because of a transient 401.
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/meetings/")) return;
       const now = Date.now();
       if (now - lastRefreshRef.current < REFRESH_THROTTLE_MS) return;
       lastRefreshRef.current = now;
