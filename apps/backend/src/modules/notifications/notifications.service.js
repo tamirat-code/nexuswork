@@ -2,6 +2,23 @@ import Notification from "./notifications.model.js";
 import User from "../users/users.model.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { emitToUser } from "../../websocket/socket.registry.js";
+import { sendNotificationEmail } from "../../shared/mailer/mailer.service.js";
+import { logger } from "../../shared/logger/logger.js";
+
+async function deliverNotificationEmail(notification, recipient) {
+  if (!recipient?.email || recipient.notification_prefs?.email === false) return;
+
+  try {
+    await sendNotificationEmail({
+      to: recipient.email,
+      subject: notification.title,
+      body: notification.body,
+    });
+    await Notification.updateOne({ _id: notification._id }, { $set: { email_sent: true } });
+  } catch (err) {
+    logger.error(`[notifications] failed to send ${notification.type} email:`, err.message);
+  }
+}
 
 export async function createNotification({
   userId,
@@ -22,7 +39,7 @@ export async function createNotification({
     data: data || {},
   });
 
-  const recipient = await User.findById(userId).select("notification_prefs").lean();
+  const recipient = await User.findById(userId).select("email notification_prefs").lean();
   if (recipient?.notification_prefs?.push !== false) {
     emitToUser(userId, "notification:new", {
       _id: notification._id,
@@ -37,6 +54,8 @@ export async function createNotification({
       updatedAt: notification.updatedAt,
     });
   }
+
+  void deliverNotificationEmail(notification, recipient);
 
   return notification;
 }

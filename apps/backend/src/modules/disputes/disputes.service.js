@@ -8,6 +8,7 @@ import { refundClient, releaseToStudent } from "../payments/payments.service.js"
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import { createNotification } from "../notifications/notifications.service.js";
 import crypto from "node:crypto";
 import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
 
@@ -52,6 +53,14 @@ export async function openDispute(milestoneId, openedBy, reason, auditContext = 
     newState: dispute.status,
     correlationId,
     metadata: { milestoneId: milestone._id },
+  });
+  const otherPartyId = String(contract.client_id) === String(openedBy) ? contract.student_id : contract.client_id;
+  await createNotification({
+    userId: otherPartyId,
+    type: "dispute_update",
+    title: "A dispute was opened",
+    body: `A dispute was opened for milestone ${milestone.title || milestone._id}. Please review the details.`,
+    data: { dispute_id: dispute._id, milestone_id: milestone._id, action: "view_dispute" },
   });
   return dispute;
 }
@@ -140,6 +149,13 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
     correlationId: auditContext.correlationId || crypto.randomUUID(),
     metadata: { outcome, previousMilestoneState, newMilestoneState: milestone.status },
   });
+  await Promise.all([contract.client_id, contract.student_id].map((userId) => createNotification({
+    userId,
+    type: "dispute_update",
+    title: "Dispute resolved",
+    body: `The dispute was resolved with outcome: ${outcome.replaceAll("_", " ")}.`,
+    data: { dispute_id: dispute._id, milestone_id: milestone._id, outcome, action: "view_dispute" },
+  })));
   return dispute;
 }
 

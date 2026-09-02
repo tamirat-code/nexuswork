@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MessageSquare, Paperclip, Send } from "lucide-react";
 import { listMessages, sendMessage } from "../../services/api/messages.api.js";
-import { uploadFile } from "../../services/api/files.api.js";
+import { downloadFile, openFilePreview, uploadFile } from "../../services/api/files.api.js";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useSocket } from "../../hooks/useSocket.js";
@@ -217,6 +217,22 @@ export default function ChatPage() {
                       {m.body && (
                         <p className="mt-0.5 leading-relaxed text-slate">{m.body}</p>
                       )}
+                      {m.attachments?.length > 0 && (
+                        <div className="mt-2 space-y-1.5 border-t border-current/10 pt-2">
+                          {m.attachments.map((file) => (
+                            <div key={file._id} className="flex items-center gap-2 text-[11px]">
+                              <Paperclip className="h-3.5 w-3.5 shrink-0 text-brass" />
+                              <span className="min-w-0 flex-1 truncate" title={file.original_name}>{file.original_name}</span>
+                              <button type="button" className="shrink-0 font-semibold text-brass hover:underline" onClick={async () => {
+                                try { await openFilePreview(file._id, token); } catch (error) { toast.error(error.message || "Could not preview file"); }
+                              }}>View</button>
+                              <button type="button" className="shrink-0 font-semibold text-brass hover:underline" onClick={async () => {
+                                try { await downloadFile(file._id, token, file.original_name); } catch (error) { toast.error(error.message || "Could not download file"); }
+                              }}>Download</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <p className="mt-1 text-[10px] text-slate-300">{formatTimeAgo(m.createdAt)}</p>
                     </div>
                   </div>
@@ -271,4 +287,3 @@ export default function ChatPage() {
     </div>
   );
 }
-

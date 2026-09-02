@@ -211,14 +211,19 @@ function SubmissionFiles({ submission, token, filesOverride }) {
     return <p className="text-xs text-slate-300">No files attached to this submission.</p>;
   }
 
-  const openPreview = (file) => {
+  const openPreview = async (file) => {
     const mimetype = String(file.mimetype || "").toLowerCase();
     if (mimetype.includes("zip") || mimetype.includes("compressed") || mimetype.includes("x-7z") || mimetype.includes("rar")) {
       toast.info("This archive can be downloaded but cannot be previewed in the browser.");
       return;
     }
+    const blob = await fetchFileBlob(file._id, token);
+    const url = URL.createObjectURL(blob);
     setPreviewFile(file);
-    setPreviewUrl(getFileContentUrl(file._id, { direct: true }));
+    setPreviewUrl((previous) => {
+      if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
+      return url;
+    });
   };
 
   return (
@@ -231,9 +236,9 @@ function SubmissionFiles({ submission, token, filesOverride }) {
           <FileText className="h-4 w-4 shrink-0 text-brass" />
           <span className="min-w-0 flex-1 truncate text-sm text-slate">{file.original_name}</span>
           <span className="shrink-0 text-xs text-slate-300">{formatBytes(file.size)}</span>
-          <button type="button" onClick={() => {
+          <button type="button" onClick={async () => {
             try {
-              openPreview(file);
+              await openPreview(file);
             } catch (error) {
               toast.error(error.message || "Could not preview file");
             }

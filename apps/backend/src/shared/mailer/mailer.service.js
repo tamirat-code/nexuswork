@@ -9,6 +9,15 @@ async function send({ to, subject, html }) {
   return sendMail({ to, subject, html });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 export async function sendPasswordResetEmail(email, resetToken) {
   const resetUrl = `${mailConfig.appUrl}/reset-password?token=${resetToken}`;
   const { subject, html } = passwordResetEmail({ resetUrl });
@@ -30,8 +39,8 @@ export async function sendWelcomeEmail(email, name) {
 export async function sendNotificationEmail({ to, subject, body }) {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #1f2937;">${subject}</h2>
-      <p style="color: #374151; line-height: 1.6;">${body}</p>
+      <h2 style="color: #1f2937;">${escapeHtml(subject)}</h2>
+      <p style="color: #374151; line-height: 1.6; white-space: pre-line;">${escapeHtml(body)}</p>
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
       <p style="color: #9ca3af; font-size: 12px;">You are receiving this because you have an account on NexusWork.</p>
     </div>

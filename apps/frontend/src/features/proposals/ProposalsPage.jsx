@@ -72,7 +72,7 @@ import {
 
 import { ROLES } from "../../constants/roles.constants.js";
 import { PROPOSAL_STATUS } from "../../constants/status.constants.js";
-import { getFileContentUrl } from "../../services/api/files.api.js";
+import { fetchFileBlob, openFilePreview } from "../../services/api/files.api.js";
 
 
 function EmptyProposals({ isClient }) {
@@ -117,6 +117,7 @@ function ProposalReviewDialog({
   rejecting,
   cvViewed,
   onCvViewed,
+  token,
 }) {
   const [cvUrl, setCvUrl] = useState(null);
 
@@ -126,11 +127,12 @@ function ProposalReviewDialog({
 
   if (!proposal) return null;
   const openCv = async () => {
-    // An iframe navigation sends the HttpOnly session cookie without asking
-    // JavaScript to read the cross-origin file response, keeping the client
-    // on this proposal page while reviewing the CV.
-    setCvUrl(getFileContentUrl(proposal.cv_file_id._id, { direct: true }));
     try {
+      const blob = await fetchFileBlob(proposal.cv_file_id._id, token);
+      setCvUrl((previous) => {
+        if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
+        return URL.createObjectURL(blob);
+      });
       await onCvViewed?.(proposal._id);
     } catch (error) {
       toast.error(error.message || "Could not open the student's CV");
@@ -1129,6 +1131,7 @@ export default function ProposalsPage() {
         }
 
         cvViewed={cvViewed}
+        token={token}
         onCvViewed={(id) => cvViewedMutation.mutateAsync(id)}
 
         onAccept={() => {

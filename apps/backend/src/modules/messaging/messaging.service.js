@@ -2,6 +2,7 @@ import Message from "./messaging.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { emitToContract } from "../../websocket/socket.registry.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import { createNotification } from "../notifications/notifications.service.js";
 import crypto from "node:crypto";
 
 async function assertParty(contractId, userId) {
@@ -17,12 +18,13 @@ async function assertParty(contractId, userId) {
     err.status = 403;
     throw err;
   }
+  return contract;
 }
 
 import File from "../files/files.model.js";
 
 export async function sendMessage(contractId, senderId, { body, attachments }, auditContext = {}) {
-  await assertParty(contractId, senderId);
+  const contract = await assertParty(contractId, senderId);
 
   const attachmentsInput = attachments || [];
   const attachmentIds = [];
@@ -56,7 +58,7 @@ export async function sendMessage(contractId, senderId, { body, attachments }, a
 
   if (attachmentIds.length) {
     await File.updateMany(
-      { _id: { $in: attachmentIds } },
+      { _id: { $in: attachmentIds }, owner_id: senderId },
       { $set: { related_type: "message_attachment", related_id: created._id } }
     );
   }
@@ -79,6 +81,15 @@ export async function sendMessage(contractId, senderId, { body, attachments }, a
   });
 
   emitToContract(contractId, "message:new", message);
+
+  const recipientId = String(contract.client_id) === String(senderId) ? contract.student_id : contract.client_id;
+  await createNotification({
+    userId: recipientId,
+    type: "new_message",
+    title: `New message from ${message.sender_id?.name || "your contract partner"}`,
+    body: body || (attachmentIds.length ? "You received a message with an attachment." : "You received a new message."),
+    data: { contract_id: contractId, message_id: created._id, action: "view_contract" },
+  });
   return message;
 }
 
