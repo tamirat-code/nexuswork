@@ -5,7 +5,7 @@ import StudentProfile from "../students/students.model.js";
 import User from "../users/users.model.js";
 import File from "../files/files.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
-import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from "../../shared/exceptions/AppError.js";
 import { env } from "../../config/env.js";
 import { signCredential } from "./credential-signing.js";
 
@@ -231,17 +231,26 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
   verification.rejection_reason = decision === "rejected" ? (rejectionReason || "Not approved") : undefined;
 
   if (decision === "approved") {
-    
-    await StudentProfile.findOneAndUpdate(
-      { user_id: verification.user_id },
-      {
-        verification_status: "verified",
-        university_id: verification.university_id,
-        student_id_number: verification.student_id_number,
-        program: verification.program,
-      },
-      { new: true, upsert: true }
-    );
+    try {
+      await StudentProfile.findOneAndUpdate(
+        { user_id: verification.user_id },
+        {
+          verification_status: "verified",
+          university_id: verification.university_id,
+          student_id_number: verification.student_id_number,
+          program: verification.program,
+        },
+        { new: true, upsert: true }
+      );
+    } catch (err) {
+      if (err?.code === 11000 && err?.keyPattern?.university_id && err?.keyPattern?.student_id_number) {
+        throw new ConflictError(
+          `Student ID ${verification.student_id_number} is already registered at this university. Resolve the duplicate before approving this request.`,
+          "DUPLICATE_STUDENT_ID"
+        );
+      }
+      throw err;
+    }
 
     await User.findByIdAndUpdate(verification.user_id, { universityVerified: true });
   } else {

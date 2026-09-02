@@ -23,3 +23,9 @@ export class ValidationError extends AppError {
     super(message, 400, code);
   }
 }
+
+export class ConflictError extends AppError {
+  constructor(message = "The requested change conflicts with an existing resource", code = null) {
+    super(message, 409, code);
+  }
+}
