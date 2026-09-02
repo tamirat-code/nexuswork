@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileJson, ShieldCheck } from "lucide-react";
 import {
@@ -65,7 +65,11 @@ export default function ProfilePage() {
   const toast = useToast();
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState("general");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => {
+    const section = searchParams.get("section");
+    return section === "verification" || section === "strength" ? section : "general";
+  });
 
   const initial = useMemo(() => fromUser(user), [user]);
   const [form, setForm] = useState(initial);
@@ -83,10 +87,20 @@ export default function ProfilePage() {
   const showVerificationTab = isStudent || isStaff;
 
   useEffect(() => {
-    if (!showVerificationTab && activeTab === "verification") {
-      setActiveTab("general");
-    }
-  }, [showVerificationTab, activeTab]);
+    const requestedSection = searchParams.get("section");
+    const nextTab = requestedSection === "verification" && showVerificationTab
+      ? "verification"
+      : requestedSection === "strength"
+        ? "strength"
+        : "general";
+
+    if (nextTab !== activeTab) setActiveTab(nextTab);
+  }, [searchParams, showVerificationTab, activeTab]);
+
+  function handleTabChange(value) {
+    setActiveTab(value);
+    setSearchParams(value === "general" ? {} : { section: value }, { replace: true });
+  }
 
   // Enrollment status lives on the separate StudentProfile record (not the
   // User document), and isn't collected at signup anymore — so it's fetched
@@ -241,7 +255,7 @@ export default function ProfilePage() {
 
       {/* ── Compact Tab Bar to eliminate vertical scrolling ── */}
       <div className="mb-6">
-        <Tabs items={tabItems} value={activeTab} onChange={setActiveTab} ariaLabel={t("profile.sections", { defaultValue: "Profile sections" })} />
+        <Tabs items={tabItems} value={activeTab} onChange={handleTabChange} ariaLabel={t("profile.sections", { defaultValue: "Profile sections" })} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

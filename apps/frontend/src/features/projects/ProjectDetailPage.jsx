@@ -70,7 +70,7 @@ function VerificationRequiredNotice() {
       <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
         {t("projects.verifiedOnly", { defaultValue: "Clients only see proposals from verified students. Submit your university details from your profile — most requests are reviewed within a couple of days." })}
       </p>
-      <Link to="/profile" className="mt-3 block">
+      <Link to="/profile?section=verification" className="mt-3 block">
         <Button variant="outline" className="w-full" size="sm">
           {t("projects.getVerified", { defaultValue: "Get verified" })}
         </Button>

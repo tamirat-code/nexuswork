@@ -16,6 +16,10 @@ import { csrfGuard } from "./modules/auth/auth.cookies.js";
 
 const app = express();
 
+// Render sits behind a reverse proxy. Trust the first proxy hop so
+// express-rate-limit can distinguish users by their forwarded client IP.
+app.set("trust proxy", 1);
+
 app.use(requestContext);
 
 app.use(helmet({

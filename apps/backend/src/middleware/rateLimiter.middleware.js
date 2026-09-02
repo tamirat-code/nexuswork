@@ -12,7 +12,10 @@ export const loginRateLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.body?.email?.toLowerCase() || req.ip,
+  // Scope failed-login attempts to both the account and the real client IP.
+  // This prevents one device from blocking the same account everywhere while
+  // still limiting repeated attempts from that device.
+  keyGenerator: (req) => `${req.body?.email?.toLowerCase() || "unknown"}:${req.ip}`,
   message: { success: false, message: "Too many login attempts. Please try again later." },
 });
 
