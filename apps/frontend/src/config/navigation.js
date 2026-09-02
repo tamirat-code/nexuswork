@@ -111,6 +111,7 @@ export const STANDALONE_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/verify-email-pending",
   "/mfa/setup",
   "/mfa/verify",
 ];

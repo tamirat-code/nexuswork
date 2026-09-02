@@ -9,7 +9,7 @@ import University from "../universities/universities.model.js";
 import { RevokedToken, PasswordResetToken, EmailVerificationToken } from "./tokens.model.js";
 import { authConfig } from "../../config/auth.config.js";
 import { legalConfig } from "../../config/legal.config.js";
-import { sendPasswordResetEmail, sendVerificationEmail } from "../../shared/mailer/mailer.service.js";
+import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../../shared/mailer/mailer.service.js";
 import { verifyGoogleIdToken } from "./google.client.js";
 import { verifyRecaptcha } from "../../shared/recaptcha/recaptcha.service.js";
 import { requireStrongPassword } from "../../shared/validators/password.js";
@@ -210,8 +210,10 @@ function beginMfaForUser(user) {
     return { mfaRequired: true, challengeToken };
   }
 
-  user.mfa_enabled = false;
-  return createMfaSetupChallenge(user);
+  // MFA is an optional account security setting. New registrations and
+  // existing users who have not opted in should receive a normal session;
+  // setup is initiated explicitly from the authenticated Settings page.
+  return { token: signToken(user), user };
 }
 
 // Lets an already-authenticated user opt into MFA proactively from Settings,
@@ -467,4 +469,10 @@ export async function verifyEmail(rawToken) {
   const user = await User.findByIdAndUpdate(record.user_id, { email_verified: true }, { new: true });
   if (!user) throw new ValidationError("This verification link is invalid or has expired");
   await EmailVerificationToken.deleteOne({ _id: record._id });
+
+  try {
+    await sendWelcomeEmail(user.email, user.name);
+  } catch (err) {
+    logger.error("[auth] welcome email delivery failed:", err.message);
+  }
 }

@@ -19,6 +19,24 @@ describe("centralized environment configuration", () => {
     expect(config.commissionWaiverMilestoneThreshold).toBe(4);
   });
 
+  test("normalizes mail driver and SMTP settings", () => {
+    const config = buildEnv({
+      NODE_ENV: "development",
+      MAIL_DRIVER: "SMTP",
+      SMTP_PORT: "2525",
+      SMTP_SECURE: "true",
+    });
+
+    expect(config.mailDriver).toBe("smtp");
+    expect(config.smtpPort).toBe(2525);
+    expect(config.smtpSecure).toBe(true);
+  });
+
+  test("rejects an unsupported mail driver", () => {
+    const config = buildEnv({ NODE_ENV: "development", MAIL_DRIVER: "unknown" });
+    expect(() => validateEnv(config)).toThrow(/Unsupported MAIL_DRIVER/);
+  });
+
   test("rejects an invalid commission waiver threshold", () => {
     const config = buildEnv({ NODE_ENV: "development", COMMISSION_WAIVER_MILESTONE_THRESHOLD: "1.5" });
     expect(() => validateEnv(config)).toThrow(/COMMISSION_WAIVER_MILESTONE_THRESHOLD/);
@@ -48,5 +66,25 @@ describe("centralized environment configuration", () => {
     });
     expect(() => validateEnv(config)).toThrow(/CHAPA_SECRET_KEY/);
     expect(() => validateEnv(config)).toThrow(/PAYMENT_CURRENCY/);
+  });
+
+  test("requires SMTP credentials for production SMTP mail", () => {
+    const config = buildEnv({
+      NODE_ENV: "production",
+      AI_PROVIDER: "none",
+      PAYMENT_PROVIDER: "none",
+      STORAGE_DRIVER: "s3",
+      MAIL_DRIVER: "smtp",
+    });
+
+    expect(() => validateEnv(config)).toThrow(/SMTP_HOST/);
+    expect(() => validateEnv(config)).toThrow(/SMTP_USER/);
+    expect(() => validateEnv(config)).toThrow(/SMTP_PASS/);
+    expect(() => validateEnv(config)).not.toThrow(/RESEND_API_KEY/);
+  });
+
+  test("rejects the simulated mail driver in production", () => {
+    const config = buildEnv({ NODE_ENV: "production", MAIL_DRIVER: "log" });
+    expect(() => validateEnv(config)).toThrow(/MAIL_DRIVER=log/);
   });
 });

@@ -53,8 +53,8 @@ export default function VerifyEmailPage() {
           <SealMark className="h-5 w-5 shrink-0 text-escrow mt-0.5" />
           <p className="text-sm text-slate">{t("auth.emailVerifiedDescription")}</p>
         </div>
-        <Link to="/dashboard" className="mt-6 inline-block text-sm font-semibold text-brass hover:underline">
-          {t("navigation.dashboard")}
+        <Link to={user ? "/dashboard" : "/login"} className="mt-6 inline-block text-sm font-semibold text-brass hover:underline">
+          {user ? t("navigation.dashboard") : t("auth.logIn")}
         </Link>
       </AuthShell>
     );

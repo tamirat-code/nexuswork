@@ -61,9 +61,31 @@ export async function updateMe(userId, payload) {
   for (const k of allowed) {
     if (Object.prototype.hasOwnProperty.call(payload, k)) update[k] = payload[k];
   }
-  if (update.email) update.email = String(update.email).toLowerCase();
+
+  const existingUser = await User.findById(userId);
+  if (!existingUser) return null;
+
+  let emailChanged = false;
+  if (update.email) {
+    update.email = String(update.email).toLowerCase();
+    if (update.email !== existingUser.email) {
+      emailChanged = true;
+      update.email_verified = false;
+    }
+  }
+
   const user = await User.findByIdAndUpdate(userId, update, { new: true, runValidators: true });
   if (!user) return null;
+
+  if (emailChanged) {
+    try {
+      const { resendVerificationEmail } = await import("../auth/auth.service.js");
+      await resendVerificationEmail(user._id);
+    } catch (err) {
+      // Best-effort send
+    }
+  }
+
   return getPrivateProfile(user._id);
 }
 

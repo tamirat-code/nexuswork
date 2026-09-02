@@ -4,6 +4,7 @@ const SUPPORTED_AI_PROVIDERS = new Set(["none", "groq", "anthropic"]);
 const SUPPORTED_PAYMENT_PROVIDERS = new Set(["none", "stripe", "chapa"]);
 const SUPPORTED_STORAGE_DRIVERS = new Set(["local", "s3"]);
 const SUPPORTED_FILE_SCAN_PROVIDERS = new Set(["none", "opswat"]);
+const SUPPORTED_MAIL_DRIVERS = new Set(["resend", "smtp", "log"]);
 
 function requireValue(missing, value, name) {
   if (!value) missing.push(name);
@@ -38,6 +39,10 @@ export function validateEnv(config = env) {
   }
   if (config.aiProvider !== "none") requireValue(missing, config.aiApiKey, "AI_API_KEY");
 
+  if (!SUPPORTED_MAIL_DRIVERS.has(config.mailDriver)) {
+    throw new Error(`Unsupported MAIL_DRIVER: ${config.mailDriver}. Use resend, smtp, or log.`);
+  }
+
   if (!SUPPORTED_PAYMENT_PROVIDERS.has(config.paymentProvider)) {
     throw new Error(`Unsupported PAYMENT_PROVIDER: ${config.paymentProvider}. Use none, stripe, or chapa.`);
   }
@@ -66,6 +71,9 @@ export function validateEnv(config = env) {
   }
 
   if (config.isProduction) {
+    if (config.mailDriver === "log") {
+      throw new Error("Production cannot use MAIL_DRIVER=log");
+    }
     requireUrl(missing, config.clientUrl, "CLIENT_URL");
     requireValue(missing, config.credentialIssuerPrivateKey, "CREDENTIAL_ISSUER_PRIVATE_KEY");
     if (config.clientUrl === "*") missing.push("CLIENT_URL (wildcard is not allowed in production)");
@@ -89,7 +97,13 @@ export function validateEnv(config = env) {
     if (config.fileScanProvider !== "opswat" || !config.opswatPrivateScan) {
       missing.push("FILE_SCAN_PROVIDER (production uploads require hosted malware scanning)");
     }
-    requireValue(missing, config.resendApiKey, "RESEND_API_KEY");
+    if (config.mailDriver === "smtp") {
+      requireValue(missing, config.smtpHost, "SMTP_HOST");
+      requireValue(missing, config.smtpUser, "SMTP_USER");
+      requireValue(missing, config.smtpPass, "SMTP_PASS");
+    } else {
+      requireValue(missing, config.resendApiKey, "RESEND_API_KEY");
+    }
     requireValue(missing, config.recaptchaSecretKey, "RECAPTCHA_SECRET_KEY");
     if (config.mailFrom.includes("yourdomain.com")) missing.push("MAIL_FROM (replace the development placeholder)");
     if (config.stripeSecretKey?.startsWith("sk_test_")) {

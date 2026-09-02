@@ -9,6 +9,7 @@ const RegisterPage = lazy(() => import("../../features/auth/RegisterPage.jsx"));
 const ForgotPasswordPage = lazy(() => import("../../features/auth/ForgotPasswordPage.jsx"));
 const ResetPasswordPage = lazy(() => import("../../features/auth/ResetPasswordPage.jsx"));
 const VerifyEmailPage = lazy(() => import("../../features/auth/VerifyEmailPage.jsx"));
+const VerifyEmailPendingPage = lazy(() => import("../../features/auth/VerifyEmailPendingPage.jsx"));
 const MfaSetupPage = lazy(() => import("../../features/auth/MfaSetupPage.jsx"));
 const MfaVerifyPage = lazy(() => import("../../features/auth/MfaVerifyPage.jsx"));
 const ProjectListPage = lazy(() => import("../../features/projects/ProjectListPage.jsx"));
@@ -66,6 +67,7 @@ export default function AppRouter() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/verify-email-pending" element={<VerifyEmailPendingPage />} />
       <Route path="/mfa/setup" element={<MfaSetupPage />} />
       <Route path="/mfa/verify" element={<MfaVerifyPage />} />
       <Route path="/terms" element={<TermsPage />} />

@@ -42,17 +42,12 @@ export default function LoginPage() {
         navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
         return;
       }
-      if (result.mfaSetupRequired) {
-        navigate("/mfa/setup", {
-          state: {
-            setupToken: result.setupToken,
-            secret: result.secret,
-            otpauthUri: result.otpauthUri,
-          },
-        });
-        return;
+      const user = result.user;
+      if (user && !user.email_verified && user.role !== "university_staff" && user.role !== "admin") {
+        navigate("/verify-email-pending");
+      } else {
+        navigate("/dashboard");
       }
-      navigate("/dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -87,16 +82,6 @@ export default function LoginPage() {
         navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
         return;
       }
-      if (result.mfaSetupRequired) {
-        navigate("/mfa/setup", {
-          state: {
-            setupToken: result.setupToken,
-            secret: result.secret,
-            otpauthUri: result.otpauthUri,
-          },
-        });
-        return;
-      }
       show(result.isNewUser ? "Account created with Google." : "Welcome back.");
       navigate("/dashboard");
     } catch (err) {
@@ -128,16 +113,6 @@ try {
   }
   if (result.mfaRequired) {
     navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
-    return;
-  }
-  if (result.mfaSetupRequired) {
-    navigate("/mfa/setup", {
-      state: {
-        setupToken: result.setupToken,
-        secret: result.secret,
-        otpauthUri: result.otpauthUri,
-      },
-    });
     return;
   }
   show(t("auth.accountCreatedGoogle"));

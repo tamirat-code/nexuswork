@@ -69,6 +69,13 @@ export function buildEnv(source = process.env) {
     aiModel: optional(source.AI_MODEL),
     aiModelVersion: optional(source.AI_MODEL_VERSION) || "v1",
 
+    mailDriver: (source.MAIL_DRIVER || "resend").toLowerCase(),
+    smtpHost: optional(source.SMTP_HOST),
+    smtpPort: number(source.SMTP_PORT, 587),
+    smtpSecure: boolean(source.SMTP_SECURE, false),
+    smtpUser: optional(source.SMTP_USER),
+    smtpPass: optional(source.SMTP_PASS),
+
     resendApiKey: optional(source.RESEND_API_KEY),
     mailFrom: source.MAIL_FROM || "NexusWork <no-reply@yourdomain.com>",
     termsVersion: source.TERMS_VERSION || "1.0",

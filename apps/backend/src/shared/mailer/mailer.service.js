@@ -1,17 +1,12 @@
-import { resend } from "./resend.client.js";
+import { sendMail } from "./mail-transport.js";
 import { mailConfig } from "../../config/mail.config.js";
 import { logger } from "../logger/logger.js";
 import { passwordResetEmail } from "../../templates/email/password-reset.template.js";
 import { verificationEmail } from "../../templates/email/email-verification.template.js";
-import  welcomeEmail  from "../../templates/email/welcome.template.js";
+import welcomeEmail from "../../templates/email/welcome.template.js";
 
 async function send({ to, subject, html }) {
-  const { data, error } = await resend.emails.send({ from: mailConfig.from, to, subject, html });
-  if (error) {
-    logger.error("[mail] send failed:", error.message || error);
-    throw new Error("Failed to send email");
-  }
-  return data;
+  return sendMail({ to, subject, html });
 }
 
 export async function sendPasswordResetEmail(email, resetToken) {

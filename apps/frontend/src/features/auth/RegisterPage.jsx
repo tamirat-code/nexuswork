@@ -171,7 +171,11 @@ export default function RegisterPage() {
       });
 
       show(t("registration.accountCreated"));
-      navigate("/dashboard");
+      if (role === "university_staff" || role === "admin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/verify-email-pending");
+      }
     } catch (err) {
       show(err.message, { variant: "error" });
       recaptchaRef.current?.reset();
@@ -202,16 +206,6 @@ export default function RegisterPage() {
 
       if (result.mfaRequired) {
         navigate("/mfa/verify", { state: { challengeToken: result.challengeToken } });
-        return;
-      }
-      if (result.mfaSetupRequired) {
-        navigate("/mfa/setup", {
-          state: {
-            setupToken: result.setupToken,
-            secret: result.secret,
-            otpauthUri: result.otpauthUri,
-          },
-        });
         return;
       }
 
