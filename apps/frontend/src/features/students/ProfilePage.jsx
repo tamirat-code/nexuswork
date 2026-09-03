@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
   BadgeCheck,
+  Ban,
   BriefcaseBusiness,
   CalendarDays,
   ChevronRight,
   ExternalLink,
+  Flag,
   GraduationCap,
   Globe,
   MapPin,
@@ -14,7 +16,7 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getStudentProfile } from "../../services/api/students.api.js";
 import { getUserReputation } from "../../services/api/reviews.api.js";
@@ -23,6 +25,10 @@ import { ROLES } from "../../constants/roles.constants.js";
 import { formatDate } from "../../utils/date.utils.js";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
+import { blockUser, reportUser } from "../../services/api/safety.api.js";
+import { Button } from "../../components/ui/shadcn/button.jsx";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/shadcn/dialog.jsx";
+import { Textarea } from "../../components/ui/shadcn/textarea.jsx";
 
 const ENROLLMENT_LABELS = {
   enrolled: "Currently enrolled",
@@ -44,10 +50,27 @@ function initialsOf(name) {
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [blocked, setBlocked] = useState(false);
 
   const isOwnProfile = !!user && String(user.id) === String(id);
+
+  const blockMutation = useMutation({
+    mutationFn: () => blockUser(id, token),
+    onSuccess: () => setBlocked(true),
+    onError: (error) => window.alert(error.message || "Could not block this user"),
+  });
+  const reportMutation = useMutation({
+    mutationFn: () => reportUser(id, reportReason, token),
+    onSuccess: () => {
+      setReportOpen(false);
+      setReportReason("");
+    },
+    onError: (error) => window.alert(error.message || "Could not submit report"),
+  });
 
   const profileQuery = useQuery({
     queryKey: ["student-profile", id],
@@ -195,6 +218,25 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
+                  {!isOwnProfile && user && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        loading={blockMutation.isPending}
+                        disabled={blocked}
+                        onClick={() => blockMutation.mutate()}
+                        className="gap-2"
+                      >
+                        <Ban className="h-4 w-4" />
+                        {blocked ? "Blocked" : "Block"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setReportOpen(true)} className="gap-2">
+                        <Flag className="h-4 w-4" />
+                        Report
+                      </Button>
+                    </>
+                  )}
                   {isOwnProfile ? (
                     <Link
                       to="/profile"
@@ -214,6 +256,28 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+
+              <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Report this user</DialogTitle>
+                    <DialogDescription>Tell us what happened. Our team will review your report.</DialogDescription>
+                  </DialogHeader>
+                  <Textarea
+                    value={reportReason}
+                    onChange={(event) => setReportReason(event.target.value)}
+                    placeholder="Describe the issue…"
+                    rows={5}
+                    maxLength={2000}
+                  />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setReportOpen(false)}>Cancel</Button>
+                    <Button type="button" loading={reportMutation.isPending} disabled={reportReason.trim().length < 3} onClick={() => reportMutation.mutate()}>
+                      Submit report
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {/* Stats */}
               <div className="mt-8 grid grid-cols-2 divide-x divide-ink-300 border-t border-ink-300 pt-6 sm:grid-cols-3">
