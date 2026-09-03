@@ -10,6 +10,7 @@ import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
 import { getProject, updateProject, closeProject } from "../../services/api/projects.api.js";
 import { listSkills } from "../../services/api/skills.api.js";
 import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
+import { getProposalDraft, saveProposalDraft } from "../../services/api/proposal-drafts.api.js";
 import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -88,6 +89,20 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
     resolver: zodResolver(proposalSchema),
     defaultValues: { price: "", delivery_time_days: 7, cover_note: "" },
   });
+  const { data: draftResponse } = useQuery({
+    queryKey: ["proposal-draft", projectId],
+    queryFn: () => getProposalDraft(projectId, token),
+    enabled: !!token && verified,
+  });
+  useEffect(() => {
+    const draft = draftResponse?.data;
+    if (draft) form.reset({ price: draft.price ?? "", delivery_time_days: draft.delivery_time_days ?? 7, cover_note: draft.cover_note ?? "" });
+  }, [draftResponse]);
+  const draftMutation = useMutation({
+    mutationFn: () => saveProposalDraft(projectId, form.getValues(), token),
+    onSuccess: () => toast.success("Draft saved"),
+    onError: (err) => toast.error(err.message || "Could not save draft"),
+  });
   const proposalPrice = form.watch("price");
   const { data: commissionRes, isLoading: commissionLoading } = useQuery({
     queryKey: ["commission-preview", proposalPrice],
@@ -145,6 +160,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
               </p>
             </div>
             <DialogFooter>
+              <Button type="button" variant="outline" loading={draftMutation.isPending} onClick={() => draftMutation.mutate()}>Save draft</Button>
               <Button type="submit" loading={mutation.isPending} disabled={!cvFile || cvUpload.isPending}>{t("projects.submitProposal", { defaultValue: "Submit proposal" })}</Button>
             </DialogFooter>
           </form>

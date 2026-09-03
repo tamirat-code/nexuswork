@@ -280,6 +280,16 @@ export const submitProposalSchema = z.object({
   cover_note: z.string().trim().min(10, "Cover note must be at least 10 characters").max(5000),
 });
 
+export const proposalDraftSchema = z.object({
+  price: z.coerce.number().min(0).nullable().optional(),
+  delivery_time_days: z.coerce.number().int().min(1).nullable().optional(),
+  cover_note: z.string().trim().max(10000).optional(),
+});
+
+export const userReportSchema = z.object({
+  reason: z.string().trim().min(3).max(2000),
+});
+
 // --- Contracts ---
 export const createContractSchema = z.object({
   proposal_id: objectId,
