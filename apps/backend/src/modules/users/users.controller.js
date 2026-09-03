@@ -6,6 +6,8 @@ import {
   updateAvatar as updateAvatarService,
   removeAvatar as removeAvatarService,
   updateLanguage as updateLanguageService,
+  exportMyData as exportMyDataService,
+  deactivateMyAccount as deactivateMyAccountService,
 } from "./users.service.js";
 
 export const getUser = asyncHandler(async (req, res) => {
@@ -43,4 +45,17 @@ export const removeMyAvatar = asyncHandler(async (req, res) => {
   const result = await removeAvatarService(req.user._id);
   if (!result) return res.status(404).json({ success: false, message: "User not found" });
   res.json({ success: true });
+});
+
+export const exportMyData = asyncHandler(async (req, res) => {
+  const data = await exportMyDataService(req.user._id);
+  if (!data) return res.status(404).json({ success: false, message: "User not found" });
+  res.setHeader("Content-Disposition", 'attachment; filename="nexuswork-data.json"');
+  res.json({ success: true, data });
+});
+
+export const deactivateMyAccount = asyncHandler(async (req, res) => {
+  const data = await deactivateMyAccountService(req.user._id);
+  if (!data) return res.status(404).json({ success: false, message: "User not found" });
+  res.json({ success: true, data });
 });

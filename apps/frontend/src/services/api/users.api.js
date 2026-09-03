@@ -8,4 +8,7 @@ export const updateMyAvatar = (avatar, token) =>
   apiRequest("/users/me/avatar", { method: "PATCH", body: { avatar }, token });
 export const removeMyAvatar = (token) =>
   apiRequest("/users/me/avatar", { method: "DELETE", token });
+
+export const exportMyData = (token) => apiRequest("/users/me/export", { token });
+export const deactivateMyAccount = (token) => apiRequest("/users/me/deactivate", { method: "POST", token });
 export const updateLanguage = (preferred_language, token) => apiRequest("/users/me/preferences", { method: "PATCH", body: { preferred_language }, token });

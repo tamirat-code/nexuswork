@@ -124,3 +124,18 @@ export async function removeAvatar(userId) {
   if (!user) return null;
   return { success: true };
 }
+
+export async function exportMyData(userId) {
+  const user = await User.findById(userId).select("-password_hash -mfa_secret_encrypted -mfa_pending_secret_encrypted -mfa_recovery_code_hashes").lean();
+  if (!user) return null;
+  return { exported_at: new Date().toISOString(), user };
+}
+
+export async function deactivateMyAccount(userId) {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { status: "deactivated" }, $inc: { auth_session_version: 1 } },
+    { new: true }
+  ).select("_id status").lean();
+  return user ? { id: user._id, status: user.status } : null;
+}
