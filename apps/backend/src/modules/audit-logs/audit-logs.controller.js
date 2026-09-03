@@ -18,7 +18,6 @@ export const list = asyncHandler(async (req, res) => {
   }
 
   const result = await listLogs({
-    actor_role: req.user.role,
     action_type: req.query.action_type,
     entity_type: req.query.entity_type,
     entity_id: req.query.entity_id,

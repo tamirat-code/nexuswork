@@ -290,6 +290,11 @@ export const userReportSchema = z.object({
   reason: z.string().trim().min(3).max(2000),
 });
 
+export const reviewUserReportSchema = z.object({
+  status: z.enum(["reviewed", "dismissed"]),
+  review_note: z.string().trim().max(2000).optional().default(""),
+});
+
 // --- Contracts ---
 export const createContractSchema = z.object({
   proposal_id: objectId,

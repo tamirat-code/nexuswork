@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText } from "lucide-react";
 
-import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute } from "../../services/api/admin.api.js";
+import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute, listAdminReports, reviewAdminReport, suspendAdminUser, restoreAdminUser, changeAdminUserRole, deleteAdminUser } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { openFilePreview } from "../../services/api/files.api.js";
@@ -193,6 +193,73 @@ function ResolveDisputeDialog({ dispute, token }) {
   );
 }
 
+function ReportReviewAction({ report, token }) {
+  const qc = useQueryClient();
+  const review = useMutation({
+    mutationFn: (status) => reviewAdminReport(report._id, { status }, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-reports"] }); toast.success("Report updated"); },
+    onError: (err) => toast.error(err.message || "Could not update report"),
+  });
+  return (
+    <div className="flex justify-end gap-2">
+      <Button size="sm" variant="secondary" loading={review.isPending} onClick={() => review.mutate("dismissed")}>Dismiss</Button>
+      <Button size="sm" loading={review.isPending} onClick={() => review.mutate("reviewed")}>Mark reviewed</Button>
+    </div>
+  );
+}
+
+function UserAdminActions({ account, token }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [nextRole, setNextRole] = useState(account.role || "student");
+  const isDelete = open === "delete";
+  const isRoleChange = open === "role";
+  const action = useMutation({
+    mutationFn: () => isDelete
+      ? deleteAdminUser(account._id, reason.trim(), token)
+      : isRoleChange
+        ? changeAdminUserRole(account._id, { new_role: nextRole, reason: reason.trim() }, token)
+        : account.status === "suspended"
+          ? restoreAdminUser(account._id, reason.trim(), token)
+          : suspendAdminUser(account._id, reason.trim(), token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success(isDelete ? "User deleted" : isRoleChange ? "Role updated" : account.status === "suspended" ? "User restored" : "User suspended");
+      setOpen(false); setReason("");
+    },
+    onError: (err) => toast.error(err.message || "Admin action failed"),
+  });
+  const title = isDelete ? "Delete user" : isRoleChange ? "Change user role" : account.status === "suspended" ? "Restore user" : "Suspend user";
+  return (
+    <>
+      <div className="flex justify-end gap-1.5">
+        <Button size="sm" variant="secondary" className="h-8" onClick={() => setOpen(account.status === "suspended" ? "restore" : "suspend")}>
+          {account.status === "suspended" ? "Restore" : "Suspend"}
+        </Button>
+        <Button size="sm" variant="secondary" className="h-8" onClick={() => setOpen("role")}>Role</Button>
+        <Button size="sm" variant="secondary" className="h-8 text-brick" onClick={() => setOpen("delete")}>Delete</Button>
+      </div>
+      <Dialog open={Boolean(open)} onOpenChange={(next) => !next && setOpen(false)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{account.name} · {account.email}</DialogDescription></DialogHeader>
+          {isRoleChange && (
+            <Select value={nextRole} onValueChange={setNextRole}>
+              <SelectTrigger><SelectValue placeholder="Choose role" /></SelectTrigger>
+              <SelectContent>
+                {[["student", "Student"], ["client", "Client"], ["university_staff", "University staff"], ["admin", "Administrator"]].map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason (required)" rows={3} maxLength={500} />
+          <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button loading={action.isPending} disabled={reason.trim().length < 3 || (isRoleChange && nextRole === account.role)} onClick={() => action.mutate()}>{title}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // A university_staff account gets zero real power at registration — matching
 // its email domain only made it eligible to apply. This is the only place in
 // the app that turns a pending request into actual contact_staff membership
@@ -324,10 +391,18 @@ export default function AdminPage() {
   const { token } = useAuth();
   const [searchParams] = useSearchParams();
   const focusStaffId = searchParams.get("staff_id");
+  const [userSearch, setUserSearch] = useState("");
+  const [userRole, setUserRole] = useState("all");
+  const [userStatus, setUserStatus] = useState("all");
 
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
-  const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => listAdminUsers(token), enabled: !!token });
+  const userQuery = new URLSearchParams();
+  if (userSearch.trim()) userQuery.set("search", userSearch.trim());
+  if (userRole !== "all") userQuery.set("role", userRole);
+  if (userStatus !== "all") userQuery.set("status", userStatus);
+  const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users", userQuery.toString()], queryFn: () => listAdminUsers(`?${userQuery.toString()}`, token), enabled: !!token });
   const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes(token), enabled: !!token });
+  const { data: reportsData, isLoading: reportsLoading } = useQuery({ queryKey: ["admin-reports"], queryFn: () => listAdminReports("?status=open&limit=50", token), enabled: !!token });
   const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
   const { data: staffVerificationsData, isLoading: staffVerificationsLoading } = useQuery({
     queryKey: ["admin-staff-verifications"],
@@ -354,6 +429,7 @@ export default function AdminPage() {
   const disputes = Array.isArray(disputesData?.data)
     ? disputesData.data
     : disputesData?.data?.disputes ?? [];
+  const reports = reportsData?.data?.reports ?? [];
 
   const universities = universitiesData?.data ?? [];
   const staffVerifications = staffVerificationsData?.data ?? [];
@@ -361,7 +437,7 @@ export default function AdminPage() {
   const statCards = [
     { label: "Active projects", value: stats.active_projects ?? 0, icon: Briefcase },
     { label: "Students", value: stats.students ?? 0, icon: Users },
-    { label: "Active users (30d)", value: stats.users?.active_30d ?? 0, icon: UserCheck },
+    { label: "Active users", value: stats.users?.active_30d ?? 0, icon: UserCheck },
     { label: "Open disputes", value: stats.disputes?.open ?? 0, icon: Flag },
     { label: "Pending staff requests", value: staffVerifications.length, icon: ShieldCheck },
   ];
@@ -455,19 +531,51 @@ export default function AdminPage() {
       </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Recent users</CardTitle></CardHeader>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg">User reports</CardTitle>
+            <CardDescription>Review reports submitted through user profiles.</CardDescription>
+          </CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role</TableHead><TableHead className="text-right">Joined</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Reported user</TableHead><TableHead>Reporter</TableHead><TableHead>Reason</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
               <TableBody>
-                {usersLoading && <TableRow><TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
-                {!usersLoading && users.length === 0 && <TableRow><TableCell colSpan={3} className="py-8 text-center text-slate-300">No users yet</TableCell></TableRow>}
+                {reportsLoading && <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
+                {!reportsLoading && reports.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">No open reports</TableCell></TableRow>}
+                {reports.map((report) => (
+                  <TableRow key={report._id}>
+                    <TableCell className="text-sm font-medium text-slate">{report.target_user_id?.name || "Unknown user"}<div className="text-xs font-normal text-slate-300">{report.target_user_id?.email}</div></TableCell>
+                    <TableCell className="text-xs text-slate-300">{report.reporter_id?.name || report.reporter_id?.email || "Unknown"}</TableCell>
+                    <TableCell className="max-w-[280px] truncate text-xs text-slate-300" title={report.reason}>{report.reason}</TableCell>
+                    <TableCell><ReportReviewAction report={report} token={token} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">User management</CardTitle>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name or email" className="h-9 max-w-xs" />
+              <Select value={userRole} onValueChange={setUserRole}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Role" /></SelectTrigger><SelectContent><SelectItem value="all">All roles</SelectItem><SelectItem value="student">Students</SelectItem><SelectItem value="client">Clients</SelectItem><SelectItem value="university_staff">University staff</SelectItem><SelectItem value="admin">Admins</SelectItem></SelectContent></Select>
+              <Select value={userStatus} onValueChange={setUserStatus}><SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All status</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="suspended">Suspended</SelectItem><SelectItem value="deactivated">Deactivated</SelectItem></SelectContent></Select>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {usersLoading && <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
+                {!usersLoading && users.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">No users found</TableCell></TableRow>}
                 {users.map((u) => (
                   <TableRow key={u._id}>
                     <TableCell className="font-semibold text-slate">{u.name}</TableCell>
                     <TableCell><Badge variant="secondary" className="capitalize">{u.role?.replace("_", " ")}</Badge></TableCell>
-                    <TableCell className="text-right font-mono text-xs text-slate-300">{new Date(u.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell><Badge variant={u.status === "active" ? "success" : u.status === "suspended" ? "danger" : "secondary"}>{u.status || "unknown"}</Badge></TableCell>
+                    <TableCell><UserAdminActions account={u} token={token} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

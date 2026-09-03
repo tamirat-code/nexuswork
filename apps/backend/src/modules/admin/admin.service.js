@@ -1,4 +1,5 @@
 import User from "../users/users.model.js";
+import Project from "../projects/projects.model.js";
 import Dispute from "../disputes/disputes.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Payment from "../payments/payments.model.js";
@@ -224,12 +225,13 @@ export async function getDashboardStats() {
     commission30dAgg,
     withdrawnTotalAgg,
     monthlyCommissionAgg,
+    escrowAgg,
   ] = await Promise.all([
     User.countDocuments(),
-    User.countDocuments({ status: "active", last_login: { $gte: thirtyDaysAgo } }),
+    User.countDocuments({ status: "active" }),
     User.countDocuments({ role: ROLES.STUDENT }),
     User.countDocuments({ role: ROLES.CLIENT }),
-    Contract.countDocuments({ status: "active" }),
+    Project.countDocuments({ status: "open" }),
     Dispute.countDocuments({ status: "open" }),
     Dispute.countDocuments({ status: "resolved", resolved_at: { $gte: thirtyDaysAgo } }),
     Payment.aggregate([
@@ -266,6 +268,10 @@ export async function getDashboardStats() {
       },
       { $sort: { "_id.y": 1, "_id.m": 1 } },
     ]),
+    Payment.aggregate([
+      { $match: { direction: { $in: ["deposit", "release", "refund"] }, status: "succeeded" } },
+      { $group: { _id: { currency: "$currency", direction: "$direction" }, total: { $sum: "$amount" } } },
+    ]),
   ]);
 
   const user_breakdown = await User.aggregate([
@@ -282,6 +288,15 @@ export async function getDashboardStats() {
   const commission_total = commission_by_currency[paymentConfig.currency] || 0;
   const commission_30d = commission_30d_by_currency[paymentConfig.currency] || 0;
   const total_withdrawn = withdrawn_by_currency[paymentConfig.currency] || 0;
+  const escrow_held_by_currency = {};
+  for (const row of escrowAgg) {
+    const currency = String(row._id.currency || "").toLowerCase();
+    const direction = row._id.direction;
+    escrow_held_by_currency[currency] = (escrow_held_by_currency[currency] || 0) + (direction === "deposit" ? 1 : -1) * Number(row.total || 0);
+  }
+  Object.keys(escrow_held_by_currency).forEach((currency) => {
+    escrow_held_by_currency[currency] = Math.max(0, escrow_held_by_currency[currency]);
+  });
 
   const monthNames = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -311,6 +326,8 @@ export async function getDashboardStats() {
       commission_total,
       commission_30d,
       total_withdrawn,
+      escrow_held: escrow_held_by_currency[paymentConfig.currency] || 0,
+      escrow_held_by_currency,
       currency: paymentConfig.currency,
       commission_by_currency,
       commission_30d_by_currency,

@@ -13,6 +13,7 @@ import {
   resolveDispute,
   getDashboardStats,
 } from "./admin.service.js";
+import { listReports, reviewReport } from "../safety/safety.service.js";
 
 /**
  * Get admin dashboard with platform statistics.
@@ -145,4 +146,14 @@ export const resolveDisputeHandler = asyncHandler(async (req, res) => {
     req.body.outcome
   );
   res.json({ success: true, data: dispute });
+});
+
+export const getReports = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) throw new ForbiddenError("Only admins can view user reports");
+  res.json({ success: true, data: await listReports({ status: req.query.status, limit: req.query.limit, skip: req.query.skip }) });
+});
+
+export const reviewUserReport = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) throw new ForbiddenError("Only admins can review user reports");
+  res.json({ success: true, data: await reviewReport(req.params.reportId, req.user._id, req.body.status, req.body.review_note) });
 });
