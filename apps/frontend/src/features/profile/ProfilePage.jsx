@@ -152,7 +152,7 @@ export default function ProfilePage() {
       return result;
     },
     onSuccess: (res) => {
-      const next = res?.data ?? { ...user, ...form };
+      const next = res?.data ? { ...user, ...res.data } : { ...user, ...form };
       setLocalUser?.(next);
       setForm(fromUser(next));
       setTouched({});
