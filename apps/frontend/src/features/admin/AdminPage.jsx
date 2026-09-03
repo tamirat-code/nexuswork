@@ -515,6 +515,30 @@ export default function AdminPage() {
 
       <Card className="mt-6">
         <CardHeader>
+          <CardTitle className="text-lg">Commission by currency</CardTitle>
+          <CardDescription>Each currency is shown separately. Values are not converted or combined.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {Object.keys(revenue.commission_by_currency || {}).length === 0 ? (
+            <p className="text-sm text-slate-300">No commission recorded yet.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Object.entries(revenue.commission_by_currency).sort(([a], [b]) => a.localeCompare(b)).map(([code, total]) => (
+                <div key={code} className="rounded-xl border border-ink-300 bg-ink-50 p-4">
+                  <p className="font-mono text-xs uppercase tracking-wide text-slate-300">{code}</p>
+                  <p className="mt-2 font-mono text-xl font-semibold text-brass">{formatCurrency(total, code.toUpperCase())}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Last 30 days: {formatCurrency(revenue.commission_30d_by_currency?.[code] || 0, code.toUpperCase())}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
           <CardTitle className="text-lg">Commission revenue by month</CardTitle>
           <CardDescription>Platform's cut of released milestones, last 12 months.</CardDescription>
         </CardHeader>
