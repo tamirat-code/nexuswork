@@ -38,6 +38,7 @@ export async function getPlatformMetrics({ days = 30 } = {}) {
     totalPayments,
     totalRevenue,
     commissionAgg,
+    commissionByCurrencyAgg,
     popularSkillsAgg,
     demandByCategoryAgg,
   ] = await Promise.all([
@@ -56,6 +57,10 @@ export async function getPlatformMetrics({ days = 30 } = {}) {
       { $match: { status: "succeeded", direction: "commission" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]).then((rows) => rows[0]?.total || 0),
+    Payment.aggregate([
+      { $match: { status: "succeeded", direction: "commission" } },
+      { $group: { _id: "$currency", total: { $sum: "$amount" } } },
+    ]),
     Project.aggregate([
       { $unwind: "$required_skills" },
       { $match: { required_skills: { $nin: [null, ""] } } },
@@ -90,10 +95,14 @@ export async function getPlatformMetrics({ days = 30 } = {}) {
     top_events: recentEvents,
     period_days: Number(days),
 
-    
     active_projects: activeContracts,
     students: totalStudents,
     income: commissionAgg,
+    income_by_currency: Object.fromEntries(
+      commissionByCurrencyAgg
+        .filter((row) => row._id)
+        .map((row) => [String(row._id).toLowerCase(), Number(row.total || 0)])
+    ),
     popular_skills: popularSkillsAgg.map((row) => ({ name: row._id, count: row.count })),
     demand_by_category: demandByCategoryAgg.map((row) => ({ category: row._id, projects: row.count })),
   };

@@ -86,6 +86,15 @@ const ROLE_CONFIG = {
   },
 };
 
+function formatMultiCurrency(values, fallback, fallbackCurrency = "USD") {
+  const entries = Object.entries(values || {}).filter(([, amount]) => amount != null);
+  if (!entries.length) return formatCurrency(fallback ?? 0, fallbackCurrency);
+  return entries
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, amount]) => formatCurrency(amount, currency.toUpperCase()))
+    .join(" · ");
+}
+
 export default function DashboardPage() {
   const { user, token } = useAuth();
   const { t } = useTranslation();
@@ -233,7 +242,18 @@ export default function DashboardPage() {
           return { ...stat, value: statsLoading ? "…" : String(values[i] ?? 0) };
         })
       : liveStats
-        ? config.stats.map((stat, i) => ({ ...stat, value: liveLoading ? "…" : i === 2 && isAdmin ? formatCurrency(liveStats[i], adminStats.revenue?.currency || "USD") : String(liveStats[i]) }))
+        ? config.stats.map((stat, i) => ({
+            ...stat,
+            value: liveLoading
+              ? "…"
+              : i === 2 && isAdmin
+                ? formatMultiCurrency(
+                    adminStats.revenue?.commission_by_currency,
+                    liveStats[i],
+                    adminStats.revenue?.currency || "USD"
+                  )
+                : String(liveStats[i]),
+          }))
         : config.stats;
   const pendingCount = verificationStatsRes?.data?.pending ?? 0;
   const roleCopy = {

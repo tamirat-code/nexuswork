@@ -11,6 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/sh
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 
+function formatMultiCurrency(values, fallback, fallbackCurrency = "USD") {
+  const entries = Object.entries(values || {}).filter(([, amount]) => amount != null);
+  if (!entries.length) return formatCurrency(fallback ?? 0, fallbackCurrency);
+  return entries
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, amount]) => formatCurrency(amount, currency.toUpperCase()))
+    .join(" · ");
+}
+
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { token, user } = useAuth();
@@ -52,7 +61,15 @@ export default function AnalyticsPage() {
     ? [
         { label: t("analytics.activeProjects"), value: a.active_projects ?? 0, icon: Briefcase },
         { label: t("analytics.freelancers"), value: a.students ?? 0, icon: Users },
-        { label: t("analytics.platformIncome"), value: formatCurrency(a.income ?? 0), icon: TrendingUp },
+        {
+          label: t("analytics.platformIncome"),
+          value: formatMultiCurrency(
+            a.income_by_currency,
+            a.income ?? 0,
+            adminDashboard.revenue?.currency || "USD"
+          ),
+          icon: TrendingUp,
+        },
         { label: t("analytics.popularSkills"), value: a.popular_skills?.length ?? 0, icon: BarChart3 },
       ]
     : [
@@ -222,4 +239,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
