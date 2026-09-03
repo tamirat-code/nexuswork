@@ -80,15 +80,15 @@ export default function AppRouter() {
       <Route path="/students" element={<StudentsPage />} />
       <Route path="/profile/:id" element={<StudentProfilePage />} />
       <Route path="/universities" element={<UniversitiesPage />} />
-      <Route path="/verifications" element={protect(<UniversitiesPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
+      <Route path="/verifications" element={protect(<UniversitiesPage />, [ROLES.UNIVERSITY_STAFF])} />
       <Route path="/verify-credential" element={<CredentialVerifyPage />} />
       <Route path="/search" element={<SearchPage />} />
 
       {/* Workspace */}
       <Route path="/dashboard" element={protect(<DashboardPage />)} />
       <Route path="/notifications" element={protect(<NotificationsPage />)} />
-      <Route path="/chat" element={protect(<ChatPage />)} />
-      <Route path="/chat/:conversationId" element={protect(<ChatPage />)} />
+      <Route path="/chat" element={protect(<ChatPage />, [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF])} />
+      <Route path="/chat/:conversationId" element={protect(<ChatPage />, [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF])} />
       <Route path="/proposals" element={protect(<ProposalsPage />)} />
       <Route path="/contracts" element={protect(<ContractsPage />)} />
       <Route path="/contracts/:id" element={protect(<ContractDetailPage />)} />

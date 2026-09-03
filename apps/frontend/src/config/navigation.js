@@ -18,7 +18,7 @@ export const workspaceNav = [
     items: [
       { to: "/dashboard", label: "Dashboard", icon: "grid", roles: ALL, exact: true },
       { to: "/notifications", label: "Notifications", icon: "bell", roles: ALL },
-      { to: "/chat", label: "Messages", icon: "chat", roles: ALL },
+      { to: "/chat", label: "Messages", icon: "chat", roles: [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF] },
     ],
   },
   {
@@ -32,7 +32,7 @@ export const workspaceNav = [
         to: "/universities",
         label: "Verifications",
         icon: "shield",
-        roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN],
+        roles: [ROLES.UNIVERSITY_STAFF],
       },
       { to: "/contracts", label: "Contracts", icon: "shield", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       { to: "/meetings", label: "Meetings", icon: "video", roles: [ROLES.STUDENT, ROLES.CLIENT] },
