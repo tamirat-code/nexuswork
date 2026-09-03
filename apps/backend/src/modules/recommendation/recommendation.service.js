@@ -5,9 +5,10 @@ import User from "../users/users.model.js";
 import LearningResource from "../learning/learning.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import RecommendationCache from "./recommendation.model.js";
+import RecommendationFeedback from "./recommendation-feedback.model.js";
 import { aiConfig } from "../../config/ai.config.js";
 import { logger } from "../../shared/logger/logger.js";
-import { ForbiddenError, NotFoundError } from "../../shared/exceptions/AppError.js";
+import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
 
 function scoreBySkillOverlap(project, studentSkills) {
@@ -206,6 +207,34 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
     skills: profile.skills,
     match_score: Math.round(score * 100) / 100,
   }));
+}
+
+export async function getRecommendationHistory(studentUserId) {
+  const cache = await RecommendationCache.findOne({ student_id: studentUserId })
+    .populate("project_ids", "title status budget currency deadline required_skills")
+    .lean();
+  const feedback = await RecommendationFeedback.find({ student_id: studentUserId })
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+  return {
+    generated_at: cache?.generated_at || null,
+    projects: cache?.project_ids || [],
+    feedback,
+  };
+}
+
+export async function saveRecommendationFeedback(studentUserId, projectId, { sentiment, reason = "" } = {}) {
+  if (!["useful", "not_useful"].includes(sentiment)) {
+    throw new ValidationError("Feedback sentiment must be useful or not_useful");
+  }
+  const project = await Project.findById(projectId).select("_id").lean();
+  if (!project) throw new NotFoundError("Project not found");
+  return RecommendationFeedback.findOneAndUpdate(
+    { student_id: studentUserId, project_id: projectId },
+    { sentiment, reason: String(reason).trim().slice(0, 500) },
+    { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+  );
 }
 
 

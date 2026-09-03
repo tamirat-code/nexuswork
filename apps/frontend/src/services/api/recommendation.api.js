@@ -3,6 +3,9 @@ import { apiRequest } from "../../lib/http.js";
 
 export const getRecommendations = (token) => apiRequest("/recommendations/me", { token });
 export const getCareerRecommendation = (token) => apiRequest("/recommendations/career", { token });
+export const getRecommendationHistory = (token) => apiRequest("/recommendations/history", { token });
+export const submitRecommendationFeedback = (projectId, payload, token) =>
+  apiRequest(`/recommendations/${projectId}/feedback`, { method: "POST", body: payload, token });
 
 
 export const getStudentMatchesForProject = (projectId, token) =>

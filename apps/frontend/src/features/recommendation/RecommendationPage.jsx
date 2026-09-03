@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Zap, TrendingUp, BookOpen } from "lucide-react";
-import { getRecommendations, getCareerRecommendation } from "../../services/api/recommendation.api.js";
+import { Sparkles, Zap, TrendingUp, BookOpen, ThumbsDown, ThumbsUp } from "lucide-react";
+import { getRecommendations, getCareerRecommendation, submitRecommendationFeedback } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeLeft } from "../../utils/date.utils.js";
@@ -14,6 +14,7 @@ import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 export default function RecommendationPage() {
   const { t } = useTranslation();
   const { token, user } = useAuth();
+  const queryClient = useQueryClient();
   const isStudent = user?.role === "student";
 
   const { data, isLoading } = useQuery({
@@ -22,6 +23,10 @@ export default function RecommendationPage() {
     enabled: !!token && isStudent,
   });
   const recs = data?.data ?? [];
+  const feedback = useMutation({
+    mutationFn: ({ projectId, sentiment }) => submitRecommendationFeedback(projectId, { sentiment }, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recommendation-history"] }),
+  });
 
   const { data: careerData, isLoading: careerLoading } = useQuery({
     queryKey: ["career-recommendation"],
@@ -165,7 +170,12 @@ export default function RecommendationPage() {
 
                 <div className="mt-4 flex items-center justify-between border-t border-ink-300 pt-3 text-xs text-slate-300">
                   <span>{formatTimeLeft(p.deadline)}</span>
-                  <Link to={`/projects/${p._id}`}><Button size="sm" variant="secondary">{t("recommendations.viewProject")}</Button></Link>
+                  <div className="flex items-center gap-2">
+                    <span className="sr-only">Was this recommendation useful?</span>
+                    <Button size="sm" variant="ghost" aria-label="Useful recommendation" disabled={feedback.isPending} onClick={() => feedback.mutate({ projectId: p._id, sentiment: "useful" })}><ThumbsUp className="h-3.5 w-3.5" /></Button>
+                    <Button size="sm" variant="ghost" aria-label="Not useful recommendation" disabled={feedback.isPending} onClick={() => feedback.mutate({ projectId: p._id, sentiment: "not_useful" })}><ThumbsDown className="h-3.5 w-3.5" /></Button>
+                    <Link to={`/projects/${p._id}`}><Button size="sm" variant="secondary">{t("recommendations.viewProject")}</Button></Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>
