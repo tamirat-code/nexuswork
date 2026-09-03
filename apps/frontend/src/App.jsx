@@ -7,6 +7,7 @@ import ScrollToTop, { SkipLink } from "./components/common/ScrollToTop.jsx";
 import { STANDALONE_PATHS, WORKSPACE_PATHS, WORKSPACE_EXACT_PATHS } from "./config/navigation.js";
 import { useAuth } from "./hooks/useAuth.js";
 import { installGlobalErrorHandlers } from "./lib/logger.js";
+import InitialAppLoader from "./components/loaders/InitialAppLoader.jsx";
 
 const matches = (paths, pathname) =>
   paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -14,7 +15,12 @@ const matches = (paths, pathname) =>
 export default function App() {
   useEffect(() => installGlobalErrorHandlers(), []);
   const { pathname } = useLocation();
-  const { token } = useAuth();
+  const { token, ready } = useAuth();
+
+  // AuthProvider checks the existing session on every full page load. Keep
+  // the route and layout hidden until that check completes so users do not
+  // briefly see the wrong public/protected screen during startup.
+  if (!ready) return <InitialAppLoader />;
 
   const standalone = matches(STANDALONE_PATHS, pathname);
   

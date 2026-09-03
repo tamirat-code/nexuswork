@@ -44,8 +44,12 @@ export const fetchFileBlob = async (id, token) => {
 // Open the tab synchronously from the user's click before awaiting the
 // authenticated request so browser popup blockers do not reject the preview.
 export const openFilePreview = async (id, token) => {
-  const previewWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+  // Do not pass `noopener,noreferrer` to window.open here. Some browsers
+  // return null for that feature combination even when the tab was opened,
+  // which incorrectly looks like a popup-blocker failure to the caller.
+  const previewWindow = window.open("about:blank", "_blank");
   if (!previewWindow) throw new Error("Please allow pop-ups to open this file");
+  previewWindow.opener = null;
   try {
     const blob = await fetchFileBlob(id, token);
     const url = URL.createObjectURL(blob);

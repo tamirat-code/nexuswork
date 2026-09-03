@@ -57,6 +57,18 @@ export default function RecommendationPage() {
         <p className="mt-2 max-w-2xl text-sm text-slate-300">{t("recommendations.subtitle")}</p>
       </header>
 
+      <Card className="mt-6 border-brass/20 bg-brass/5">
+        <CardContent className="flex gap-3 p-4">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-brass" />
+          <div>
+            <h2 className="font-display text-sm text-slate">{t("recommendations.howItWorks", { defaultValue: "How recommendations work" })}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-300">
+              {t("recommendations.howItWorksDesc", { defaultValue: "We compare your profile skills with each project’s required skills. Projects with matching skills are scored, then AI ranks the strongest matches when enabled. Every card shows the matching skills and score." })}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {isStudent && (
         <section className="mt-8">
           <h2 className="flex items-center gap-1.5 font-display text-lg text-slate"><TrendingUp className="h-4 w-4 text-brass" /> {t("recommendations.careerPathTitle")}</h2>
@@ -129,6 +141,9 @@ export default function RecommendationPage() {
               <CardContent className="flex flex-1 flex-col p-5">
                 <div className="flex items-center justify-between gap-2">
                   <Badge variant="outline" className="gap-1"><Sparkles className="h-3 w-3" /> {r.match_score ? t("recommendations.matchScore", { percent: Math.round(r.match_score * 100) }) : t("recommendations.recommendedBadge")}</Badge>
+                  <Badge variant={r.ranking_source === "ai" ? "success" : "outline"} className="text-[10px]">
+                    {r.ranking_source === "ai" ? "AI ranked" : "Skill match"}
+                  </Badge>
                   <span className="font-mono text-sm text-brass">{formatCurrency(p.budget)}</span>
                 </div>
                 <h3 className="mt-3 font-display text-base leading-snug text-slate">{p.title}</h3>
@@ -140,6 +155,12 @@ export default function RecommendationPage() {
                       <Badge key={s} variant="success" className="text-xs">✓ {s}</Badge>
                     ))}
                   </div>
+                )}
+
+                {r.ai_reason && (
+                  <p className="mt-3 rounded-md bg-brass/5 px-3 py-2 text-xs leading-relaxed text-slate-300">
+                    <span className="font-semibold text-brass">AI explanation:</span> {r.ai_reason}
+                  </p>
                 )}
 
                 <div className="mt-4 flex items-center justify-between border-t border-ink-300 pt-3 text-xs text-slate-300">
