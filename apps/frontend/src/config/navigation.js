@@ -25,6 +25,7 @@ export const workspaceNav = [
     section: "Work",
     items: [
       { to: "/projects", label: "Projects", icon: "briefcase", roles: ALL },
+      { to: "/saved-projects", label: "Saved projects", icon: "bookmark", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       { to: "/projects/new", label: "Post a project", icon: "plus", roles: [ROLES.CLIENT] },
       { to: "/proposals", label: "Proposals", icon: "document", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       {
@@ -77,6 +78,7 @@ export const WORKSPACE_PATHS = [
   "/notifications",
   "/chat",
   "/projects",
+  "/saved-projects",
   "/proposals",
   "/contracts",
   "/disputes",

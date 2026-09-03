@@ -31,6 +31,9 @@ import { AdminRoutes } from "../../modules/admin/index.js";
 import { AuditLogsRoutes } from "../../modules/audit-logs/index.js";
 import { HealthRoutes } from "../../modules/health/index.js";
 import { MeetingsRoutes } from "../../modules/meetings/index.js";
+import { SavedProjectsRoutes } from "../../modules/saved-projects/index.js";
+import { ProposalDraftRoutes } from "../../modules/proposal-drafts/index.js";
+import { SafetyRoutes } from "../../modules/safety/index.js";
 
 const router = Router();
 
@@ -65,5 +68,8 @@ router.use("/admin", AdminRoutes);
 router.use("/audit-logs", AuditLogsRoutes);
 router.use("/health", HealthRoutes);
 router.use("/meetings", MeetingsRoutes);
+router.use("/saved-projects", SavedProjectsRoutes);
+router.use("/proposal-drafts", ProposalDraftRoutes);
+router.use("/safety", SafetyRoutes);
 
 export default router;
