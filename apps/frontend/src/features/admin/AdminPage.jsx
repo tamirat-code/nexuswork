@@ -736,7 +736,7 @@ export default function AdminPage() {
                 {staffVerifications.map((v) => (
                   <TableRow
                     key={v._id}
-                    className={v._id === highlightStaffVerificationId ? "bg-brass/5" : undefined}
+                    className={v._id === focusStaffId ? "bg-brass/5" : undefined}
                   >
                     <TableCell className="font-semibold text-slate">
                       {v.full_name}
@@ -760,7 +760,7 @@ export default function AdminPage() {
                       <ReviewStaffVerificationDialog
                         verification={v}
                         token={token}
-                        defaultOpen={v._id === highlightStaffVerificationId}
+                        defaultOpen={v._id === focusStaffId}
                       />
                     </TableCell>
                   </TableRow>
