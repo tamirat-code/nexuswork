@@ -96,6 +96,9 @@ export const content = asyncHandler(async (req, res) => {
   // a short-lived signed URL, avoiding proxy timeouts and premature closes.
   const privateUrl = await filesService.getPrivateContentUrl(file);
   if (privateUrl && ["1", "true"].includes(String(req.query.direct).toLowerCase())) {
+    if (["1", "true"].includes(String(req.query.json).toLowerCase())) {
+      return res.json({ success: true, data: { url: privateUrl } });
+    }
     return res.redirect(302, privateUrl);
   }
 

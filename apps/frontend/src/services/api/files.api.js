@@ -54,7 +54,7 @@ export const openFilePreview = async (id, token) => {
     // Keep the Authorization header/cookie on the API request while asking
     // the backend to redirect to object storage instead of proxying the file
     // bytes through Render.
-    const response = await authenticatedFetch(getFileContentUrl(id, { direct: true }), { token });
+    const response = await authenticatedFetch(`${getFileContentUrl(id, { direct: true })}&json=1`, { token });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       const error = new Error(data.message || `Unable to open file (${response.status})`);
@@ -62,9 +62,16 @@ export const openFilePreview = async (id, token) => {
       Object.assign(error, data);
       throw error;
     }
-    const url = URL.createObjectURL(await response.blob());
-    previewWindow.location.href = url;
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await response.json();
+      if (!data?.data?.url) throw new Error("File preview URL was not returned");
+      previewWindow.location.href = data.data.url;
+    } else {
+      const url = URL.createObjectURL(await response.blob());
+      previewWindow.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
   } catch (error) {
     previewWindow.close();
     throw error;
