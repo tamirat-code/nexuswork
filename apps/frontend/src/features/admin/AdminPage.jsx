@@ -511,12 +511,14 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState("");
   const [userRole, setUserRole] = useState("all");
   const [userStatus, setUserStatus] = useState("all");
+  const [userUniversity, setUserUniversity] = useState("all");
 
   const { data: statsData, isLoading: statsLoading } = useQuery({ queryKey: ["admin-stats"], queryFn: () => listAdminStats(token), enabled: !!token });
   const userQuery = new URLSearchParams();
   if (userSearch.trim()) userQuery.set("search", userSearch.trim());
   if (userRole !== "all") userQuery.set("role", userRole);
   if (userStatus !== "all") userQuery.set("status", userStatus);
+  if (userUniversity !== "all") userQuery.set("university", userUniversity);
   const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users", userQuery.toString()], queryFn: () => listAdminUsers(`?${userQuery.toString()}`, token), enabled: !!token });
   const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes("", token), enabled: !!token });
   const { data: reportsData, isLoading: reportsLoading } = useQuery({ queryKey: ["admin-reports"], queryFn: () => listAdminReports("?status=open&limit=50", token), enabled: !!token });
@@ -602,6 +604,14 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="overview">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <aside className="h-fit rounded-card border border-ink-300 bg-ink-50 p-3 lg:sticky lg:top-6">
+          <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Admin workspace</p>
+          <nav className="grid gap-1 text-sm font-semibold">
+            {[['#admin-overview', 'Overview'], ['#admin-reports', 'User reports'], ['#admin-users', 'User management'], ['#admin-disputes', 'Disputes'], ['#admin-staff', 'Staff verification'], ['#admin-universities', 'Universities']].map(([href, label]) => <a key={href} href={href} className="rounded-control px-3 py-2 text-slate-600 hover:bg-brand-soft hover:text-brand">{label}</a>)}
+          </nav>
+        </aside>
+        <div id="admin-overview" className="min-w-0">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((s) => (
           <Card key={s.label}>
@@ -672,7 +682,7 @@ export default function AdminPage() {
       </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card className="lg:col-span-2">
+        <Card id="admin-reports" className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg">User reports</CardTitle>
             <CardDescription>Review reports submitted through user profiles.</CardDescription>
@@ -696,13 +706,14 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="admin-users">
           <CardHeader>
             <CardTitle className="text-lg">User management</CardTitle>
             <div className="mt-3 flex flex-wrap gap-2">
               <Input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name or email" className="h-9 max-w-xs" />
               <Select value={userRole} onValueChange={setUserRole}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Role" /></SelectTrigger><SelectContent><SelectItem value="all">All roles</SelectItem><SelectItem value="student">Students</SelectItem><SelectItem value="client">Clients</SelectItem><SelectItem value="university_staff">University staff</SelectItem><SelectItem value="admin">Admins</SelectItem></SelectContent></Select>
               <Select value={userStatus} onValueChange={setUserStatus}><SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All status</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="suspended">Suspended</SelectItem><SelectItem value="deactivated">Deactivated</SelectItem></SelectContent></Select>
+              <Select value={userUniversity} onValueChange={setUserUniversity}><SelectTrigger className="h-9 w-[210px]"><SelectValue placeholder="University" /></SelectTrigger><SelectContent><SelectItem value="all">All universities</SelectItem>{universities.map((university) => <SelectItem key={university._id} value={university.name}>{university.name}</SelectItem>)}</SelectContent></Select>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -724,7 +735,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="admin-disputes">
           <CardHeader><CardTitle className="text-lg">Dispute queue</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -758,7 +769,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card id="admin-staff" className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg">Staff verification requests</CardTitle>
             <CardDescription>
@@ -825,7 +836,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card id="admin-universities" className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-lg">Universities</CardTitle>
             <CreateUniversityDialog token={token} />
@@ -849,6 +860,8 @@ export default function AdminPage() {
             </Table>
           </CardContent>
         </Card>
+      </div>
+        </div>
       </div>
         </TabsContent>
       </Tabs>

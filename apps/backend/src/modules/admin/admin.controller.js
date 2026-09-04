@@ -37,6 +37,7 @@ export const getUsers = asyncHandler(async (req, res) => {
   const result = await listUsers({
     role: req.query.role,
     status: req.query.status,
+    university: req.query.university,
     search: req.query.search,
     limit: parseInt(req.query.limit) || 50,
     skip: parseInt(req.query.skip) || 0,

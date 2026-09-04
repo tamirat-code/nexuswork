@@ -107,10 +107,11 @@ export async function deleteUser(admin_id, admin_role, user_id, reason) {
 }
 
 
-export async function listUsers({ role, status, search, limit = 50, skip = 0 }) {
+export async function listUsers({ role, status, university, search, limit = 50, skip = 0 }) {
   const query = {};
   if (role) query.role = role;
   if (status) query.status = status;
+  if (university) query.university = { $regex: university, $options: "i" };
   if (search) {
     query.$or = [
       { email: { $regex: search, $options: "i" } },
