@@ -12,6 +12,15 @@ import { ROLES } from "../../shared/enums/roles.enum.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { resolveDispute as resolveDisputeCanonical } from "../disputes/disputes.service.js";
 
+async function assertNotLastAdmin(user) {
+  if (user.role !== ROLES.ADMIN) return;
+
+  const adminCount = await User.countDocuments({ role: ROLES.ADMIN });
+  if (adminCount <= 1) {
+    throw new ValidationError("Cannot remove the last administrator");
+  }
+}
+
 
 export async function suspendUser(admin_id, admin_role, user_id, reason) {
   const user = await User.findById(user_id);
@@ -71,6 +80,7 @@ export async function deleteUser(admin_id, admin_role, user_id, reason) {
   if (user._id.toString() === admin_id.toString()) {
     throw new ValidationError("Cannot delete yourself");
   }
+  await assertNotLastAdmin(user);
 
   
   const deletedUser = {
@@ -159,6 +169,9 @@ export async function updateUserRole(admin_id, admin_role, user_id, new_role, re
   if (!user) throw new NotFoundError("User not found");
 
   const old_role = user.role;
+  if (old_role === ROLES.ADMIN && new_role !== ROLES.ADMIN) {
+    await assertNotLastAdmin(user);
+  }
   user.role = new_role;
   await user.save();
 

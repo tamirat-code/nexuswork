@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Plus, Minus, ArrowUpRight, Check, CircleDollarSign, ShieldCheck, Sparkles, Code2, Palette, BarChart3, PenLine, Video, Megaphone, LockKeyhole, BadgeCheck, WalletCards } from "lucide-react";
 import { SealMark } from "../auth/components/AuthShell.jsx";
-import Strands from "../../components/Strands.jsx";
 import ProjectCard from "../../components/cards/ProjectCard.jsx";
 import Spinner from "../../components/loaders/Spinner.jsx";
 import { listProjects } from "../../services/api/projects.api.js";
@@ -281,9 +280,6 @@ function HeroMarketplaceVisual() {
 
   return (
     <div className="hero-marketplace-visual relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#286174] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.28)] sm:p-6" aria-label="NexusWork product preview">
-      <div className="pointer-events-none absolute inset-0 opacity-35" aria-hidden="true">
-        <Strands colors={["#00c8b4", "#2788b0", "#7ce3d1"]} count={4} speed={0.3} opacity={0.7} scale={1.2} glow={1.4} intensity={0.45} />
-      </div>
       <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -375,7 +371,8 @@ function HeroVideoBackground() {
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
+        fetchPriority="high"
         poster="/hero-poster.svg"
       >
         <source src="/videos/herobg.mp4" type="video/mp4" />
