@@ -1,6 +1,7 @@
 import Verification from "./verifications.model.js";
 import SkillCertificationRequest from "./skill-certification-request.model.js";
 import University from "../universities/universities.model.js";
+import StaffVerification from "../staff-verifications/staff-verifications.model.js";
 import StudentProfile from "../students/students.model.js";
 import User from "../users/users.model.js";
 import File from "../files/files.model.js";
@@ -179,8 +180,10 @@ export async function getMyVerifications(userId) {
 async function scopedUniversityFilter(requesterId, requesterRole) {
   if (!requesterRole || requesterRole === "admin") return {};
 
-  const university = await University.findOne({ contact_staff: requesterId });
-  return { university_id: university ? university._id : null }; // null -> no matches
+  const approvedStaff = await StaffVerification.findOne({ user_id: requesterId, status: "approved" }).select("university_id").lean();
+  if (approvedStaff?.university_id) return { university_id: approvedStaff.university_id };
+  const university = await University.findOne({ contact_staff: requesterId }).select("_id").lean();
+  return { university_id: university?._id || null }; // null -> no matches
 }
 
 export async function listVerifications({ status, limit = 50, skip = 0, requesterId, requesterRole }) {

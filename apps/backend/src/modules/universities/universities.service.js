@@ -10,7 +10,10 @@ export async function listUniversities() {
 }
 
 export async function getMyUniversity(userId) {
-  return University.findOne({ contact_staff: userId });
+  const university = await University.findOne({ contact_staff: userId });
+  if (university) return university;
+  const approvedStaff = await StaffVerification.findOne({ user_id: userId, status: "approved" }).select("university_id").lean();
+  return approvedStaff?.university_id ? University.findById(approvedStaff.university_id) : null;
 }
 
 export async function createUniversity({ name, domain }) {
