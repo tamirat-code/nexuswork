@@ -1015,6 +1015,7 @@ function StaffVerificationCard({ user, token }) {
   const qc = useQueryClient();
   const { refreshMe } = useAuth();
   const [fullName, setFullName] = useState(user?.name || "");
+  const [universityId, setUniversityId] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
   const [uploadedDoc, setUploadedDoc] = useState(null);
@@ -1025,8 +1026,13 @@ function StaffVerificationCard({ user, token }) {
     queryFn: () => getMyStaffVerifications(token),
     enabled: !!token,
   });
+  const { data: universitiesRes, isLoading: universitiesLoading } = useQuery({
+    queryKey: ["universities-all"],
+    queryFn: () => listUniversities("?limit=200"),
+  });
 
   const verifications = verificationsRes?.data ?? [];
+  const universities = universitiesRes?.data ?? [];
   const latest = verifications[0];
   const isApproved = latest?.status === "approved" || Boolean(user?.staffVerified);
 
@@ -1066,6 +1072,7 @@ function StaffVerificationCard({ user, token }) {
     mutationFn: () =>
       requestStaffVerification(
         {
+          university_id: universityId,
           full_name: fullName.trim(),
           job_title: jobTitle.trim(),
           department: department.trim(),
@@ -1086,6 +1093,7 @@ function StaffVerificationCard({ user, token }) {
   function validate() {
     const errors = {};
     if (!fullName.trim()) errors.fullName = "Enter your full legal name, as it appears on your ID.";
+    if (!universityId) errors.university = "Select the university you represent.";
     if (!jobTitle.trim()) errors.jobTitle = "Enter your job title.";
     if (!department.trim()) errors.department = "Enter your department.";
     if (!uploadedDoc) errors.document = "Upload a staff ID, HR/offer letter, or department directory page.";
@@ -1131,6 +1139,16 @@ function StaffVerificationCard({ user, token }) {
           )}
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Select
+              label="University"
+              value={universityId}
+              onChange={(event) => { setUniversityId(event.target.value); setFieldErrors((prev) => ({ ...prev, university: undefined })); }}
+              options={universities.map((university) => ({ value: university._id, label: university.name }))}
+              placeholder={universitiesLoading ? "Loading universities…" : "Select your university"}
+              disabled={busy || universitiesLoading}
+              error={fieldErrors.university}
+              wrapperClassName="sm:col-span-2"
+            />
             <Input
               id="staff-verification-full-name"
               label={t("profile.fullLegalName", { defaultValue: "Full legal name" })}

@@ -322,12 +322,6 @@ export async function loginOrRegisterWithGoogle(
   if (role === "university_staff") {
     const domain = email.toLowerCase().split("@")[1];
     university = await University.findOne({ domain });
-    if (!university) {
-      throw new ValidationError(
-        "Your email domain isn't registered to a university on NexusWork yet. Ask a platform admin to add your university first."
-      );
-    }
-    
   }
 
   user = await User.create({
@@ -342,10 +336,7 @@ export async function loginOrRegisterWithGoogle(
     terms_version: legalConfig.currentTermsVersion,
   });
 
-  if (role === "university_staff") {
-    university.contact_staff.push(user._id);
-    await university.save();
-  } else if (role === "client") {
+  if (role === "client") {
     await Wallet.create({ user_id: user._id });
     await ClientProfile.create({
       user_id: user._id,

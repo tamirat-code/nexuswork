@@ -191,6 +191,7 @@ export const reviewVerificationSchema = z.object({
 
 
 export const submitStaffVerificationSchema = z.object({
+  university_id: objectId,
   full_name: z
     .string()
     .trim()

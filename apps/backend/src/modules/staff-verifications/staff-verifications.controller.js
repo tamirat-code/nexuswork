@@ -9,10 +9,11 @@ import {
 } from "./staff-verifications.service.js";
 
 export const requestStaffVerification = asyncHandler(async (req, res) => {
-  requireFields(req.body, ["full_name", "job_title", "department", "document_file_id"]);
+  requireFields(req.body, ["university_id", "full_name", "job_title", "department", "document_file_id"]);
   const verification = await submitStaffVerification({
     userId: req.user._id,
     userEmail: req.user.email,
+    universityId: req.body.university_id,
     fullName: req.body.full_name,
     jobTitle: req.body.job_title,
     department: req.body.department,

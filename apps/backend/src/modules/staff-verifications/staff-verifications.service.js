@@ -8,6 +8,7 @@ import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exc
 export async function submitStaffVerification({
   userId,
   userEmail,
+  universityId,
   fullName,
   jobTitle,
   department,
@@ -27,11 +28,9 @@ export async function submitStaffVerification({
 
   
   const emailDomain = String(userEmail || "").split("@")[1]?.toLowerCase() || "";
-  const university = await University.findOne({ domain: emailDomain });
+  const university = await University.findById(universityId);
   if (!university) {
-    throw new ValidationError(
-      "Your email domain isn't registered to a university on NexusWork. Ask a platform admin to add your university first."
-    );
+    throw new ValidationError("The selected university could not be found");
   }
 
   const existing = await StaffVerification.findOne({ user_id: userId, university_id: university._id });
@@ -51,7 +50,7 @@ export async function submitStaffVerification({
       user_id: userId,
       university_id: university._id,
       email_domain: emailDomain,
-      email_domain_matched: true,
+      email_domain_matched: university.domain === emailDomain,
       full_name: fullName,
       job_title: jobTitle,
       department,
