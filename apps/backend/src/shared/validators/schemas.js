@@ -162,10 +162,12 @@ export const createUniversitySchema = z.object({
   contact_staff: z.array(objectId).optional().default([]),
 });
 
-// --- Verifications ---
-// Identity/enrollment evidence a student must supply for university staff to review.
-// email_domain is intentionally NOT accepted from the client — it's derived server-side
-// from the authenticated user's own account email so it can't be spoofed.
+export const updateUniversitySchema = z.object({
+  name: z.string().trim().min(1, "University name is required").max(200).optional(),
+  domain: z.string().trim().min(1, "Domain is required").max(200).optional(),
+});
+
+
 export const submitVerificationSchema = z.object({
   university_id: objectId,
   full_name: z
@@ -187,11 +189,7 @@ export const reviewVerificationSchema = z.object({
   rejection_reason: z.string().trim().max(500).optional(),
 });
 
-// --- Staff verifications ---
-// university_id is intentionally NOT accepted from the client — it's derived
-// server-side from the authenticated user's own account email domain, so a
-// staff registrant can't file a request against a university their email
-// has no relationship to. See staff-verifications.service.js.
+
 export const submitStaffVerificationSchema = z.object({
   full_name: z
     .string()

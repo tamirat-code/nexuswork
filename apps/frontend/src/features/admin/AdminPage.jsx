@@ -3,10 +3,10 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText } from "lucide-react";
 
 import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute, listAdminReports, reviewAdminReport, suspendAdminUser, restoreAdminUser, changeAdminUserRole, deleteAdminUser } from "../../services/api/admin.api.js";
-import { listUniversities, createUniversity } from "../../services/api/universities.api.js";
+import { listUniversities, createUniversity, updateUniversity, deleteUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { openFilePreview } from "../../services/api/files.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -37,6 +37,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/shadcn/select.jsx";
 import { reportValidation } from "../../lib/validation.js";
+import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
 
 function CreateUniversityDialog({ token }) {
   const qc = useQueryClient();
@@ -106,6 +107,67 @@ function CreateUniversityDialog({ token }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditUniversityDialog({ university, token }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(university.name);
+  const [domain, setDomain] = useState(university.domain);
+  const [errors, setErrors] = useState({});
+
+  function validate() {
+    const next = {};
+    if (!name.trim()) next.name = "Enter the university name.";
+    if (!domain.trim() || !/^(?=.{1,200}$)(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(domain.trim())) {
+      next.domain = "Enter a valid domain such as aau.edu.et (without https://).";
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
+  const update = useMutation({
+    mutationFn: () => updateUniversity(university._id, { name: name.trim(), domain: domain.trim().toLowerCase() }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["universities"] });
+      toast.success("University updated");
+      setOpen(false);
+    },
+    onError: (err) => toast.error(err.message || "Could not update university"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" aria-label={`Edit ${university.name}`}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit university</DialogTitle><DialogDescription>Update the institution name or verified email domain.</DialogDescription></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5"><Label htmlFor={`edit-uni-name-${university._id}`}>Name</Label><Input id={`edit-uni-name-${university._id}`} value={name} maxLength={200} onChange={(e) => { setName(e.target.value); setErrors((v) => ({ ...v, name: undefined })); }} />{errors.name && <p className="text-xs text-brick" role="alert">{errors.name}</p>}</div>
+          <div className="space-y-1.5"><Label htmlFor={`edit-uni-domain-${university._id}`}>Email domain</Label><Input id={`edit-uni-domain-${university._id}`} value={domain} maxLength={200} onChange={(e) => { setDomain(e.target.value.toLowerCase()); setErrors((v) => ({ ...v, domain: undefined })); }} />{errors.domain && <p className="text-xs text-brick" role="alert">{errors.domain}</p>}</div>
+        </div>
+        <DialogFooter><Button loading={update.isPending} onClick={() => validate() && update.mutate()}>Save changes</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteUniversityButton({ university, token }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => deleteUniversity(university._id, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["universities"] }); toast.success("University deleted"); setOpen(false); },
+    onError: (err) => toast.error(err.message || "Could not delete university"),
+  });
+
+  return (
+    <>
+      <Button variant="destructive" size="sm" aria-label={`Delete ${university.name}`} onClick={() => setOpen(true)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
+      <ConfirmDialog open={open} loading={remove.isPending} onCancel={() => setOpen(false)} onConfirm={() => remove.mutate()} tone="danger" confirmLabel="Delete university" title={`Delete ${university.name}?`} description="This is only allowed when no users or verification records are linked to this university." />
+    </>
   );
 }
 
@@ -715,16 +777,17 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Domain</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {universitiesLoading && <TableRow><TableCell colSpan={2}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Domain</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+            <TableBody>
+                {universitiesLoading && <TableRow><TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
                 {!universitiesLoading && universities.length === 0 && (
-                  <TableRow><TableCell colSpan={2} className="py-8 text-center text-slate-300">No universities yet — add one to enable student verification.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} className="py-8 text-center text-slate-300">No universities yet — add one to enable student verification.</TableCell></TableRow>
                 )}
                 {universities.map((u) => (
                   <TableRow key={u._id}>
                     <TableCell className="flex items-center gap-2 font-semibold text-slate"><GraduationCap className="h-4 w-4 text-brass" /> {u.name}</TableCell>
                     <TableCell className="font-mono text-xs text-slate-300">{u.domain}</TableCell>
+                    <TableCell><div className="flex justify-end gap-2"><EditUniversityDialog university={u} token={token} /><DeleteUniversityButton university={u} token={token} /></div></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

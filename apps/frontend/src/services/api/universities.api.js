@@ -4,3 +4,7 @@ export const listUniversities = (query = "") => apiRequest(`/universities${query
 export const getMyUniversity = (token) => apiRequest("/universities/mine", { token });
 export const createUniversity = (payload, token) =>
   apiRequest("/universities", { method: "POST", body: payload, token });
+export const updateUniversity = (id, payload, token) =>
+  apiRequest(`/universities/${id}`, { method: "PATCH", body: payload, token });
+export const deleteUniversity = (id, token) =>
+  apiRequest(`/universities/${id}`, { method: "DELETE", token });
