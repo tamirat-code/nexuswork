@@ -50,15 +50,10 @@ export const openFilePreview = async (id, token) => {
   const previewWindow = window.open("about:blank", "_blank");
   if (!previewWindow) throw new Error("Please allow pop-ups to open this file");
   previewWindow.opener = null;
-  try {
-    const blob = await fetchFileBlob(id, token);
-    const url = URL.createObjectURL(blob);
-    previewWindow.location.href = url;
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } catch (error) {
-    previewWindow.close();
-    throw error;
-  }
+  // Keep authorization on the API request, but let object storage stream the
+  // file directly. Proxying private files through Render can produce 502s for
+  // larger or slower documents.
+  previewWindow.location.href = getFileContentUrl(id, { direct: true });
 };
 
 export const downloadFile = async (id, token, filename = "download") => {

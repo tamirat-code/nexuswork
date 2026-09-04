@@ -463,7 +463,7 @@ export default function AdminPage() {
   if (userRole !== "all") userQuery.set("role", userRole);
   if (userStatus !== "all") userQuery.set("status", userStatus);
   const { data: usersData, isLoading: usersLoading } = useQuery({ queryKey: ["admin-users", userQuery.toString()], queryFn: () => listAdminUsers(`?${userQuery.toString()}`, token), enabled: !!token });
-  const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes(token), enabled: !!token });
+  const { data: disputesData, isLoading: disputesLoading } = useQuery({ queryKey: ["admin-disputes"], queryFn: () => listAdminDisputes("", token), enabled: !!token });
   const { data: reportsData, isLoading: reportsLoading } = useQuery({ queryKey: ["admin-reports"], queryFn: () => listAdminReports("?status=open&limit=50", token), enabled: !!token });
   const { data: universitiesData, isLoading: universitiesLoading } = useQuery({ queryKey: ["universities"], queryFn: () => listUniversities() });
   const { data: staffVerificationsData, isLoading: staffVerificationsLoading } = useQuery({
