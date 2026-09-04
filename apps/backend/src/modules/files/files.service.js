@@ -13,9 +13,22 @@ import { NotFoundError, ForbiddenError } from "../../shared/exceptions/AppError.
 import { isOrgMember } from "../clients/clients.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
+function normalizeOriginalFilename(value) {
+  const filename = String(value || "");
+  if (!/[\u00c0-\u00ff]/.test(filename)) return filename;
+  try {
+    const bytes = Uint8Array.from(filename, (character) => character.charCodeAt(0) & 0xff);
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return decoded && !/[\ufffd]/.test(decoded) ? decoded : filename;
+  } catch {
+    return filename;
+  }
+}
+
 export async function createFileRecord({ ownerId, multerFile, related_type, related_id, contentHash, auditContext = {} }) {
+  const originalName = normalizeOriginalFilename(multerFile.originalname);
   const filename = storageConfig.driver === "s3"
-    ? `${crypto.randomUUID()}${path.extname(multerFile.originalname).toLowerCase()}`
+    ? `${crypto.randomUUID()}${path.extname(originalName).toLowerCase()}`
     : multerFile.filename;
 
   if (storageConfig.driver === "s3") {
@@ -29,7 +42,7 @@ export async function createFileRecord({ ownerId, multerFile, related_type, rela
   const file = new File({
     owner_id: ownerId,
     filename,
-    original_name: path.basename(multerFile.originalname).replace(/[\u0000-\u001f\u007f]/g, "_").slice(0, 255),
+    original_name: path.basename(originalName).replace(/[\u0000-\u001f\u007f]/g, "_").slice(0, 255),
     mimetype: multerFile.mimetype,
     size: multerFile.size,
     content_sha256: contentHash,

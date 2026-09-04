@@ -42,6 +42,7 @@ import ReviewsSection from "../reviews/ReviewsSection.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
+import { displayFilename } from "../../utils/filename.utils.js";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
@@ -234,7 +235,7 @@ function SubmissionFiles({ submission, token, filesOverride }) {
           className="flex w-full items-center gap-3 rounded-control border border-ink-300 bg-ink-50 p-2.5 text-left transition hover:border-brass/40"
         >
           <FileText className="h-4 w-4 shrink-0 text-brass" />
-          <span className="min-w-0 flex-1 truncate text-sm text-slate">{file.original_name}</span>
+          <span className="min-w-0 flex-1 truncate text-sm text-slate">{displayFilename(file.original_name)}</span>
           <span className="shrink-0 text-xs text-slate-300">{formatBytes(file.size)}</span>
           <button type="button" onClick={async () => {
             try {
@@ -247,7 +248,7 @@ function SubmissionFiles({ submission, token, filesOverride }) {
           </button>
           <button type="button" onClick={async () => {
             try {
-              await downloadFile(file._id, token, file.original_name);
+              await downloadFile(file._id, token, displayFilename(file.original_name));
             } catch (error) {
               toast.error(error.message || "Could not download file");
             }
@@ -270,7 +271,7 @@ function SubmissionFiles({ submission, token, filesOverride }) {
           {String(previewFile?.mimetype || "").startsWith("video/") ? (
             <video title="Milestone video deliverable" src={previewUrl} controls playsInline className="max-h-[min(65vh,720px)] w-full" />
           ) : String(previewFile?.mimetype || "").startsWith("image/") ? (
-            <img alt={previewFile?.original_name || "Milestone deliverable"} src={previewUrl} className="max-h-[min(65vh,720px)] w-full object-contain" />
+            <img alt={displayFilename(previewFile?.original_name, "Milestone deliverable")} src={previewUrl} className="max-h-[min(65vh,720px)] w-full object-contain" />
           ) : (
             <iframe title="Milestone deliverable preview" src={previewUrl} className="h-[min(65vh,720px)] w-full" />
           )}
@@ -984,7 +985,7 @@ function ChatPanel({ contractId, token, contract }) {
       {pendingAttachment && (
         <div className="mb-2 flex items-center gap-2 rounded-control border border-ink-300 bg-ink-700 px-3 py-1.5 text-xs text-slate-300">
           <Paperclip className="h-3.5 w-3.5 text-brass" />
-          <span className="flex-1 truncate">{pendingAttachment.original_name}</span>
+          <span className="flex-1 truncate">{displayFilename(pendingAttachment.original_name)}</span>
           <button type="button" onClick={() => setPendingAttachment(null)} aria-label="Remove attachment"><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
@@ -1139,14 +1140,14 @@ export default function ContractDetailPage() {
     mutationFn: async (file) => {
       const uploaded = await uploadFile(file, { relatedType: "message_attachment", token });
       await sendMessage(id, {
-        body: `📎 Shared a file: ${uploaded.data.original_name}`,
+        body: `📎 Shared a file: ${displayFilename(uploaded.data.original_name)}`,
         attachments: [uploaded.data._id],
       }, token);
       return uploaded;
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["messages", id] });
-      toast.success(`${response.data.original_name} shared in contract chat.`);
+      toast.success(`${displayFilename(response.data.original_name)} shared in contract chat.`);
     },
     onError: (error) => toast.error(error.message || "That file couldn't be shared"),
   });

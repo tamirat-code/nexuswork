@@ -29,6 +29,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
+import { displayFilename } from "../../utils/filename.utils.js";
 
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
 import {
@@ -305,7 +306,7 @@ function ProposalReviewDialog({
 
           {proposal.cv_file_id ? (
             <button type="button" onClick={openCv} className="inline-flex items-center gap-2 text-sm font-semibold text-brass hover:underline">
-              <FileText className="h-4 w-4" /> {cvViewed ? "CV reviewed" : "View student CV"} ({proposal.cv_file_id.original_name})
+              <FileText className="h-4 w-4" /> {cvViewed ? "CV reviewed" : "View student CV"} ({displayFilename(proposal.cv_file_id.original_name)})
             </button>
           ) : <p className="text-sm text-brick">This proposal has no CV attached and cannot be accepted.</p>}
 

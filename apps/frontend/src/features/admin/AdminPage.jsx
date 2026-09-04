@@ -9,6 +9,7 @@ import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute,
 import { listUniversities, createUniversity, updateUniversity, deleteUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { openFilePreview } from "../../services/api/files.api.js";
+import { displayFilename } from "../../utils/filename.utils.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/shadcn/card.jsx";
@@ -400,7 +401,7 @@ function ReviewStaffVerificationDialog({ verification, token, defaultOpen = fals
               className="inline-flex items-center gap-1.5 text-sm font-medium text-brass underline-offset-4 hover:underline"
             >
               <FileText className="h-4 w-4" />
-              View uploaded document ({verification.document_file_id.original_name || "file"})
+              View uploaded document ({displayFilename(verification.document_file_id.original_name)})
             </button>
           ) : (
             <p className="text-sm text-brick">No document on file — reject and ask them to resubmit with proof.</p>

@@ -11,6 +11,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useSocket } from "../../hooks/useSocket.js";
 import { Card, Button, Input, PageHeader, Skeleton } from "../../components/ui/index.js";
 import { formatTimeAgo } from "../../utils/date.utils.js";
+import { displayFilename } from "../../utils/filename.utils.js";
 
 export default function ChatPage() {
   const { t } = useTranslation();
@@ -222,12 +223,12 @@ export default function ChatPage() {
                           {m.attachments.map((file) => (
                             <div key={file._id} className="flex items-center gap-2 text-[11px]">
                               <Paperclip className="h-3.5 w-3.5 shrink-0 text-brass" />
-                              <span className="min-w-0 flex-1 truncate" title={file.original_name}>{file.original_name}</span>
+                              <span className="min-w-0 flex-1 truncate" title={displayFilename(file.original_name)}>{displayFilename(file.original_name)}</span>
                               <button type="button" className="shrink-0 font-semibold text-brass hover:underline" onClick={async () => {
                                 try { await openFilePreview(file._id, token); } catch (error) { toast.error(error.message || "Could not preview file"); }
                               }}>View</button>
                               <button type="button" className="shrink-0 font-semibold text-brass hover:underline" onClick={async () => {
-                                try { await downloadFile(file._id, token, file.original_name); } catch (error) { toast.error(error.message || "Could not download file"); }
+                                try { await downloadFile(file._id, token, displayFilename(file.original_name)); } catch (error) { toast.error(error.message || "Could not download file"); }
                               }}>Download</button>
                             </div>
                           ))}
@@ -249,7 +250,7 @@ export default function ChatPage() {
                 sendMutation.mutate();
               }}
             >
-              {attachment && <span className="max-w-28 truncate text-xs text-brass" title={attachment.original_name}>{attachment.original_name}</span>}
+              {attachment && <span className="max-w-28 truncate text-xs text-brass" title={displayFilename(attachment.original_name)}>{displayFilename(attachment.original_name)}</span>}
               <Button
                 type="button"
                 variant="ghost"

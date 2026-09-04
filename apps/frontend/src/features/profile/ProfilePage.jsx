@@ -35,6 +35,7 @@ import { getMyStaffVerifications, requestStaffVerification } from "../../service
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
 import { PROFILE_LIMITS, getCompletenessFields, profileCompleteness, validateProfile } from "./profile.utils.js";
+import { displayFilename } from "../../utils/filename.utils.js";
 import { useTranslation } from "react-i18next";
 
 const EMPTY = {
@@ -730,7 +731,7 @@ function SkillCertificationCard({ token, user, profile, universityVerified }) {
             <label className="block text-sm font-semibold text-slate">Evidence file
               <input className="mt-2 block w-full text-sm text-slate-300" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.zip,.txt,application/pdf,image/*,application/zip,text/plain" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; uploadEvidence(file); }} />
             </label>
-            {evidence && <p className="mt-1 text-xs text-escrow">Attached: {evidence.original_name}</p>}
+            {evidence && <p className="mt-1 text-xs text-escrow">Attached: {displayFilename(evidence.original_name)}</p>}
           </div>
           <Button className="mt-4" loading={submit.isPending || uploading} disabled={!finalSkillName || !evidence || notes.trim().length < 20 || (method === "coursework_linkage" && !courseName.trim())} onClick={() => submit.mutate()}>{t("profile.requestCertification", { defaultValue: "Request certification" })}</Button>
         </>
@@ -985,7 +986,7 @@ function UniversityVerificationCard({ user, token }) {
                 accept={VERIFICATION_DOC_ACCEPT}
                 maxSizeMb={VERIFICATION_DOC_MAX_MB}
                 disabled={busy}
-                files={uploadedDoc ? [{ id: uploadedDoc._id, name: uploadedDoc.original_name, size: uploadedDoc.size }] : []}
+                files={uploadedDoc ? [{ id: uploadedDoc._id, name: displayFilename(uploadedDoc.original_name), size: uploadedDoc.size }] : []}
                 onFilesSelected={(files) => files[0] && uploadDoc.mutate(files[0])}
                 onRemove={() => removeDoc.mutate()}
               />
@@ -1185,7 +1186,7 @@ function StaffVerificationCard({ user, token }) {
                 accept={VERIFICATION_DOC_ACCEPT}
                 maxSizeMb={VERIFICATION_DOC_MAX_MB}
                 disabled={busy}
-                files={uploadedDoc ? [{ id: uploadedDoc._id, name: uploadedDoc.original_name, size: uploadedDoc.size }] : []}
+                files={uploadedDoc ? [{ id: uploadedDoc._id, name: displayFilename(uploadedDoc.original_name), size: uploadedDoc.size }] : []}
                 onFilesSelected={(files) => files[0] && uploadDoc.mutate(files[0])}
                 onRemove={() => removeDoc.mutate()}
               />
