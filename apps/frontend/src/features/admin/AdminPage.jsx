@@ -3,15 +3,16 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText, Eye } from "lucide-react";
 
-import { listAdminStats, listAdminUsers, listAdminDisputes, resolveAdminDispute, listAdminReports, reviewAdminReport, suspendAdminUser, restoreAdminUser, changeAdminUserRole, deleteAdminUser } from "../../services/api/admin.api.js";
+import { listAdminStats, listAdminUsers, getAdminUserProfile, listAdminDisputes, resolveAdminDispute, listAdminReports, reviewAdminReport, suspendAdminUser, restoreAdminUser, changeAdminUserRole, deleteAdminUser } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity, updateUniversity, deleteUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { openFilePreview } from "../../services/api/files.api.js";
 import { displayFilename } from "../../utils/filename.utils.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
+import { formatDate } from "../../utils/date.utils.js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/shadcn/card.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
@@ -298,6 +299,7 @@ function UserAdminActions({ account, token }) {
   return (
     <>
       <div className="flex justify-end gap-1.5">
+        <UserProfileDialog account={account} token={token} />
         <Button size="sm" variant="secondary" className="h-8" onClick={() => setOpen(account.status === "suspended" ? "restore" : "suspend")}>
           {account.status === "suspended" ? "Restore" : "Suspend"}
         </Button>
@@ -317,6 +319,58 @@ function UserAdminActions({ account, token }) {
           )}
           <Textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason (required)" rows={3} maxLength={500} />
           <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button loading={action.isPending} disabled={reason.trim().length < 3 || (isRoleChange && nextRole === account.role)} onClick={() => action.mutate()}>{title}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function UserProfileDialog({ account, token }) {
+  const [open, setOpen] = useState(false);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-user-profile", account._id],
+    queryFn: () => getAdminUserProfile(account._id, token),
+    enabled: open && !!token,
+  });
+  const profile = data?.data;
+  const activities = profile?.recent_actions ?? [];
+
+  return (
+    <>
+      <Button size="sm" variant="secondary" className="h-8" onClick={() => setOpen(true)} title="View profile and activity">
+        <Eye className="h-3.5 w-3.5" /> View
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{profile?.name || account.name}</DialogTitle>
+            <DialogDescription>Account profile and recent activity</DialogDescription>
+          </DialogHeader>
+          {isLoading ? <Skeleton className="h-32 w-full" /> : isError ? <p className="text-sm text-brick">Could not load this user profile.</p> : profile && (
+            <div className="space-y-5">
+              <div className="grid gap-3 rounded-control border border-ink-300 bg-ink-50 p-4 text-sm sm:grid-cols-2">
+                <div><span className="text-slate-400">Email</span><p className="font-medium text-slate">{profile.email}</p></div>
+                <div><span className="text-slate-400">Role</span><p className="font-medium capitalize text-slate">{profile.role?.replaceAll("_", " ")}</p></div>
+                <div><span className="text-slate-400">Status</span><p className="font-medium capitalize text-slate">{profile.status}</p></div>
+                <div><span className="text-slate-400">Joined</span><p className="font-medium text-slate">{profile.createdAt ? formatDate(profile.createdAt) : "—"}</p></div>
+                <div><span className="text-slate-400">Email verified</span><p className="font-medium text-slate">{profile.email_verified ? "Yes" : "No"}</p></div>
+                <div><span className="text-slate-400">University verified</span><p className="font-medium text-slate">{profile.universityVerified ? "Yes" : "No"}</p></div>
+              </div>
+              <div>
+                <h3 className="mb-2 font-semibold text-slate">Recent activity</h3>
+                {activities.length === 0 ? <p className="text-sm text-slate-400">No recorded activity for this user.</p> : (
+                  <div className="max-h-64 space-y-2 overflow-y-auto">
+                    {activities.map((activity) => (
+                      <div key={activity._id} className="rounded-control border border-ink-300 p-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium capitalize text-slate">{(activity.action_type || "activity").replaceAll("_", " ")}</span><span className="text-xs text-slate-400">{formatDate(activity.createdAt)}</span></div>
+                        <p className="mt-1 text-xs text-slate-400">{activity.entity_type || "account"}{activity.reason ? ` · ${activity.reason}` : ""}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

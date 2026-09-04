@@ -13,6 +13,7 @@ function toPublicUser(user) {
     auth_provider: user.auth_provider,
     avatarUrl: user.avatarUrl,
     universityVerified: user.universityVerified,
+    staffVerified: user.staffVerified,
     notification_prefs: user.notification_prefs,
     mfa_enabled: user.mfa_enabled,
     preferred_language: user.preferred_language || "en",
