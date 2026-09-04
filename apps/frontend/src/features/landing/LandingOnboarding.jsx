@@ -171,4 +171,3 @@ export default function LandingOnboarding({ enabled = true }) {
     </div>
   ), document.body);
 }
-

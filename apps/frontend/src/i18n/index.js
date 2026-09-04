@@ -143,7 +143,12 @@ function mergeResources(...objs) {
   return result;
 }
 
-const stored = typeof localStorage !== "undefined" ? localStorage.getItem("nw_language") : null;
+let stored = null;
+try {
+  stored = typeof localStorage !== "undefined" ? localStorage.getItem("nw_language") : null;
+} catch {
+  // Some browsers block localStorage; use the browser language instead.
+}
 const browser = typeof navigator !== "undefined" ? navigator.language?.split("-")[0] : null;
 const initial = supported.includes(stored) ? stored : supported.includes(browser) ? browser : "en";
 
@@ -171,9 +176,8 @@ for (const bundle of extraBundles) {
 }
 
 
-i18n.on("languageChanged", (lng) => { if (typeof localStorage !== "undefined") localStorage.setItem("nw_language", supported.includes(lng) ? lng : "en"); if (typeof document !== "undefined") { document.documentElement.lang = lng; document.documentElement.dir = ["ar", "he", "fa"].includes(lng) ? "rtl" : "ltr"; translateLegacyDom(lng); } });
-if (typeof document !== "undefined") { const observer = new MutationObserver(() => translateLegacyDom(i18n.language)); observer.observe(document.documentElement, { childList: true, subtree: true }); }
+i18n.on("languageChanged", (lng) => { try { if (typeof localStorage !== "undefined") localStorage.setItem("nw_language", supported.includes(lng) ? lng : "en"); } catch { /* storage is optional */ } if (typeof document !== "undefined") { document.documentElement.lang = lng; document.documentElement.dir = ["ar", "he", "fa"].includes(lng) ? "rtl" : "ltr"; translateLegacyDom(lng); } });
+if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") { const observer = new MutationObserver(() => translateLegacyDom(i18n.language)); observer.observe(document.documentElement, { childList: true, subtree: true }); }
 if (typeof window !== "undefined") window.__nwI18n = i18n;
 export { supported };
 export default i18n;
-

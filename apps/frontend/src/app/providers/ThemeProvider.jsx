@@ -4,14 +4,19 @@ const THEME_STORAGE_KEY = "nexuswork-theme";
 const ThemeContext = createContext(null);
 
 function getSystemTheme() {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
 }
 
 function getInitialTheme() {
   if (typeof window === "undefined") return "light";
-  const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+  let saved = null;
+  try {
+    saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable in private/restricted browsing modes.
+  }
   return saved === "light" || saved === "dark" ? saved : getSystemTheme();
 }
 
@@ -28,9 +33,14 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const handleSystemChange = () => {
-      if (!window.localStorage.getItem(THEME_STORAGE_KEY)) setTheme(getSystemTheme());
+      try {
+        if (!window.localStorage.getItem(THEME_STORAGE_KEY)) setTheme(getSystemTheme());
+      } catch {
+        setTheme(getSystemTheme());
+      }
     };
     media.addEventListener?.("change", handleSystemChange);
     return () => media.removeEventListener?.("change", handleSystemChange);
@@ -39,7 +49,11 @@ export function ThemeProvider({ children }) {
   const toggleTheme = useCallback(() => {
     setTheme((current) => {
       const next = current === "dark" ? "light" : "dark";
-      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        // Continue the session even when persistent storage is unavailable.
+      }
       return next;
     });
   }, []);

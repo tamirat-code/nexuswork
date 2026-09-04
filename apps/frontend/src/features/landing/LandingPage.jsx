@@ -188,7 +188,7 @@ function HeroTestimonial() {
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const prefersReducedMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion || paused || TESTIMONIALS.length <= 1) return undefined;
 
     timerRef.current = setInterval(() => {
