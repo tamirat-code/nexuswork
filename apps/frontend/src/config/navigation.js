@@ -57,7 +57,17 @@ export const workspaceNav = [
       { to: "/students", label: "Talent", icon: "users", roles: [ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/clients", label: "Clients", icon: "building", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/analytics", label: "Analytics", icon: "chart", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
-      { to: "/admin", label: "Admin", icon: "cog", roles: [ROLES.ADMIN] },
+    ],
+  },
+  {
+    section: "Admin",
+    items: [
+      { to: "/admin", hash: "#admin-overview", label: "Overview", icon: "grid", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-reports", label: "User reports", icon: "flag", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-users", label: "User management", icon: "users", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-disputes", label: "Disputes", icon: "scale", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-staff", label: "Staff verification", icon: "shield", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-universities", label: "Universities", icon: "building", roles: [ROLES.ADMIN] },
     ],
   },
 ];

@@ -8,6 +8,7 @@ const paths = {
   document: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4",
   shield: "M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6zM9 12l2 2 4-4",
   flag: "M5 21V4h9l-1 3h6l-1 4 1 4h-8l-1-3H5",
+  scale: "M12 3v18M5 7h14M5 7l-3 6a3 3 0 0 0 6 0L5 7zM19 7l-3 6a3 3 0 0 0 6 0l-3-6zM8 21h8",
   wallet: "M3 8h18v11H3zM3 8l2-4h12l2 4M16 13.5h2",
   card: "M3 7h18v10H3zM3 11h18M7 15h3",
   receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",

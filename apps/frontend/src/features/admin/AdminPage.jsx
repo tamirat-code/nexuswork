@@ -604,13 +604,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="overview">
-      <div className="mt-6 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-card border border-ink-300 bg-ink-50 p-3 lg:sticky lg:top-6">
-          <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Admin workspace</p>
-          <nav className="grid gap-1 text-sm font-semibold">
-            {[['#admin-overview', 'Overview'], ['#admin-reports', 'User reports'], ['#admin-users', 'User management'], ['#admin-disputes', 'Disputes'], ['#admin-staff', 'Staff verification'], ['#admin-universities', 'Universities']].map(([href, label]) => <a key={href} href={href} className="rounded-control px-3 py-2 text-slate-600 hover:bg-brand-soft hover:text-brand">{label}</a>)}
-          </nav>
-        </aside>
+      <div className="mt-6">
         <div id="admin-overview" className="min-w-0">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((s) => (
@@ -861,7 +855,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
-        </div>
+      </div>
       </div>
         </TabsContent>
       </Tabs>

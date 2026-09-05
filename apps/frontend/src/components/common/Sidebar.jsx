@@ -1,4 +1,4 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation } from "react-router-dom";
 import { navForRole } from "../../config/navigation.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import NavIcon from "./NavIcon.jsx";
@@ -6,13 +6,11 @@ import { ROLE_LABELS } from "../../constants/roles.constants.js";
 import { cn } from "../../lib/cn.js";
 import { useTranslation } from "react-i18next";
 
-/**
- * Sidebar — Quiet navigation canvas supporting page hierarchy.
- * Clean section grouping, subtle hover states, brand-soft active indicator.
- */
+
 export default function Sidebar({ role, onNavigate, showBrand = false, className = "" }) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
   const groups = navForRole(role || user?.role);
 
   const initials = (user?.name || user?.email || "?")
@@ -43,14 +41,16 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
               {group.items.map((item) => (
                 <li key={item.to}>
                   <NavLink
-                    to={item.to}
+                    to={item.hash ? { pathname: item.to, hash: item.hash } : item.to}
                     end={item.exact}
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
                         "relative flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
-                        isActive
+                        item.hash
+                          ? location.hash === item.hash || (!location.hash && item.hash === "#admin-overview" && location.pathname === item.to)
+                          : isActive
                           ? "bg-brand-soft font-semibold text-brand before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-1 before:rounded-r-full before:bg-brand"
                           : "text-content-secondary hover:bg-surface-soft hover:text-content-primary"
                       )
