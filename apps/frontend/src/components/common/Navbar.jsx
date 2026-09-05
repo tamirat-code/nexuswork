@@ -40,7 +40,7 @@ export default function Navbar() {
     );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95">
       <div className="flex h-[84px] w-full items-center justify-between gap-5 px-4 sm:px-8 lg:px-10">
         <Link to="/" className="group flex shrink-0 items-center gap-3">
           <img src="/logo.svg" alt="NexusWork" className="h-12 w-12 object-contain transition-transform duration-200 group-hover:scale-105" />
