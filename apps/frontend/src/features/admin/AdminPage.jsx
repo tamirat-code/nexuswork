@@ -554,27 +554,27 @@ export default function AdminPage() {
   const staffVerifications = staffVerificationsData?.data ?? [];
 
   const statCards = [
-    { label: "Active projects", value: stats.active_projects ?? 0, icon: Briefcase },
-    { label: "Students", value: stats.students ?? 0, icon: Users },
-    { label: "Active users", value: stats.users?.active_30d ?? 0, icon: UserCheck },
-    { label: "Open disputes", value: stats.disputes?.open ?? 0, icon: Flag },
-    { label: "Pending staff requests", value: staffVerifications.length, icon: ShieldCheck },
+    { label: t("admin.activeProjects"), value: stats.active_projects ?? 0, icon: Briefcase },
+    { label: t("admin.studentsCount"), value: stats.students ?? 0, icon: Users },
+    { label: t("admin.activeUsers"), value: stats.users?.active_30d ?? 0, icon: UserCheck },
+    { label: t("admin.openDisputes"), value: stats.disputes?.open ?? 0, icon: Flag },
+    { label: t("admin.pendingStaffRequests"), value: staffVerifications.length, icon: ShieldCheck },
   ];
 
   const revenueCards = [
     {
-      label: "Platform commission (all-time)",
+      label: t("admin.commissionAllTime"),
       value: formatMultiCurrency(revenue.commission_by_currency, revenue.commission_total ?? 0),
       icon: ShieldCheck,
       highlight: true,
     },
     {
-      label: "Commission (last 30 days)",
+      label: t("admin.commissionLast30"),
       value: formatMultiCurrency(revenue.commission_30d_by_currency, revenue.commission_30d ?? 0),
       icon: TrendingUp,
     },
     {
-      label: "Escrow funds held",
+      label: t("admin.escrowFundsHeld"),
       value: formatMultiCurrency(revenue.escrow_held_by_currency, revenue.escrow_held ?? 0),
       icon: Wallet,
     },
@@ -636,20 +636,20 @@ export default function AdminPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg">Commission by currency</CardTitle>
-          <CardDescription>Each currency is shown separately. Values are not converted or combined.</CardDescription>
+          <CardTitle className="text-lg">{t("admin.commissionByCurrency")}</CardTitle>
+          <CardDescription>{t("admin.currencyBreakdownHint")}</CardDescription>
         </CardHeader>
         <CardContent>
           {Object.keys(revenue.commission_by_currency || {}).length === 0 ? (
-            <p className="text-sm text-slate-300">No commission recorded yet.</p>
+            <p className="text-sm text-slate-300">{t("admin.noCommission")}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {Object.entries(revenue.commission_by_currency).sort(([a], [b]) => a.localeCompare(b)).map(([code, total]) => (
                 <div key={code} className="rounded-xl border border-ink-300 bg-ink-50 p-4">
                   <p className="font-mono text-xs uppercase tracking-wide text-slate-300">{code}</p>
                   <p className="mt-2 font-mono text-xl font-semibold text-brass">{formatCurrency(total, code.toUpperCase())}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Last 30 days: {formatCurrency(revenue.commission_30d_by_currency?.[code] || 0, code.toUpperCase())}
+                    <p className="mt-1 text-xs text-slate-400">
+                    {t("admin.last30Days", { value: formatCurrency(revenue.commission_30d_by_currency?.[code] || 0, code.toUpperCase()) })}
                   </p>
                 </div>
               ))}
@@ -660,8 +660,8 @@ export default function AdminPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg">Commission revenue by month</CardTitle>
-          <CardDescription>Platform's cut of released milestones, last 12 months.</CardDescription>
+          <CardTitle className="text-lg">{t("admin.commissionByMonth")}</CardTitle>
+          <CardDescription>{t("admin.last12MonthsHint")}</CardDescription>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
@@ -678,15 +678,15 @@ export default function AdminPage() {
       <div className="mt-6 space-y-6">
         <Card id="admin-reports">
           <CardHeader>
-            <CardTitle className="text-lg">User reports</CardTitle>
-            <CardDescription>Review reports submitted through user profiles.</CardDescription>
+            <CardTitle className="text-lg">{t("admin.userReports")}</CardTitle>
+            <CardDescription>{t("admin.reviewReportsHint")}</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Reported user</TableHead><TableHead>Reporter</TableHead><TableHead>Reason</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{t("admin.reportedUser")}</TableHead><TableHead>{t("admin.reporter")}</TableHead><TableHead>{t("admin.reason")}</TableHead><TableHead className="text-right">{t("admin.action")}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {reportsLoading && <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
-                {!reportsLoading && reports.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">No open reports</TableCell></TableRow>}
+                {!reportsLoading && reports.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">{t("admin.noOpenReports")}</TableCell></TableRow>}
                 {reports.map((report) => (
                   <TableRow key={report._id}>
                     <TableCell className="text-sm font-medium text-slate">{report.target_user_id?.name || "Unknown user"}<div className="text-xs font-normal text-slate-300">{report.target_user_id?.email}</div></TableCell>
@@ -702,20 +702,20 @@ export default function AdminPage() {
 
         <Card id="admin-users">
           <CardHeader>
-            <CardTitle className="text-lg">User management</CardTitle>
+            <CardTitle className="text-lg">{t("admin.userManagement")}</CardTitle>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name or email" className="h-9 max-w-xs" />
-              <Select value={userRole} onValueChange={setUserRole}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Role" /></SelectTrigger><SelectContent><SelectItem value="all">All roles</SelectItem><SelectItem value="student">Students</SelectItem><SelectItem value="client">Clients</SelectItem><SelectItem value="university_staff">University staff</SelectItem><SelectItem value="admin">Admins</SelectItem></SelectContent></Select>
-              <Select value={userStatus} onValueChange={setUserStatus}><SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All status</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="suspended">Suspended</SelectItem><SelectItem value="deactivated">Deactivated</SelectItem></SelectContent></Select>
-              <Select value={userUniversity} onValueChange={setUserUniversity}><SelectTrigger className="h-9 w-[210px]"><SelectValue placeholder="University" /></SelectTrigger><SelectContent><SelectItem value="all">All universities</SelectItem>{universities.map((university) => <SelectItem key={university._id} value={university.name}>{university.name}</SelectItem>)}</SelectContent></Select>
+              <Input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder={t("admin.searchNameEmail")} className="h-9 max-w-xs" />
+              <Select value={userRole} onValueChange={setUserRole}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder={t("admin.role")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("admin.allRoles")}</SelectItem><SelectItem value="student">{t("admin.students")}</SelectItem><SelectItem value="client">{t("admin.clients")}</SelectItem><SelectItem value="university_staff">{t("admin.universityStaff")}</SelectItem><SelectItem value="admin">{t("admin.admins")}</SelectItem></SelectContent></Select>
+              <Select value={userStatus} onValueChange={setUserStatus}><SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder={t("admin.status")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("admin.allStatus")}</SelectItem><SelectItem value="active">{t("admin.active")}</SelectItem><SelectItem value="suspended">{t("admin.suspended")}</SelectItem><SelectItem value="deactivated">{t("admin.deactivated")}</SelectItem></SelectContent></Select>
+              <Select value={userUniversity} onValueChange={setUserUniversity}><SelectTrigger className="h-9 w-[210px]"><SelectValue placeholder={t("admin.universities")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("admin.allUniversities")}</SelectItem>{universities.map((university) => <SelectItem key={university._id} value={university.name}>{university.name}</SelectItem>)}</SelectContent></Select>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{t("admin.user")}</TableHead><TableHead>{t("admin.role")}</TableHead><TableHead>{t("admin.status")}</TableHead><TableHead className="text-right">{t("admin.actions")}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {usersLoading && <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
-                {!usersLoading && users.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">No users found</TableCell></TableRow>}
+                {!usersLoading && users.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">{t("admin.noUsers")}</TableCell></TableRow>}
                 {users.map((u) => (
                   <TableRow key={u._id}>
                     <TableCell className="font-semibold text-slate">{u.name}</TableCell>
@@ -730,20 +730,20 @@ export default function AdminPage() {
         </Card>
 
         <Card id="admin-disputes">
-          <CardHeader><CardTitle className="text-lg">Dispute queue</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg">{t("admin.disputeQueue")}</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Milestone</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>{t("admin.milestone")}</TableHead>
+                  <TableHead>{t("admin.reason")}</TableHead>
+                  <TableHead>{t("admin.status")}</TableHead>
+                  <TableHead className="text-right">{t("admin.action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {disputesLoading && <TableRow><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>}
-                {!disputesLoading && disputes.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">No disputes</TableCell></TableRow>}
+                {!disputesLoading && disputes.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-300">{t("admin.noDisputes")}</TableCell></TableRow>}
                 {disputes.map((d) => (
                   <TableRow key={d._id}>
                     <TableCell className="text-sm font-medium text-slate">{d.milestone_id?.title || "Milestone"}</TableCell>

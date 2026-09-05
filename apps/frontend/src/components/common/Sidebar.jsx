@@ -35,7 +35,7 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
         {groups.map((group) => (
           <div key={group.section}>
             <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-content-muted">
-              {group.section}
+              {t(`navigation.section${group.section}`, { defaultValue: group.section })}
             </p>
             <ul className="space-y-0.5">
               {group.items.map((item) => (
@@ -57,7 +57,7 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
                     }
                   >
                     <NavIcon name={item.icon} className="h-4 w-4 shrink-0 opacity-75" />
-                    <span className="min-w-0 flex-1 truncate">{t(`navigation.${item.to.slice(1).split("/")[0]}`, { defaultValue: item.label })}</span>
+                    <span className="min-w-0 flex-1 truncate">{t(`navigation.${item.translationKey || item.to.slice(1).split("/")[0]}`, { defaultValue: item.label })}</span>
                   </NavLink>
                 </li>
               ))}

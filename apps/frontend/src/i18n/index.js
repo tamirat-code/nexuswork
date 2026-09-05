@@ -99,6 +99,7 @@ import {
   reviewsSectionResources,
   analyticsPageResources,
   adminPageResources,
+  navigationResources,
   miscPagesResources,
   landingPageResources,
 } from "./moreResources.js";
@@ -123,6 +124,7 @@ const extraBundles = [
   reviewsSectionResources,
   analyticsPageResources,
   adminPageResources,
+  navigationResources,
   miscPagesResources,
   landingPageResources,
 ];

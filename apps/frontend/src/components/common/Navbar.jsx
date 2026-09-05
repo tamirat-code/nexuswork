@@ -114,7 +114,7 @@ export default function Navbar() {
                   active ? "bg-brass/15 font-bold text-brass" : "text-slate-300 hover:bg-ink-50"
                 )}
               >
-                {l.label}
+                {t(`navigation.${l.translationKey || l.to.split("/")[1] || "home"}`, { defaultValue: l.label })}
               </Link>
             );
           })}

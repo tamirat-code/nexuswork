@@ -1,13 +1,13 @@
 import { ROLES } from "../constants/roles.constants.js";
 
 export const marketingNav = [
-  { to: "/", label: "Home", icon: "home" },
-  { to: "/projects", label: "Browse projects", icon: "briefcase" },
-  { to: "/students", label: "Find talent", icon: "users" },
-  { to: "/universities", label: "For universities", icon: "building" },
-  { to: "/#how-it-works", label: "How it works", icon: "spark" },
-  { to: "/#faq", label: "FAQ", icon: "help" },
-  { to: "/search", label: "Search", icon: "search" },
+  { to: "/", label: "Home", translationKey: "home", icon: "home" },
+  { to: "/projects", label: "Browse projects", translationKey: "browseProjects", icon: "briefcase" },
+  { to: "/students", label: "Find talent", translationKey: "findTalent", icon: "users" },
+  { to: "/universities", label: "For universities", translationKey: "universities", icon: "building" },
+  { to: "/#how-it-works", label: "How it works", translationKey: "howItWorks", icon: "spark" },
+  { to: "/#faq", label: "FAQ", translationKey: "faq", icon: "help" },
+  { to: "/search", label: "Search", translationKey: "search", icon: "search" },
 ];
 
 const ALL = [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN];
@@ -62,12 +62,12 @@ export const workspaceNav = [
   {
     section: "Admin",
     items: [
-      { to: "/admin", hash: "#admin-overview", label: "Overview", icon: "grid", roles: [ROLES.ADMIN] },
-      { to: "/admin", hash: "#admin-reports", label: "User reports", icon: "flag", roles: [ROLES.ADMIN] },
-      { to: "/admin", hash: "#admin-users", label: "User management", icon: "users", roles: [ROLES.ADMIN] },
-      { to: "/admin", hash: "#admin-disputes", label: "Disputes", icon: "scale", roles: [ROLES.ADMIN] },
-      { to: "/admin", hash: "#admin-staff", label: "Staff verification", icon: "shield", roles: [ROLES.ADMIN] },
-      { to: "/admin", hash: "#admin-universities", label: "Universities", icon: "building", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-overview", label: "Overview", translationKey: "adminOverview", icon: "grid", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-reports", label: "User reports", translationKey: "adminUserReports", icon: "flag", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-users", label: "User management", translationKey: "adminUserManagement", icon: "users", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-disputes", label: "Disputes", translationKey: "adminDisputes", icon: "scale", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-staff", label: "Staff verification", translationKey: "adminStaffVerification", icon: "shield", roles: [ROLES.ADMIN] },
+      { to: "/admin", hash: "#admin-universities", label: "Universities", translationKey: "adminUniversities", icon: "building", roles: [ROLES.ADMIN] },
     ],
   },
 ];
