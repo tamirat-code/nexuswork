@@ -217,4 +217,14 @@ describe("Chapa provider contract", () => {
       .resolves.toMatchObject({ id: "chapa-transfer-456", status: "succeeded" });
     expect(fetch.mock.calls[1][0]).toContain("/transfers/verify/chapa-transfer-456");
   });
+
+  test("accepts a single transfer object returned inside a data array", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: [{ reference: "chapa-transfer-array", status: "success" }] }),
+    });
+
+    await expect(chapaProvider.getTransfer("chapa-transfer-array"))
+      .resolves.toMatchObject({ id: "chapa-transfer-array", status: "succeeded" });
+  });
 });

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { paymentConfig } from "../../../config/payment.config.js";
 import { money, majorUnitsFromMoney, moneyFromLegacyMajorUnits } from "../../../shared/money/money.js";
 import { PaymentProviderError, unsupportedCapability } from "./payment-provider.js";
+import { logger } from "../../../shared/logger/logger.js";
 
 const CHAPA_CURRENCY = "etb";
 const CHAPA_REFERENCE_MAX_LENGTH = 36;
@@ -86,6 +87,7 @@ function responseObject(body, operation) {
 function transferResponse(body, operation) {
   const data = body?.data;
   if (data && typeof data === "object" && !Array.isArray(data)) return data;
+  if (Array.isArray(data) && data.length === 1 && data[0] && typeof data[0] === "object") return data[0];
   if (typeof data === "string" && data.trim()) {
     return {
       reference: data.trim(),
@@ -94,6 +96,12 @@ function transferResponse(body, operation) {
     };
   }
   if (!data && body && typeof body === "object" && !Array.isArray(body)) return body;
+  logger.warn("[chapa] unexpected transfer response shape", {
+    operation,
+    providerStatus: body?.status || null,
+    dataType: Array.isArray(data) ? "array" : typeof data,
+    dataKeys: data && typeof data === "object" && !Array.isArray(data) ? Object.keys(data) : [],
+  });
   throw new PaymentProviderError("Chapa returned a malformed " + operation + " response", { code: "malformed_response" });
 }
 
