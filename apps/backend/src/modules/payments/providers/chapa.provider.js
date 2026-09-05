@@ -226,19 +226,22 @@ export const chapaProvider = {
     // wrapping it in an object. The subsequent verification is authoritative
     // for the final payout status.
     const data = transferResponse(body, "transfer");
-    const id = data.reference || data.tx_ref || data.transfer_id || chapaReference(idempotencyKey);
+    const id = data.reference || data.tx_ref || data.transfer_id || data.id || data.transferId;
+    if (!id) {
+      throw new PaymentProviderError("Chapa returned a transfer response without a reference", { code: "malformed_response" });
+    }
     return {
       id,
       status: transferStatus(data.status || body.status),
       providerStatus: data.providerStatus || data.status || body.status,
-      providerReference: data.reference || data.tx_ref,
+      providerReference: data.reference || data.tx_ref || data.transfer_id || data.id || data.transferId,
     };
   },
   async getTransfer(id) {
     const body = await request("/transfers/verify/" + encodeURIComponent(id));
     const data = transferResponse(body, "transfer verification");
     return {
-      id: data.reference || data.tx_ref || id,
+      id: data.reference || data.tx_ref || data.transfer_id || data.id || data.transferId || id,
       status: transferStatus(data.status || body.status),
       providerStatus: data.status || body.status,
     };
