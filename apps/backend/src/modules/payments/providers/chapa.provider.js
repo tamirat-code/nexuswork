@@ -4,6 +4,15 @@ import { money, majorUnitsFromMoney, moneyFromLegacyMajorUnits } from "../../../
 import { PaymentProviderError, unsupportedCapability } from "./payment-provider.js";
 
 const CHAPA_CURRENCY = "etb";
+const CHAPA_REFERENCE_MAX_LENGTH = 36;
+
+function chapaReference(value) {
+  const reference = String(value || "");
+  if (reference.length <= CHAPA_REFERENCE_MAX_LENGTH) return reference;
+  // Keep a deterministic provider reference so retries resolve the same
+  // Chapa transaction while respecting Chapa's 36-character limit.
+  return `nw-${crypto.createHash("sha256").update(reference).digest("hex").slice(0, 32)}`;
+}
 
 function readableProviderMessage(value) {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -105,7 +114,7 @@ export const chapaProvider = {
   capabilities: ["hosted_checkout", "status_lookup", "refunds", "payouts", "webhooks"],
   async createPaymentIntent({ amountMinor, currency, metadata = {}, idempotencyKey }) {
     const value = assertEtb({ amountMinor, currency });
-    const txRef = idempotencyKey || "nexuswork-" + crypto.randomUUID();
+    const txRef = chapaReference(idempotencyKey || "nexuswork-" + crypto.randomUUID());
     const returnSeparator = paymentConfig.chapaReturnUrl.includes("?") ? "&" : "?";
     const body = await request("/transaction/initialize", {
       method: "POST",
@@ -179,12 +188,12 @@ export const chapaProvider = {
         amount: String(majorUnitsFromMoney(value)),
         currency: "ETB",
         bank_code: destination.bankCode,
-        reference: idempotencyKey,
+        reference: chapaReference(idempotencyKey),
         meta: metadata,
       }),
     });
     const data = responseObject(body, "transfer");
-    const id = data.reference || data.tx_ref || data.transfer_id || idempotencyKey;
+    const id = data.reference || data.tx_ref || data.transfer_id || chapaReference(idempotencyKey);
     return {
       id,
       status: transferStatus(data.status || body.status),
@@ -207,7 +216,7 @@ export const chapaProvider = {
     const params = new URLSearchParams({
       amount: String(majorUnitsFromMoney(value)),
       reason: String(metadata.reason || "NexusWork dispute resolution"),
-      reference: idempotencyKey || "nexuswork-refund-" + crypto.randomUUID(),
+      reference: chapaReference(idempotencyKey || "nexuswork-refund-" + crypto.randomUUID()),
     });
     const body = await request("/refund/" + encodeURIComponent(paymentIntentId), {
       method: "POST",
