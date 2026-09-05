@@ -179,6 +179,16 @@ describe("Chapa provider contract", () => {
       });
   });
 
+  test("accepts a successful transfer verification with any data array shape", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: ["chapa-transfer-array-result"] }),
+    });
+
+    await expect(chapaProvider.getTransfer("chapa-transfer-array-result"))
+      .resolves.toMatchObject({ id: "chapa-transfer-array-result", status: "succeeded", providerStatus: "success" });
+  });
+
   test("uses the provider transfer id instead of a local fallback reference", async () => {
     jest.spyOn(global, "fetch")
       .mockResolvedValueOnce({
