@@ -83,6 +83,16 @@ function responseObject(body, operation) {
   return data;
 }
 
+function transferResponse(body, operation) {
+  const data = body?.data;
+  if (data && typeof data === "object" && !Array.isArray(data)) return data;
+  if (typeof data === "string" && data.trim()) {
+    return { reference: data.trim(), status: "pending", providerStatus: body?.status };
+  }
+  if (!data && body && typeof body === "object" && !Array.isArray(body)) return body;
+  throw new PaymentProviderError("Chapa returned a malformed " + operation + " response", { code: "malformed_response" });
+}
+
 function providerAmountMinor(amount, currency) {
   if (amount === null || amount === undefined || typeof amount === "boolean") {
     throw new PaymentProviderError("Chapa returned an invalid amount", { code: "malformed_response" });
@@ -208,18 +218,21 @@ export const chapaProvider = {
         meta: metadata,
       }),
     });
-    const data = responseObject(body, "transfer");
+    // Chapa may return the transfer reference directly in `data` instead of
+    // wrapping it in an object. The subsequent verification is authoritative
+    // for the final payout status.
+    const data = transferResponse(body, "transfer");
     const id = data.reference || data.tx_ref || data.transfer_id || chapaReference(idempotencyKey);
     return {
       id,
       status: transferStatus(data.status || body.status),
-      providerStatus: data.status || body.status,
+      providerStatus: data.providerStatus || data.status || body.status,
       providerReference: data.reference || data.tx_ref,
     };
   },
   async getTransfer(id) {
     const body = await request("/transfers/verify/" + encodeURIComponent(id));
-    const data = responseObject(body, "transfer verification");
+    const data = transferResponse(body, "transfer verification");
     return {
       id: data.reference || data.tx_ref || id,
       status: transferStatus(data.status || body.status),
