@@ -33,7 +33,7 @@ function HeroVideoBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       <video
-        className="absolute inset-0 h-full w-full object-cover opacity-45 saturate-125"
+        className="absolute inset-0 h-full w-full bg-canvas object-contain opacity-45 saturate-125"
         autoPlay
         muted
         loop
