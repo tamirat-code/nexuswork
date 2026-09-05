@@ -1,6 +1,7 @@
 import User from "./users.model.js";
 import { storageConfig } from "../../config/storage.config.js";
 import { uploadToS3 } from "../../shared/utils/s3.client.js";
+import { getPrivateObjectUrl } from "../../shared/utils/private-storage.client.js";
 import mime from "mime-types";
 
 export async function findByEmail(email) {
@@ -30,12 +31,22 @@ export async function getPrivateProfile(userId) {
     skills,
     website,
     avatarUrl,
+    avatarKey,
     universityVerified,
     notification_prefs,
     preferred_language,
     cv_file_id,
     email_verified,
   } = user;
+  let freshAvatarUrl = avatarUrl;
+  if (storageConfig.driver === "s3" && (avatarKey || avatarUrl)) {
+    try {
+      const key = avatarKey || new URL(avatarUrl).pathname.split("/").filter(Boolean).slice(1).join("/");
+      if (key) freshAvatarUrl = await getPrivateObjectUrl(key, 300);
+    } catch {
+      // Keep the stored value as a fallback for legacy avatar records.
+    }
+  }
   return {
     id: _id,
     name,
@@ -48,12 +59,13 @@ export async function getPrivateProfile(userId) {
     university,
     skills,
     website,
-    avatarUrl,
+    avatarUrl: freshAvatarUrl,
     universityVerified,
     notification_prefs,
     preferred_language,
     cv_file_id,
     email_verified,
+    staffVerified: user.staffVerified,
   };
 }
 
@@ -110,7 +122,7 @@ export async function updateAvatar(userId, avatarData) {
     const bucket = storageConfig.bucket;
     if (!bucket) throw Object.assign(new Error("S3_BUCKET not configured"), { status: 500 });
     const url = await uploadToS3({ bucket, key, body: buffer, contentType });
-    const user = await User.findByIdAndUpdate(userId, { avatarUrl: url }, { new: true });
+    const user = await User.findByIdAndUpdate(userId, { avatarUrl: url, avatarKey: key }, { new: true });
     if (!user) return null;
     return { avatarUrl: url };
   }

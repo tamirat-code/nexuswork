@@ -2,6 +2,7 @@ import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
 import * as authService from "./auth.service.js";
 import { clearAuthCookies, getCookie, setAuthCookies, setCsrfCookie, CSRF_COOKIE } from "./auth.cookies.js";
+import { getPrivateProfile } from "../users/users.service.js";
 
 function toPublicUser(user) {
   return {
@@ -68,7 +69,8 @@ export const verifyMfa = asyncHandler(async (req, res) => {
 });
 
 export const me = asyncHandler(async (req, res) => {
-  res.json({ success: true, data: toPublicUser(req.user) });
+  const profile = await getPrivateProfile(req.user._id);
+  res.json({ success: true, data: { ...toPublicUser(req.user), ...profile } });
 });
 
 export const csrf = asyncHandler(async (req, res) => {

@@ -117,6 +117,7 @@ export default function CredentialVerifyPage() {
               Upload file
               <input type="file" accept=".json,.jsonld,.vc,.pdf,application/json,application/ld+json,application/pdf" className="sr-only" onChange={handleFile} />
             </label>
+            <p className="mt-2 text-xs text-slate-400">Allowed: JSON, JSON-LD, VC, or PDF credential files.</p>
           </div>
 
           <Textarea

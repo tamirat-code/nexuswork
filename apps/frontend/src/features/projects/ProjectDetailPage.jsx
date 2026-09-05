@@ -30,6 +30,7 @@ import { ROLES } from "../../constants/roles.constants.js";
 import { uploadFile, openFilePreview } from "../../services/api/files.api.js";
 import { reportValidation } from "../../lib/validation.js";
 import { displayFilename } from "../../utils/filename.utils.js";
+import { GLOBAL_FILE_LIMIT_MB } from "../../utils/file-rules.js";
 
 const PROJECT_CATEGORIES = [
   ["web-development", "Web Development"],
@@ -151,7 +152,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
                 <FormControl><Textarea rows={5} placeholder="Why are you the right person? What's your approach?" {...field} /></FormControl>
                 <FormMessage /></FormItem>
             )} />
-            <div className="space-y-1.5"><FormLabel>CV / resume (PDF or document)</FormLabel><Input type="file" accept=".pdf,.doc,.docx" onChange={(event) => event.target.files?.[0] && cvUpload.mutate(event.target.files[0])} />{cvFile ? <p className="text-xs text-escrow">Attached: {displayFilename(cvFile.original_name)}</p> : <p className="text-xs text-slate-300">Upload your CV before submitting.</p>}</div>
+            <div className="space-y-1.5"><FormLabel>CV / resume</FormLabel><p className="text-xs text-slate-400">Allowed: PDF, DOC, or DOCX · up to {GLOBAL_FILE_LIMIT_MB} MB</p><Input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => event.target.files?.[0] && cvUpload.mutate(event.target.files[0])} />{cvFile ? <p className="text-xs text-escrow">Attached: {displayFilename(cvFile.original_name)}</p> : <p className="text-xs text-slate-300">Upload your CV before submitting.</p>}</div>
             <div className="rounded-control border border-brass/20 bg-brass/5 p-3 text-xs text-slate-300">
               <p className="font-semibold text-slate">Your estimated payout</p>
               <p className="mt-1">

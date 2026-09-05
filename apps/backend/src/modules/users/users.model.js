@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema(
     skills: { type: String, default: "" }, // simple comma-separated string for now
     website: { type: String, default: "", trim: true },
     avatarUrl: { type: String, default: null },
+    avatarKey: { type: String, default: null },
     universityVerified: { type: Boolean, default: false },
     notification_prefs: {
       email: { type: Boolean, default: true },

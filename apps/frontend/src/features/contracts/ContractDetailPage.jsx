@@ -43,6 +43,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatDate } from "../../utils/date.utils.js";
 import { displayFilename } from "../../utils/filename.utils.js";
+import { ALL_FILE_ACCEPT, ALL_FILE_RULES } from "../../utils/file-rules.js";
 import { StatusBadge } from "../../components/ui/shadcn/status-badge.jsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
@@ -416,9 +417,9 @@ function SubmitWorkDialog({ milestone, token, onSubmitted, isRevision }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-slate">Deliverables</p>
-              <p className="text-xs text-slate-300">Attach evidence to each required deliverable. Up to 10 files total.</p>
+              <p className="text-xs text-slate-300">Attach evidence to each required deliverable. Allowed: {ALL_FILE_RULES} · up to 10 MB per file · up to 10 files total.</p>
               </div>
-              <input ref={inputRef} type="file" multiple className="hidden" onChange={addFiles} />
+              <input ref={inputRef} type="file" accept={ALL_FILE_ACCEPT} multiple className="hidden" onChange={addFiles} />
               <Button type="button" size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>
                 <Paperclip className="h-4 w-4" /> Add files
               </Button>
@@ -997,7 +998,8 @@ function ChatPanel({ contractId, token, contract }) {
           sendMutation.mutate();
         }}
       >
-        <input ref={fileInputRef} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadAttachment.mutate(file); event.target.value = ""; }} />
+                <p className="mb-1 text-[11px] text-slate-400">Allowed: {ALL_FILE_RULES} · up to 10 MB</p>
+                <input ref={fileInputRef} type="file" accept={ALL_FILE_ACCEPT} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadAttachment.mutate(file); event.target.value = ""; }} />
         <Button type="button" variant="secondary" size="icon" aria-label="Attach file" disabled={uploadAttachment.isPending} onClick={() => fileInputRef.current?.click()}>
           <Paperclip className="h-4 w-4" />
         </Button>
@@ -1311,6 +1313,7 @@ export default function ContractDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
+              <p className="mb-2 text-xs text-slate-400">Allowed: {ALL_FILE_RULES} · up to 10 MB</p>
               <Progress value={milestoneProgress} className="mb-5 bg-ink-300" />
               <div className="space-y-3">
                 {milestonesQuery.isLoading && <><Skeleton className="h-28 w-full" /><Skeleton className="h-28 w-full" /></>}

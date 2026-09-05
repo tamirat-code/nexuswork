@@ -12,6 +12,7 @@ import { useSocket } from "../../hooks/useSocket.js";
 import { Card, Button, Input, PageHeader, Skeleton } from "../../components/ui/index.js";
 import { formatTimeAgo } from "../../utils/date.utils.js";
 import { displayFilename } from "../../utils/filename.utils.js";
+import { ALL_FILE_ACCEPT, ALL_FILE_RULES } from "../../utils/file-rules.js";
 
 export default function ChatPage() {
   const { t } = useTranslation();
@@ -261,7 +262,8 @@ export default function ChatPage() {
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
-              <input id="chat-attachment" type="file" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; if (!file.size || file.size > 10 * 1024 * 1024) { toast.error("Attachment must be between 1 byte and 10 MB."); return; } try { const response = await uploadFile(file, { relatedType: "message_attachment", token }); setAttachment(response.data); } catch (error) { toast.error(error.message || "Could not upload attachment"); } }} />
+              <input id="chat-attachment" type="file" accept={ALL_FILE_ACCEPT} className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; if (!file.size || file.size > 10 * 1024 * 1024) { toast.error("Attachment must be between 1 byte and 10 MB."); return; } try { const response = await uploadFile(file, { relatedType: "message_attachment", token }); setAttachment(response.data); } catch (error) { toast.error(error.message || "Could not upload attachment"); } }} />
+              <p className="mb-1 text-[11px] text-slate-400">Allowed: {ALL_FILE_RULES} · up to 10 MB</p>
               <Input
                 maxLength={5000}
                 value={draft}
