@@ -6,6 +6,7 @@ import {
   getMyTransactions,
   postWithdrawal,
   updateChapaPayout,
+  getMyChapaBanks,
 } from "./wallets.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { requireRole } from "../../middleware/role.middleware.js";
@@ -17,6 +18,7 @@ const router = Router();
 
 router.get("/me", requireAuth, getMyWallet);
 router.get("/me/payout-status", requireAuth, requireRole("student"), getMyPayoutStatus);
+router.get("/me/chapa-banks", requireAuth, requireRole("student"), getMyChapaBanks);
 router.get("/me/transactions", requireAuth, requireRole("student"), getMyTransactions);
 router.post("/me/connect", requireAuth, requireEmailVerified, requireRole("student"), connectOnboarding);
 router.put(

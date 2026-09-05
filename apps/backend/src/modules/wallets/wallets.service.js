@@ -213,6 +213,14 @@ export async function getPayoutStatus(userId) {
   };
 }
 
+export async function getChapaBanks() {
+  const chapa = getPaymentProvider("chapa");
+  if (typeof chapa.listBanks !== "function") {
+    throw new NotFoundError("Chapa payout destinations are unavailable");
+  }
+  return chapa.listBanks();
+}
+
 export async function startOnboarding(userId) {
   const user = await User.findById(userId);
   if (!user) throw new NotFoundError("User not found");

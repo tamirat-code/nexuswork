@@ -112,6 +112,18 @@ function refundStatus(status) {
 export const chapaProvider = {
   name: "chapa",
   capabilities: ["hosted_checkout", "status_lookup", "refunds", "payouts", "webhooks"],
+  async listBanks() {
+    const body = await request("/banks");
+    const banks = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+
+    return banks
+      .map((bank) => ({
+        code: String(bank?.bank_code ?? bank?.code ?? bank?.id ?? "").trim(),
+        name: String(bank?.name ?? bank?.bank_name ?? bank?.bankName ?? "").trim(),
+        type: String(bank?.type ?? bank?.bank_type ?? bank?.category ?? "bank").trim().toLowerCase(),
+      }))
+      .filter((bank) => /^\d+$/.test(bank.code) && bank.name);
+  },
   async createPaymentIntent({ amountMinor, currency, metadata = {}, idempotencyKey }) {
     const value = assertEtb({ amountMinor, currency });
     const txRef = chapaReference(idempotencyKey || "nexuswork-" + crypto.randomUUID());

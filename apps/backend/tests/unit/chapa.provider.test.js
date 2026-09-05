@@ -17,6 +17,25 @@ describe("Chapa provider contract", () => {
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ amount: "12.5", currency: "ETB", tx_ref: "funding-123" });
   });
 
+  test("lists supported bank and mobile wallet destinations", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: [
+        { bank_code: 656, name: "Commercial Bank of Ethiopia" },
+        { code: 777, bank_name: "Telebirr", type: "mobile_wallet" },
+        { bank_code: 999 },
+      ] }),
+    });
+
+    await expect(chapaProvider.listBanks()).resolves.toEqual([
+      { code: "656", name: "Commercial Bank of Ethiopia", type: "bank" },
+      { code: "777", name: "Telebirr", type: "mobile_wallet" },
+    ]);
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/banks"), expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: expect.stringContaining("Bearer ") }),
+    }));
+  });
+
   test("rejects non-ETB money and unsupported payout capabilities", async () => {
     await expect(chapaProvider.createPaymentIntent({ amountMinor: 100, currency: "usd", idempotencyKey: "funding-123" }))
       .rejects.toMatchObject({ code: "currency_mismatch" });

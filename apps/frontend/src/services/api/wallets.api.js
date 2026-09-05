@@ -6,6 +6,9 @@ export const getMyWallet = (token) =>
 export const getPayoutStatus = (token) =>
   apiRequest("/wallets/me/payout-status", { token });
 
+export const getChapaBanks = (token) =>
+  apiRequest("/wallets/me/chapa-banks", { token });
+
 export const connectOnboarding = (token) =>
   apiRequest("/wallets/me/connect", {
     method: "POST",

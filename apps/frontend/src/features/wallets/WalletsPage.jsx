@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Wallet, ArrowDownLeft, ArrowUpRight, CheckCircle2, ShieldAlert } from "lucide-react";
 import {
   getMyWallet,
+  getChapaBanks,
   connectOnboarding,
   updateChapaPayout,
   listWalletTransactions,
@@ -18,6 +19,7 @@ import {
   Card,
   Button,
   Input,
+  Select,
   Badge,
   PageHeader,
   Skeleton,
@@ -41,6 +43,7 @@ export default function WalletsPage() {
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
   const [chapaDetails, setChapaDetails] = useState({ bank_code: "", account_name: "", account_number: "" });
+  const isStudent = user?.role === "student";
 
   const { data: wData, isLoading: wLoading } = useQuery({
     queryKey: ["wallet"],
@@ -51,12 +54,19 @@ export default function WalletsPage() {
   const { data: tData, isLoading: tLoading } = useQuery({
     queryKey: ["wallet-tx"],
     queryFn: () => listWalletTransactions(token),
-    enabled: !!token && user?.role === "student",
+    enabled: !!token && isStudent,
+  });
+
+  const { data: chapaBanksData, isLoading: chapaBanksLoading, isError: chapaBanksError } = useQuery({
+    queryKey: ["chapa-banks"],
+    queryFn: () => getChapaBanks(token),
+    enabled: !!token && isStudent,
+    staleTime: 5 * 60 * 1000,
   });
 
   const wallet = wData?.data;
   const txs = tData?.data ?? [];
-  const isStudent = user?.role === "student";
+  const chapaBanks = chapaBanksData?.data ?? [];
 
   const connect = useMutation({
     mutationFn: () => connectOnboarding(token),
@@ -180,9 +190,20 @@ export default function WalletsPage() {
               <p className="text-xs text-escrow">{t("wallets.etbReady", { name: wallet.chapa_account_name, code: wallet.chapa_bank_code, last4: wallet.chapa_account_number_last4 })}</p>
             )}
             <div className="grid gap-3 md:grid-cols-3">
-              <Input label={t("wallets.bankCode")} maxLength={20} value={chapaDetails.bank_code} onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value.replace(/\D/g, "") }))} placeholder="656" />
+              <Select
+                label="Bank or mobile wallet"
+                value={chapaDetails.bank_code}
+                onChange={(e) => setChapaDetails((v) => ({ ...v, bank_code: e.target.value }))}
+                placeholder={chapaBanksLoading ? "Loading supported destinations…" : "Select a destination"}
+                disabled={chapaBanksLoading || chapaBanks.length === 0}
+                options={chapaBanks.map((bank) => ({
+                  value: bank.code,
+                  label: bank.type && bank.type !== "bank" ? `${bank.name} (${bank.type})` : bank.name,
+                }))}
+                hint={chapaBanksError ? "Could not load Chapa destinations. Please refresh and try again." : undefined}
+              />
               <Input label={t("wallets.accountName")} maxLength={150} value={chapaDetails.account_name} onChange={(e) => setChapaDetails((v) => ({ ...v, account_name: e.target.value }))} placeholder="Full account name" />
-              <Input label={t("wallets.accountNumber")} inputMode="numeric" maxLength={30} value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank account number" />
+              <Input label={t("wallets.accountNumber")} inputMode="numeric" maxLength={30} value={chapaDetails.account_number} onChange={(e) => setChapaDetails((v) => ({ ...v, account_number: e.target.value.replace(/\D/g, "") }))} placeholder="Bank or wallet account number" />
             </div>
             <Button
               size="sm"
@@ -335,4 +356,3 @@ export default function WalletsPage() {
     </div>
   );
 }
-
