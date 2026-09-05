@@ -226,7 +226,8 @@ export const chapaProvider = {
     // wrapping it in an object. The subsequent verification is authoritative
     // for the final payout status.
     const data = transferResponse(body, "transfer");
-    const id = data.reference || data.tx_ref || data.transfer_id || data.id || data.transferId;
+    const id = data.chapa_reference || data.chapaReference || data.ref_id
+      || data.transfer_id || data.id || data.transferId || data.tx_ref || data.reference;
     if (!id) {
       throw new PaymentProviderError("Chapa returned a transfer response without a reference", { code: "malformed_response" });
     }
@@ -234,14 +235,16 @@ export const chapaProvider = {
       id,
       status: transferStatus(data.status || body.status),
       providerStatus: data.providerStatus || data.status || body.status,
-      providerReference: data.reference || data.tx_ref || data.transfer_id || data.id || data.transferId,
+      providerReference: data.chapa_reference || data.chapaReference || data.ref_id
+        || data.transfer_id || data.id || data.transferId || data.tx_ref || data.reference,
     };
   },
   async getTransfer(id) {
     const body = await request("/transfers/verify/" + encodeURIComponent(id));
     const data = transferResponse(body, "transfer verification");
     return {
-      id: data.reference || data.tx_ref || data.transfer_id || data.id || data.transferId || id,
+      id: data.chapa_reference || data.chapaReference || data.ref_id
+        || data.transfer_id || data.id || data.transferId || data.tx_ref || data.reference || id,
       status: transferStatus(data.status || body.status),
       providerStatus: data.status || body.status,
     };

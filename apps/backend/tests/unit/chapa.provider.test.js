@@ -187,4 +187,34 @@ describe("Chapa provider contract", () => {
       .resolves.toMatchObject({ id: "chapa-transfer-123", status: "succeeded" });
     expect(fetch.mock.calls[1][0]).toContain("/transfers/verify/chapa-transfer-123");
   });
+
+  test("prefers Chapa's provider reference over the merchant reference", async () => {
+    jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "success", data: {
+          reference: "nw-merchant-reference",
+          chapa_reference: "chapa-transfer-456",
+          status: "queued",
+        } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "success", data: {
+          chapa_reference: "chapa-transfer-456",
+          status: "success",
+        } }),
+      });
+
+    await expect(chapaProvider.createTransfer({
+      amountMinor: 2500,
+      currency: "etb",
+      destination: { bankCode: "656", accountName: "Test Student", accountNumber: "123456789" },
+      idempotencyKey: "milestone-release-provider-reference",
+    })).resolves.toMatchObject({ id: "chapa-transfer-456", status: "pending" });
+
+    await expect(chapaProvider.getTransfer("chapa-transfer-456"))
+      .resolves.toMatchObject({ id: "chapa-transfer-456", status: "succeeded" });
+    expect(fetch.mock.calls[1][0]).toContain("/transfers/verify/chapa-transfer-456");
+  });
 });
