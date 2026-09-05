@@ -150,4 +150,18 @@ describe("Chapa provider contract", () => {
     await expect(chapaProvider.getTransfer("tr_test_string"))
       .resolves.toMatchObject({ id: "tr_test_string", status: "succeeded", providerStatus: "success" });
   });
+
+  test("uses the top-level provider status for string verification responses", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: "tr_test_verified_string" }),
+    });
+
+    await expect(chapaProvider.getTransfer("tr_test_verified_string"))
+      .resolves.toMatchObject({
+        id: "tr_test_verified_string",
+        status: "succeeded",
+        providerStatus: "success",
+      });
+  });
 });

@@ -87,7 +87,11 @@ function transferResponse(body, operation) {
   const data = body?.data;
   if (data && typeof data === "object" && !Array.isArray(data)) return data;
   if (typeof data === "string" && data.trim()) {
-    return { reference: data.trim(), status: "pending", providerStatus: body?.status };
+    return {
+      reference: data.trim(),
+      status: operation === "transfer verification" ? body?.status : "pending",
+      providerStatus: body?.status,
+    };
   }
   if (!data && body && typeof body === "object" && !Array.isArray(body)) return body;
   throw new PaymentProviderError("Chapa returned a malformed " + operation + " response", { code: "malformed_response" });
