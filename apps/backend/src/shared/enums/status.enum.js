@@ -3,6 +3,7 @@ export const PROJECT_STATUS = Object.freeze({
   IN_PROGRESS: "in_progress",
   COMPLETED: "completed",
   CANCELLED: "cancelled",
+  EXPIRED: "expired",
 });
 
 export const PROPOSAL_STATUS = Object.freeze({

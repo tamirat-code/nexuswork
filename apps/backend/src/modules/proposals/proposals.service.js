@@ -72,7 +72,8 @@ export async function submitProposal(
 
   if (
     !project ||
-    project.status !== "open"
+    project.status !== "open" ||
+    project.deadline <= new Date()
   ) {
 
     throw new ValidationError(

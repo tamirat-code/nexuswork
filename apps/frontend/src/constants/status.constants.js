@@ -9,6 +9,7 @@ export const PROJECT_STATUS_META = {
   [PROJECT_STATUS.IN_PROGRESS]: { label: "In progress", tone: "info", hint: "Work is underway" },
   [PROJECT_STATUS.COMPLETED]: { label: "Completed", tone: "neutral", hint: "Delivered and closed" },
   [PROJECT_STATUS.CANCELLED]: { label: "Cancelled", tone: "danger", hint: "No longer accepting work" },
+  [PROJECT_STATUS.EXPIRED]: { label: "Expired", tone: "warning", hint: "The deadline passed without a contract" },
 };
 
 export const CONTRACT_STATUS_META = {

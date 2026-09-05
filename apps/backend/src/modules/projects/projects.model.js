@@ -22,7 +22,7 @@ const projectSchema = new mongoose.Schema(
     attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
     status: {
       type: String,
-      enum: ["open", "in_progress", "completed", "cancelled"],
+      enum: ["open", "in_progress", "completed", "cancelled", "expired"],
       default: "open",
     },
   },

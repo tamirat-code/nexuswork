@@ -3,4 +3,5 @@ export const PROJECT_STATUS = {
   IN_PROGRESS: "in_progress",
   COMPLETED: "completed",
   CANCELLED: "cancelled",
+  EXPIRED: "expired",
 };

@@ -10,6 +10,9 @@ export async function createProject(actingUserId, data) {
   const { on_behalf_of_client_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
 
   if (projectData.category) projectData.category = normalizeCategory(projectData.category);
+  if (!(projectData.deadline instanceof Date) || projectData.deadline <= new Date()) {
+    throw new ValidationError("Project deadline must be in the future");
+  }
 
   let ownerId = actingUserId;
   if (on_behalf_of_client_id && String(on_behalf_of_client_id) !== String(actingUserId)) {
@@ -74,8 +77,14 @@ export async function updateProject(projectId, actingUserId, data) {
   if (project.status !== "open") {
     throw new ValidationError("Only open projects can be edited");
   }
+  if (project.deadline <= new Date()) {
+    throw new ValidationError("This project deadline has passed");
+  }
 
   const { required_skill_ids, required_skills, attachments, ...updates } = data;
+  if (updates.deadline !== undefined && updates.deadline <= new Date()) {
+    throw new ValidationError("Project deadline must be in the future");
+  }
   if (updates.category) updates.category = normalizeCategory(updates.category);
   const requestedSkillIds = [...new Set((required_skill_ids || []).map(String))];
   const requestedSkillNames = [...new Set((required_skills || []).map((skill) => String(skill).trim()).filter(Boolean))];
@@ -133,6 +142,9 @@ export async function closeProjectById(projectId, actingUserId) {
   if (project.status !== "open") {
     throw new ValidationError("Only open projects can be closed");
   }
+  if (project.deadline <= new Date()) {
+    throw new ValidationError("This project deadline has passed");
+  }
   project.status = "cancelled";
   await project.save();
   return project;
@@ -148,6 +160,7 @@ export async function searchProjects(query) {
   const { skill, minBudget, maxBudget, q, search, status, category, experience_level, sort } = query;
 
   const match = { status: status || "open" };
+  if (!status || status === "open") match.deadline = { $gt: new Date() };
   if (skill) {
     match.required_skill_ids = skill.match(/^[0-9a-fA-F]{24}$/)
       ? skill
@@ -222,6 +235,9 @@ export async function searchProjects(query) {
 export async function getProjectById(id) {
   const project = await Project.findById(id).populate("client_id", "name").lean();
   if (!project) return null;
+  const effectiveStatus = project.status === "open" && project.deadline <= new Date()
+    ? "expired"
+    : project.status;
 
   const clientProfile = project.client_id
     ? await ClientProfile.findOne({ user_id: project.client_id._id }).lean()
@@ -229,6 +245,7 @@ export async function getProjectById(id) {
 
   return {
     ...project,
+    status: effectiveStatus,
     client_id: project.client_id
       ? {
           ...project.client_id,
@@ -236,4 +253,36 @@ export async function getProjectById(id) {
         }
       : null,
   };
+}
+
+/** Mark open projects past their deadline as expired and notify their owners. */
+export async function expireProjects() {
+  const candidates = await Project.find({
+    status: "open",
+    deadline: { $lte: new Date() },
+  }).select("_id client_id title").lean();
+
+  let expired = 0;
+  const { createNotification } = await import("../notifications/notifications.service.js");
+  for (const project of candidates) {
+    const claimed = await Project.findOneAndUpdate(
+      { _id: project._id, status: "open", deadline: { $lte: new Date() } },
+      { $set: { status: "expired" } },
+      { new: true }
+    ).lean();
+    if (!claimed) continue;
+    expired += 1;
+    try {
+      await createNotification({
+        userId: project.client_id,
+        type: "project_expired",
+        title: "Project deadline passed",
+        body: `"${project.title}" is no longer accepting proposals because its deadline has passed.`,
+        data: { project_id: project._id, action: "view_project" },
+      });
+    } catch {
+      // Expiration is persisted; notification delivery is best effort.
+    }
+  }
+  return { expired };
 }

@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import Meeting from "../modules/meetings/meetings.model.js";
 import { createNotification } from "../modules/notifications/notifications.service.js";
 import { expireMeetings } from "../modules/meetings/meetings.service.js";
+import { expireProjects } from "../modules/projects/projects.service.js";
 import { reconcilePendingReleases, reconcilePendingRefunds } from "../modules/payments/payments.service.js";
 import JobLock from "./job-lock.model.js";
 
@@ -37,6 +38,7 @@ export function registerJobs() {
       try {
         const now = new Date();
         await expireMeetings();
+        await expireProjects();
         const soon = new Date(now.getTime() + 15 * 60 * 1000);
         const meetings = await Meeting.find({ status: "scheduled", scheduled_start: { $gt: now, $lte: soon }, reminder_sent_at: null }).limit(100);
         for (const meeting of meetings) {
