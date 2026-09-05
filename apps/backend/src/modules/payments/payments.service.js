@@ -10,6 +10,7 @@ import { money, moneyFromLegacyMajorUnits, moneyFromRecord } from "../../shared/
 import { getPaymentProvider, paymentProvider } from "./providers/index.js";
 import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
 import { PAYMENT_STATUSES, transitionPaymentStatus } from "./payment-state.js";
+import { logger } from "../../shared/logger/logger.js";
 
 async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
   payment.status = "failed";
@@ -401,6 +402,12 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
     try {
       transfer = await provider.getTransfer(payment.provider_payment_id);
     } catch (err) {
+      logger.warn("[chapa] transfer verification pending", {
+        milestoneId: String(milestoneId),
+        transferId: String(payment.provider_payment_id),
+        code: err.code || "provider_error",
+        message: err.message,
+      });
       payment.processing_at = new Date();
       payment.status = "pending";
       payment.failure_message = `Payout status verification pending: ${err.message}`;
@@ -430,6 +437,12 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
       const verifiedTransfer = await provider.getTransfer(transfer.id);
       transfer = { ...transfer, ...verifiedTransfer };
     } catch (err) {
+      logger.warn("[chapa] transfer verification pending after creation", {
+        milestoneId: String(milestoneId),
+        transferId: String(transfer.id),
+        code: err.code || "provider_error",
+        message: err.message,
+      });
       payment.provider = providerName;
       payment.provider_payment_id = transfer.id;
       payment.provider_reference = transfer.providerReference;
