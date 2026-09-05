@@ -33,7 +33,7 @@ function HeroVideoBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       <video
-        className="absolute inset-0 h-full w-full bg-canvas object-contain opacity-45 saturate-125"
+        className="absolute inset-0 h-full w-full object-cover object-top saturate-110"
         autoPlay
         muted
         loop
@@ -42,7 +42,7 @@ function HeroVideoBackground() {
       >
         <source src="/videos/Nexuswork(1).mp4" type="video/mp4" />
       </video>
-      <div className="absolute inset-0 bg-canvas/70" />
+      <div className="absolute inset-0 bg-black/25" />
     </div>
   );
 }
