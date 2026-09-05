@@ -180,6 +180,10 @@ export const chapaProvider = {
     if (!destination?.accountNumber || !destination?.bankCode || !destination?.accountName) {
       throw new PaymentProviderError("Chapa payout bank details are incomplete", { code: "invalid_destination" });
     }
+    const bankCode = Number(destination.bankCode);
+    if (!Number.isSafeInteger(bankCode) || bankCode <= 0) {
+      throw new PaymentProviderError("Chapa payout bank code is invalid", { code: "invalid_destination" });
+    }
     const body = await request("/transfers", {
       method: "POST",
       body: JSON.stringify({
@@ -187,7 +191,7 @@ export const chapaProvider = {
         account_number: destination.accountNumber,
         amount: String(majorUnitsFromMoney(value)),
         currency: "ETB",
-        bank_code: destination.bankCode,
+        bank_code: bankCode,
         reference: chapaReference(idempotencyKey),
         meta: metadata,
       }),

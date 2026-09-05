@@ -100,7 +100,7 @@ describe("Chapa provider contract", () => {
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
       amount: "25",
       currency: "ETB",
-      bank_code: "656",
+      bank_code: 656,
       account_number: "123456789",
       reference: "milestone-release-test-123",
     });
