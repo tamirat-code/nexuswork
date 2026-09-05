@@ -88,6 +88,9 @@ function transferResponse(body, operation) {
   const data = body?.data;
   if (data && typeof data === "object" && !Array.isArray(data)) return data;
   if (Array.isArray(data) && data.length === 1 && data[0] && typeof data[0] === "object") return data[0];
+  if (operation === "transfer verification" && Array.isArray(data) && data.length === 0 && normalizeStatus(body?.status) === "succeeded") {
+    return { status: body.status, providerStatus: body.status };
+  }
   if (typeof data === "string" && data.trim()) {
     return {
       reference: data.trim(),

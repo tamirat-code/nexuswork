@@ -162,6 +162,20 @@ describe("Chapa provider contract", () => {
         id: "tr_test_verified_string",
         status: "succeeded",
         providerStatus: "success",
+    });
+  });
+
+  test("accepts a successful transfer verification with an empty data array", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: [] }),
+    });
+
+    await expect(chapaProvider.getTransfer("chapa-transfer-empty-array"))
+      .resolves.toMatchObject({
+        id: "chapa-transfer-empty-array",
+        status: "succeeded",
+        providerStatus: "success",
       });
   });
 
@@ -226,5 +240,32 @@ describe("Chapa provider contract", () => {
 
     await expect(chapaProvider.getTransfer("chapa-transfer-array"))
       .resolves.toMatchObject({ id: "chapa-transfer-array", status: "succeeded" });
+  });
+
+  test.each([
+    ["pending", "pending"],
+    ["failed", "failed"],
+  ])("preserves %s transfer verification status", async (providerStatus, expectedStatus) => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: { reference: "chapa-transfer-status", status: providerStatus } }),
+    });
+
+    await expect(chapaProvider.getTransfer("chapa-transfer-status"))
+      .resolves.toMatchObject({ status: expectedStatus, providerStatus });
+  });
+
+  test("rejects a malformed transfer verification response", async () => {
+    jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: [] }),
+    });
+
+    await expect(chapaProvider.createTransfer({
+      amountMinor: 2500,
+      currency: "etb",
+      destination: { bankCode: "656", accountName: "Test Student", accountNumber: "123456789" },
+      idempotencyKey: "milestone-release-malformed-array",
+    })).rejects.toMatchObject({ code: "malformed_response" });
   });
 });
