@@ -86,7 +86,7 @@ export default function NotificationsPage() {
 
 
  
-  const items =
+  const rawItems =
     Array.isArray(
       data?.data
     )
@@ -98,6 +98,13 @@ export default function NotificationsPage() {
         ? data.data.notifications
 
         : [];
+
+  // Keep rendering defensive if an API retry or legacy data contains the
+  // same notification document more than once.
+  const items = rawItems.filter((notification, index, all) => {
+    const id = notification?._id;
+    return !id || all.findIndex((item) => String(item?._id) === String(id)) === index;
+  });
 
 
   const markOne =
@@ -300,6 +307,10 @@ export default function NotificationsPage() {
         );
 
         return;
+      }
+
+      if (notificationType === "project_expired" && notification.data?.project_id) {
+        navigate(`/projects/${notification.data.project_id}`);
       }
 
 

@@ -31,6 +31,19 @@ export async function createNotification({
   if (!type) throw new ValidationError("Notification type is required");
   if (!title) throw new ValidationError("Notification title is required");
 
+  // Event handlers may be retried after a timeout or a double submission.
+  // Reuse an exact notification created very recently, while still allowing
+  // legitimate later notifications for the same event.
+  const recentDuplicate = await Notification.findOne({
+    user_id: userId,
+    type,
+    title,
+    body: body || "",
+    data: data || {},
+    createdAt: { $gte: new Date(Date.now() - 10_000) },
+  }).sort({ createdAt: -1 });
+  if (recentDuplicate) return recentDuplicate;
+
   const notification = await Notification.create({
     user_id: userId,
     type,

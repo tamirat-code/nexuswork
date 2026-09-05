@@ -14,6 +14,7 @@ const notificationSchema = new mongoose.Schema(
         "proposal_received",
         "proposal_accepted",
         "proposal_rejected",
+        "project_expired",
 
     
         "contract_reviewed",
