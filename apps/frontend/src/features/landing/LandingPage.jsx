@@ -29,6 +29,24 @@ const STAGGER_CONTAINER = {
   show: { transition: { staggerChildren: 0.06 } },
 };
 
+function HeroVideoBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <video
+        className="absolute inset-0 h-full w-full object-cover opacity-45 saturate-125"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+      >
+        <source src="/videos/Nexuswork(1).mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-canvas/70" />
+    </div>
+  );
+}
+
 const VIEWPORT = { once: true, margin: "-80px" };
 
 const CLIENT_STEPS = [
@@ -358,25 +376,6 @@ function HeroTrustBar() {
       </div>
       <p className="text-xs leading-relaxed text-content-secondary"><span className="font-bold text-content-primary">{client ? `${client} is hiring.` : "Built on trust."}</span> {context}</p>
       <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-brand" />
-    </div>
-  );
-}
-
-function HeroVideoBackground() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <video
-        className="absolute inset-0 h-full w-full object-cover object-[68%_50%] opacity-100 saturate-150 contrast-125"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        fetchPriority="high"
-        poster="/hero-poster.svg"
-      >
-        <source src="/videos/herobg.mp4" type="video/mp4" />
-      </video>
     </div>
   );
 }
