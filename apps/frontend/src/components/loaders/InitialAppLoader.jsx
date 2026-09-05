@@ -1,3 +1,5 @@
+import { Classic } from "../loading-ui/classic.jsx";
+
 export default function InitialAppLoader() {
   return (
     <main
@@ -14,9 +16,7 @@ export default function InitialAppLoader() {
           <p className="font-display text-xl font-semibold text-slate">NexusWork</p>
           <p className="mt-2 text-sm text-slate-300">Loading your workspace…</p>
         </div>
-        <div className="h-1.5 w-32 overflow-hidden rounded-full bg-ink-300" aria-hidden="true">
-          <div className="h-full w-1/2 animate-pulse rounded-full bg-brass" />
-        </div>
+        <Classic className="size-9 text-brass" aria-label="Loading NexusWork" />
       </div>
     </main>
   );
