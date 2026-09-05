@@ -675,8 +675,8 @@ export default function AdminPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card id="admin-reports" className="lg:col-span-2">
+      <div className="mt-6 space-y-6">
+        <Card id="admin-reports">
           <CardHeader>
             <CardTitle className="text-lg">User reports</CardTitle>
             <CardDescription>Review reports submitted through user profiles.</CardDescription>

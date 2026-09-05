@@ -39,7 +39,7 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
             </p>
             <ul className="space-y-0.5">
               {group.items.map((item) => (
-                <li key={item.to}>
+                <li key={`${item.to}${item.hash || ""}`}>
                   <NavLink
                     to={item.hash ? { pathname: item.to, hash: item.hash } : item.to}
                     end={item.exact}
@@ -48,9 +48,9 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
                       cn(
                         "relative flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
-                        item.hash
+                        (item.hash
                           ? location.hash === item.hash || (!location.hash && item.hash === "#admin-overview" && location.pathname === item.to)
-                          : isActive
+                          : isActive)
                           ? "bg-brand-soft font-semibold text-brand before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-1 before:rounded-r-full before:bg-brand"
                           : "text-content-secondary hover:bg-surface-soft hover:text-content-primary"
                       )

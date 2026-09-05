@@ -36,7 +36,7 @@ export const workspaceNav = [
       },
       { to: "/contracts", label: "Contracts", icon: "shield", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       { to: "/meetings", label: "Meetings", icon: "video", roles: [ROLES.STUDENT, ROLES.CLIENT] },
-      { to: "/disputes", label: "Disputes", icon: "flag", roles: [ROLES.STUDENT, ROLES.CLIENT, ROLES.ADMIN] },
+      { to: "/disputes", label: "Disputes", icon: "flag", roles: [ROLES.STUDENT, ROLES.CLIENT] },
     ],
   },
   {
@@ -129,12 +129,13 @@ export const STANDALONE_PATHS = [
 ];
 
 
-export function getWorkspacePageMeta(pathname) {
+export function getWorkspacePageMeta(pathname, hash = "") {
   let best = null;
   for (const group of workspaceNav) {
     for (const item of group.items) {
       const isMatch = pathname === item.to || pathname.startsWith(`${item.to}/`);
-      if (isMatch && (!best || item.to.length > best.to.length)) {
+      const isHashMatch = !item.hash || item.hash === hash || (!hash && item.hash === "#admin-overview");
+      if (isMatch && isHashMatch && (!best || item.to.length > best.to.length)) {
         best = { ...item, section: group.section };
       }
     }

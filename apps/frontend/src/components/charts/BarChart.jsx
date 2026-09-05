@@ -34,7 +34,7 @@ export default function BarChart({ data, valueFormatter, height = 220 }) {
           tick={{ fill: "var(--text-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
-          width={40}
+          width={76}
           tickFormatter={(v) => (valueFormatter ? valueFormatter(v) : v)}
         />
         <Tooltip

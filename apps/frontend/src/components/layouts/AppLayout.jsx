@@ -18,7 +18,7 @@ export default function AppLayout({ children }) {
   const { user } = useAuth();
   const [navOpen, setNavOpen] = useState(false);
   const location = useLocation();
-  const pageMeta = getWorkspacePageMeta(location.pathname);
+  const pageMeta = getWorkspacePageMeta(location.pathname, location.hash);
 
   useEffect(() => setNavOpen(false), [location.pathname]);
 
