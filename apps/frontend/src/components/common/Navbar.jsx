@@ -55,7 +55,7 @@ export default function Navbar() {
             return (
               <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
               <span className="whitespace-nowrap">
-                {t(`navigation.${l.to.slice(1).split("/")[0]}`, { defaultValue: l.label })}
+                {t(`navigation.${l.translationKey || l.to.slice(1).split("/")[0] || "home"}`, { defaultValue: l.label })}
               </span>
               </Link>
             );
