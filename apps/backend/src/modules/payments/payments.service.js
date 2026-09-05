@@ -396,11 +396,24 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
   }
 
   let transfer;
+  let existingTransferVerified = false;
   if (payment.provider_payment_id) {
     // A previous attempt may have reached the provider before the process
     // crashed. Verify that transfer first; never initialize a second payout.
     try {
       transfer = await provider.getTransfer(payment.provider_payment_id);
+      if (transfer.status === "failed") {
+        // A definitive provider failure is the only case where a retry may
+        // initialize a new transfer. Keep the operation key unchanged so the
+        // retry remains subject to the provider's idempotency rules.
+        payment.provider_payment_id = undefined;
+        payment.provider_reference = undefined;
+        if (providerName === "stripe") payment.stripe_transfer_id = undefined;
+        await payment.save();
+        transfer = undefined;
+      } else {
+        existingTransferVerified = true;
+      }
     } catch (err) {
       logger.warn("[chapa] transfer verification pending", {
         milestoneId: String(milestoneId),
@@ -414,7 +427,9 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
       await payment.save();
       return payment;
     }
-  } else {
+  }
+
+  if (!transfer) {
     try {
       transfer = await provider.createTransfer({
         amountMinor: releaseMoney.amountMinor,
@@ -432,7 +447,7 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
   }
 
  
-  if (providerName === "chapa") {
+  if (providerName === "chapa" && !existingTransferVerified) {
     try {
       const verifiedTransfer = await provider.getTransfer(transfer.id);
       transfer = { ...transfer, ...verifiedTransfer };
