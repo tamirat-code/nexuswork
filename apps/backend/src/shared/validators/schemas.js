@@ -84,7 +84,7 @@ export const googleAuthSchema = z
   });
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
+  currentPassword: z.string().optional().or(z.literal("")),
   newPassword: password,
 });
 

@@ -85,7 +85,7 @@ export const logout = asyncHandler(async (req, res) => {
 });
 
 export const changePassword = asyncHandler(async (req, res) => {
-  requireFields(req.body, ["currentPassword", "newPassword"]);
+  requireFields(req.body, ["newPassword"]);
   await authService.changePassword(req.user._id, req.body.currentPassword, req.body.newPassword);
   res.json({ success: true, data: { changed: true } });
 });

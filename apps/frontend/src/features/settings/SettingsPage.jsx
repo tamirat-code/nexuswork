@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [pushNotifs, setPushNotifs] = useState(user?.notification_prefs?.push ?? true);
   const [profileError, setProfileError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const isGoogleAccount = user?.auth_provider === "google";
 
   const profileMutation = useMutation({
     mutationFn: () => updateMe({ name }, token),
@@ -106,16 +107,17 @@ export default function SettingsPage() {
             <CardDescription>{t("settings.securityCardDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1.5">
+            {isGoogleAccount && <p className="rounded-lg border border-brass/30 bg-brass/10 p-3 text-xs leading-relaxed text-slate-300">{t("settings.googlePasswordHint", "You signed in with Google. Create a password here so you can also sign in with your email.")}</p>}
+            {!isGoogleAccount && <div className="space-y-1.5">
               <Label htmlFor="settings-current">{t("settings.currentPassword")}</Label>
               <PasswordInput id="settings-current" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-            </div>
+            </div>}
             <div className="space-y-1.5">
               <Label htmlFor="settings-new">{t("settings.newPassword")}</Label>
               <PasswordInput id="settings-new" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
             {passwordError && <p className="text-xs text-brick" role="alert">{passwordError}</p>}
-            <Button size="sm" variant="secondary" loading={passwordMutation.isPending} onClick={() => { const issue = !currentPassword.trim() ? "Enter your current password." : passwordIssue(newPassword); if (issue) { setPasswordError(issue); reportValidation(issue, { form: "settings-password" }); return; } setPasswordError(""); passwordMutation.mutate(); }}>{t("settings.changePassword")}</Button>
+            <Button size="sm" variant="secondary" loading={passwordMutation.isPending} onClick={() => { const issue = (!isGoogleAccount && !currentPassword.trim()) ? "Enter your current password." : passwordIssue(newPassword); if (issue) { setPasswordError(issue); reportValidation(issue, { form: "settings-password" }); return; } setPasswordError(""); passwordMutation.mutate(); }}>{isGoogleAccount ? t("settings.setPassword", "Set password") : t("settings.changePassword")}</Button>
 
             <Separator />
 
@@ -174,4 +176,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

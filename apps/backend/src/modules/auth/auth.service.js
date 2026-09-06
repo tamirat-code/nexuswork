@@ -383,13 +383,17 @@ export async function isTokenRevoked(jti) {
 
 export async function changePassword(userId, currentPassword, newPassword) {
   const user = await User.findById(userId).select("+password_hash");
-  if (user.auth_provider === "google" && !user.password_hash) {
-    throw new ValidationError("This account uses Google Sign-In and has no password to change.");
+  if (!user) throw new ValidationError("User not found");
+
+  // A verified Google session is sufficient to create the first local
+  // password. Password-authenticated users must still prove the old password.
+  const isGoogleAccount = user.auth_provider === "google";
+  if (!isGoogleAccount) {
+    if (!currentPassword) throw new ValidationError("Current password is required");
+    const match = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!match) throw new ValidationError("Current password is incorrect");
   }
-  const match = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!match) {
-    throw new ValidationError("Current password is incorrect");
-  }
+
   requireStrongPassword(newPassword);
   user.password_hash = await bcrypt.hash(newPassword, authConfig.bcryptSaltRounds);
   await user.save();
