@@ -400,7 +400,7 @@ export async function changePassword(userId, currentPassword, newPassword) {
 }
 
 export async function requestPasswordReset(email) {
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const user = await User.findOne({ email: email.toLowerCase() }).select("+password_hash");
   if (!user || (user.auth_provider === "google" && !user.password_hash)) return;
 
   const rawToken = generateRawToken();
