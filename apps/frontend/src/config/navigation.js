@@ -2,10 +2,73 @@ import { ROLES } from "../constants/roles.constants.js";
 
 export const marketingNav = [
   { to: "/", label: "Home", translationKey: "home", icon: "home" },
-  { to: "/projects", label: "Browse projects", translationKey: "browseProjects", icon: "briefcase" },
-  { to: "/students", label: "Find talent", translationKey: "findTalent", icon: "users" },
+  {
+    to: "/projects",
+    label: "Browse projects",
+    translationKey: "browseProjects",
+    icon: "briefcase",
+    megaMenu: [
+      {
+        title: "Discover",
+        items: [
+          { to: "/projects", label: "Browse projects", description: "Explore active briefs and opportunities.", icon: "briefcase" },
+          { to: "/search", label: "Search NexusWork", description: "Find projects, talent, and trusted profiles.", icon: "search" },
+        ],
+      },
+      {
+        title: "Work with talent",
+        items: [
+          { to: "/students", label: "Find talent", description: "Discover skilled students for your project.", icon: "users" },
+          { to: "/projects/new", label: "Post a project", description: "Share a brief and start building your team.", icon: "plus" },
+        ],
+      },
+    ],
+  },
+  {
+    to: "/students",
+    label: "Find talent",
+    translationKey: "findTalent",
+    icon: "users",
+    megaMenu: [
+      {
+        title: "Find the right fit",
+        items: [
+          { to: "/students", label: "Find talent", description: "Browse student skills and verified profiles.", icon: "users" },
+          { to: "/search", label: "Search profiles", description: "Use focused search to find a strong match.", icon: "search" },
+        ],
+      },
+      {
+        title: "Build with confidence",
+        items: [
+          { to: "/universities", label: "University verification", description: "Learn how NexusWork builds trust.", icon: "building" },
+          { to: "/#how-it-works", label: "How it works", description: "See the path from brief to delivery.", icon: "spark" },
+        ],
+      },
+    ],
+  },
   { to: "/universities", label: "For universities", translationKey: "universities", icon: "building" },
-  { to: "/#how-it-works", label: "How it works", translationKey: "howItWorks", icon: "spark" },
+  {
+    to: "/#how-it-works",
+    label: "How it works",
+    translationKey: "howItWorks",
+    icon: "spark",
+    megaMenu: [
+      {
+        title: "NexusWork",
+        items: [
+          { to: "/#how-it-works", label: "How it works", description: "Understand the journey from brief to delivery.", icon: "spark" },
+          { to: "/#faq", label: "Frequently asked questions", description: "Get answers to common platform questions.", icon: "help" },
+        ],
+      },
+      {
+        title: "Resources",
+        items: [
+          { to: "/support", label: "Support and trust", description: "Get help when the work matters.", icon: "help" },
+          { to: "/policies", label: "Platform policies", description: "Review the rules for fair work.", icon: "document" },
+        ],
+      },
+    ],
+  },
   { to: "/#faq", label: "FAQ", translationKey: "faq", icon: "help" },
   { to: "/search", label: "Search", translationKey: "search", icon: "search" },
 ];

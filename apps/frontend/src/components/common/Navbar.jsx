@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { marketingNav } from "../../config/navigation.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import Button from "../ui/Button.jsx";
@@ -10,6 +11,7 @@ import ThemeToggle from "./ThemeToggle.jsx";
 import UserMenu from "./UserMenu.jsx";
 import { cn } from "../../lib/cn.js";
 import LanguageSelector from "./LanguageSelector.jsx";
+import MegaMenu from "./MegaMenu.jsx";
 import { useTranslation } from "react-i18next";
 
 function isNavItemActive(to, pathname, hash) {
@@ -28,10 +30,29 @@ function isNavItemActive(to, pathname, hash) {
 export default function Navbar() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openMegaMenu, setOpenMegaMenu] = useState(null);
+  const [mobileExpanded, setMobileExpanded] = useState(null);
+  const closeTimer = useRef(null);
   const location = useLocation();
   const { t } = useTranslation();
 
-  useEffect(() => setMenuOpen(false), [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+    setOpenMegaMenu(null);
+    setMobileExpanded(null);
+  }, [location.pathname]);
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  const openMenu = (to) => {
+    window.clearTimeout(closeTimer.current);
+    setOpenMegaMenu(to);
+  };
+
+  const scheduleClose = () => {
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpenMegaMenu(null), 140);
+  };
 
   const linkClass = (active) =>
     cn(
@@ -52,12 +73,32 @@ export default function Navbar() {
         <nav aria-label={t("common.mainNavigation", "Main")} className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
+            const hasMegaMenu = Boolean(l.megaMenu);
             return (
-              <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
-              <span className="line-clamp-2">
-                {t(`navigation.${l.translationKey || l.to.slice(1).split("/")[0] || "home"}`, { defaultValue: l.label })}
-              </span>
-              </Link>
+              <div
+                key={l.to}
+                className="relative"
+                onMouseEnter={hasMegaMenu ? () => openMenu(l.to) : undefined}
+                onMouseLeave={hasMegaMenu ? scheduleClose : undefined}
+                onFocusCapture={hasMegaMenu ? () => openMenu(l.to) : undefined}
+                onBlurCapture={hasMegaMenu ? (event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) scheduleClose();
+                } : undefined}
+              >
+                <Link
+                  to={l.to}
+                  className={cn(linkClass(active), hasMegaMenu && "gap-1")}
+                  aria-current={active ? "page" : undefined}
+                  aria-haspopup={hasMegaMenu ? "true" : undefined}
+                  aria-expanded={hasMegaMenu ? openMegaMenu === l.to : undefined}
+                >
+                  <span className="line-clamp-2">
+                    {t(`navigation.${l.translationKey || l.to.slice(1).split("/")[0] || "home"}`, { defaultValue: l.label })}
+                  </span>
+                  {hasMegaMenu && <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", openMegaMenu === l.to && "rotate-180")} aria-hidden="true" />}
+                </Link>
+                <MegaMenu menu={l.megaMenu} open={openMegaMenu === l.to} />
+              </div>
             );
           })}
         </nav>
@@ -103,19 +144,49 @@ export default function Navbar() {
         <nav aria-label={t("common.mobileNavigation", "Mobile")} className="flex flex-col gap-1">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
+            const hasMegaMenu = Boolean(l.megaMenu);
+            const isExpanded = mobileExpanded === l.to;
             return (
-              <Link
-                key={l.to}
-                to={l.to}
-                onClick={() => setMenuOpen(false)}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-control px-3.5 py-2.5 text-sm font-semibold",
-                  active ? "bg-brass/15 font-bold text-brass" : "text-slate-300 hover:bg-ink-50"
+              <div key={l.to}>
+                <div className="flex items-center gap-1">
+                  <Link
+                    to={l.to}
+                    onClick={() => setMenuOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center gap-2.5 rounded-control px-3.5 py-2.5 text-sm font-semibold",
+                      active ? "bg-brass/15 font-bold text-brass" : "text-slate-300 hover:bg-ink-50"
+                    )}
+                  >
+                    {t(`navigation.${l.translationKey || l.to.split("/")[1] || "home"}`, { defaultValue: l.label })}
+                  </Link>
+                  {hasMegaMenu && (
+                    <button
+                      type="button"
+                      aria-label={`${isExpanded ? "Collapse" : "Expand"} ${l.label} menu`}
+                      aria-expanded={isExpanded}
+                      onClick={() => setMobileExpanded(isExpanded ? null : l.to)}
+                      className="rounded-control p-2 text-slate-300 hover:bg-ink-50 hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+                    >
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+                {hasMegaMenu && isExpanded && (
+                  <div className="ml-3 border-l border-ink-300 pl-3">
+                    {l.megaMenu.flatMap((column) => column.items).map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setMenuOpen(false)}
+                        className="block rounded-control px-3 py-2 text-sm text-slate-400 hover:bg-ink-50 hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
                 )}
-              >
-                {t(`navigation.${l.translationKey || l.to.split("/")[1] || "home"}`, { defaultValue: l.label })}
-              </Link>
+              </div>
             );
           })}
         </nav>
