@@ -10,7 +10,12 @@ export const optionalObjectId = z
 
 export const objectIdParamsSchema = (key = "id") => z.object({ [key]: objectId });
 
-export const email = z.string().trim().toLowerCase().email("Invalid email address");
+// Pasted addresses can contain zero-width characters (especially when copied
+// from rich text). Remove those before applying the strict email validator.
+export const email = z.preprocess(
+  (value) => (typeof value === "string" ? value.replace(/[\u200B-\u200D\uFEFF]/g, "") : value),
+  z.string().trim().toLowerCase().email("Invalid email address")
+);
 export const password = z
   .string()
   .min(8, "Password must be at least 8 characters")

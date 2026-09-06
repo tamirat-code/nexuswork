@@ -111,7 +111,7 @@ export default function RegisterPage() {
     const next = {};
 
     if (!form.name.trim()) next.name = t("registration.nameRequired");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = t("registration.emailInvalid");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = t("registration.emailInvalid");
 
     const pwIssue = passwordIssue(form.password, t);
     if (pwIssue) next.password = pwIssue;
@@ -125,7 +125,7 @@ export default function RegisterPage() {
     const next = {};
 
     if (!form.name.trim()) next.name = t("registration.nameRequired");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = t("registration.emailInvalid");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = t("registration.emailInvalid");
 
     const pwIssue = passwordIssue(form.password, t);
     if (pwIssue) next.password = pwIssue;
