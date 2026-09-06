@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+
+const LAST_UPDATED = "September 6, 2026";
+const SUPPORT_EMAIL = "tamneg21@gmail.com";
 
 const SECTIONS = [
   {
@@ -55,7 +57,6 @@ const SECTIONS = [
 ];
 
 export default function TermsPage() {
-  const { t } = useTranslation();
   return (
     <div className="mx-auto max-w-6xl px-6 py-14">
       <div className="grid gap-10 lg:grid-cols-[1fr_220px] lg:items-start">
@@ -65,11 +66,12 @@ export default function TermsPage() {
             Terms of Service
           </h1>
 
-          <p className="mt-2 text-xs text-slate-300">Version 1.0 · Last updated {new Date().getFullYear()}</p>
+          <p className="mt-2 text-xs text-slate-300">Version 1.0 · Effective {LAST_UPDATED}</p>
 
-          <p className="mt-6 rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm leading-relaxed text-brick">
-            Template text for development. Have a qualified lawyer review these terms before taking real
-            users or real payments in production.
+          <p className="mt-6 rounded-card border border-brass/25 bg-brass/10 px-4 py-3 text-sm leading-relaxed text-slate-300">
+            These Terms of Service explain the rules for using NexusWork, including accounts, projects,
+            payments, disputes, and account safety. By creating an account or using the platform, you
+            agree to follow these terms.
           </p>
 
           <div className="mt-10 space-y-10">
@@ -90,6 +92,14 @@ export default function TermsPage() {
             <Link to="/privacy" className="font-semibold text-brass hover:text-brass-300">
               Privacy Policy
             </Link>
+            .
+          </p>
+
+          <p className="mt-4 text-sm leading-relaxed text-slate-300">
+            Questions about these Terms of Service? Contact NexusWork at{" "}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-brass hover:text-brass-300">
+              {SUPPORT_EMAIL}
+            </a>
             .
           </p>
         </article>

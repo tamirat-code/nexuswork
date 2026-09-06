@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+
+const LAST_UPDATED = "September 6, 2026";
+const SUPPORT_EMAIL = "tamneg21@gmail.com";
 
 const SECTIONS = [
   {
@@ -47,12 +49,11 @@ const SECTIONS = [
   {
     id: "contact",
     title: "6. Contact",
-    body: ["Questions about this policy can be sent to privacy@nexuswork.app."],
+    body: ["For privacy questions, data requests, or concerns about how your information is handled, contact NexusWork at tamneg21@gmail.com."],
   },
 ];
 
 export default function PrivacyPage() {
-  const { t } = useTranslation();
   return (
     <div className="mx-auto max-w-6xl px-6 py-14">
       <div className="grid gap-10 lg:grid-cols-[1fr_220px] lg:items-start">
@@ -62,11 +63,11 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
 
-          <p className="mt-2 text-xs text-slate-300">Version 1.0 · Last updated {new Date().getFullYear()}</p>
+          <p className="mt-2 text-xs text-slate-300">Version 1.0 · Effective {LAST_UPDATED}</p>
 
-          <p className="mt-6 rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm leading-relaxed text-brick">
-            Template text for development. Have a qualified lawyer review this policy before taking real
-            users or real payments in production.
+          <p className="mt-6 rounded-card border border-brass/25 bg-brass/10 px-4 py-3 text-sm leading-relaxed text-slate-300">
+            This Privacy Policy explains what information NexusWork collects, why it is used, and the
+            choices available to you when you use the platform.
           </p>
 
           <div className="mt-10 space-y-10">
@@ -87,6 +88,14 @@ export default function PrivacyPage() {
             <Link to="/terms" className="font-semibold text-brass hover:text-brass-300">
               Terms of Service
             </Link>
+            .
+          </p>
+
+          <p className="mt-4 text-sm leading-relaxed text-slate-300">
+            Contact us about your privacy rights or personal data at{" "}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-brass hover:text-brass-300">
+              {SUPPORT_EMAIL}
+            </a>
             .
           </p>
         </article>
