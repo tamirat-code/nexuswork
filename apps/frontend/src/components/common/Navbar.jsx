@@ -41,7 +41,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95">
-      <div className="flex min-h-[84px] w-full items-center justify-between gap-3 overflow-hidden px-4 sm:gap-4 sm:px-8 lg:px-10">
+      <div className="flex min-h-[84px] w-full items-center justify-between gap-3 overflow-x-clip px-4 sm:gap-4 sm:px-8 lg:px-10">
         <Link to="/" className="group flex shrink-0 items-center gap-3">
           <img src="/logo.svg" alt="NexusWork" className="h-12 w-12 object-contain transition-transform duration-200 group-hover:scale-105" />
           <span className="font-display text-2xl font-extrabold tracking-[-0.02em] text-slate sm:text-[1.7rem]">
