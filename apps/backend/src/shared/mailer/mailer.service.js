@@ -4,6 +4,7 @@ import { logger } from "../logger/logger.js";
 import { passwordResetEmail } from "../../templates/email/password-reset.template.js";
 import { verificationEmail } from "../../templates/email/email-verification.template.js";
 import welcomeEmail from "../../templates/email/welcome.template.js";
+import { renderEmailLayout } from "../../templates/email/layout.template.js";
 
 async function send({ to, subject, html }) {
   return sendMail({ to, subject, html });
@@ -31,19 +32,19 @@ export async function sendVerificationEmail(email, verifyToken) {
 }
 
 export async function sendWelcomeEmail(email, name) {
-  const { subject, html } = welcomeEmail({ name });
+  const { subject, html } = welcomeEmail({ name, appUrl: mailConfig.appUrl });
   return send({ to: email, subject, html });
 }
 
 
-export async function sendNotificationEmail({ to, subject, body }) {
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #1f2937;">${escapeHtml(subject)}</h2>
-      <p style="color: #374151; line-height: 1.6; white-space: pre-line;">${escapeHtml(body)}</p>
-      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-      <p style="color: #9ca3af; font-size: 12px;">You are receiving this because you have an account on NexusWork.</p>
-    </div>
-  `;
+export async function sendNotificationEmail({ to, subject, body, actionUrl, actionLabel }) {
+  const html = renderEmailLayout({
+    preheader: body,
+    title: subject,
+    bodyHtml: `<p style="margin:0; white-space:pre-line;">${escapeHtml(body)}</p>`,
+    ctaLabel: actionLabel || "View in NexusWork",
+    ctaUrl: actionUrl || mailConfig.appUrl,
+    footerText: "You are receiving this because you have a NexusWork account.",
+  });
   return send({ to, subject, html });
 }

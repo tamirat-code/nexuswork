@@ -78,6 +78,7 @@ export function buildEnv(source = process.env) {
 
     resendApiKey: optional(source.RESEND_API_KEY),
     mailFrom: source.MAIL_FROM || "NexusWork <no-reply@yourdomain.com>",
+    mailLogoUrl: optional(source.MAIL_LOGO_URL),
     termsVersion: source.TERMS_VERSION || "1.0",
     recaptchaSecretKey: optional(source.RECAPTCHA_SECRET_KEY),
     recaptchaMinScore: number(source.RECAPTCHA_MIN_SCORE, 0.5),

@@ -10,4 +10,5 @@ export const mailConfig = {
   smtpPass: env.smtpPass,
   from: env.mailFrom,
   appUrl: env.clientUrl || "http://localhost:5173",
+  logoUrl: env.mailLogoUrl || `${env.clientUrl || "http://localhost:5173"}/logo.svg`,
 };

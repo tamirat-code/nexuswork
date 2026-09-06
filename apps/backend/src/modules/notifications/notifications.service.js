@@ -4,6 +4,24 @@ import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError
 import { emitToUser } from "../../websocket/socket.registry.js";
 import { sendNotificationEmail } from "../../shared/mailer/mailer.service.js";
 import { logger } from "../../shared/logger/logger.js";
+import { mailConfig } from "../../config/mail.config.js";
+
+function notificationActionUrl(data = {}) {
+  if (data.url || data.href) return data.url || data.href;
+
+  const id = data.project_id || data.contract_id || data.meeting_id || data.dispute_id;
+  const routes = {
+    view_project: id ? `/projects/${id}` : "/projects",
+    view_contract: id ? `/contracts/${id}` : "/contracts",
+    view_meeting: id ? `/meetings/${id}` : "/meetings",
+    view_dispute: id ? `/disputes?dispute=${id}` : "/disputes",
+    view_proposal: "/proposals",
+    view_staff_verification: "/verifications",
+  };
+
+  const route = routes[data.action];
+  return route ? `${mailConfig.appUrl}${route}` : mailConfig.appUrl;
+}
 
 async function deliverNotificationEmail(notification, recipient) {
   if (!recipient?.email || recipient.notification_prefs?.email === false) return;
@@ -13,6 +31,8 @@ async function deliverNotificationEmail(notification, recipient) {
       to: recipient.email,
       subject: notification.title,
       body: notification.body,
+      actionUrl: notificationActionUrl(notification.data),
+      actionLabel: notification.data?.action_label,
     });
     await Notification.updateOne({ _id: notification._id }, { $set: { email_sent: true } });
   } catch (err) {

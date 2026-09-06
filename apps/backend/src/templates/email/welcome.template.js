@@ -1,6 +1,6 @@
 import { renderEmailLayout } from "./layout.template.js";
 
-export default function welcomeEmail({ name }) {
+export default function welcomeEmail({ name, appUrl }) {
   return {
     subject: "Welcome to NexusWork",
     html: renderEmailLayout({
@@ -12,6 +12,8 @@ export default function welcomeEmail({ name }) {
         of the way.</p>
         <p>You're all set to start browsing projects or posting one, depending on your role.</p>
       `,
+      ctaLabel: "Explore NexusWork",
+      ctaUrl: appUrl,
     }),
   };
 }
