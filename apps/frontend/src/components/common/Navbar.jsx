@@ -35,13 +35,13 @@ export default function Navbar() {
 
   const linkClass = (active) =>
     cn(
-      "whitespace-nowrap shrink-0 rounded-control px-4 py-2.5 text-base font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
+      "flex min-h-10 max-w-[150px] shrink rounded-control px-2 py-2 text-center text-sm font-semibold leading-tight transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink xl:px-2.5 xl:text-[0.9375rem]",
       active ? "font-bold text-brass bg-brass/10 shadow-sm" : "text-slate-300 hover:text-brass hover:bg-ink-50/70"
     );
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95">
-      <div className="flex h-[84px] w-full items-center justify-between gap-5 px-4 sm:px-8 lg:px-10">
+      <div className="flex min-h-[84px] w-full items-center justify-between gap-3 overflow-hidden px-4 sm:gap-4 sm:px-8 lg:px-10">
         <Link to="/" className="group flex shrink-0 items-center gap-3">
           <img src="/logo.svg" alt="NexusWork" className="h-12 w-12 object-contain transition-transform duration-200 group-hover:scale-105" />
           <span className="font-display text-2xl font-extrabold tracking-[-0.02em] text-slate sm:text-[1.7rem]">
@@ -49,12 +49,12 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <nav aria-label={t("common.mainNavigation", "Main")} className="hidden items-center gap-1.5 md:flex">
+        <nav aria-label={t("common.mainNavigation", "Main")} className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
           {marketingNav.map((l) => {
             const active = isNavItemActive(l.to, location.pathname, location.hash);
             return (
               <Link key={l.to} to={l.to} className={linkClass(active)} aria-current={active ? "page" : undefined}>
-              <span className="whitespace-nowrap">
+              <span className="line-clamp-2">
                 {t(`navigation.${l.translationKey || l.to.slice(1).split("/")[0] || "home"}`, { defaultValue: l.label })}
               </span>
               </Link>
@@ -62,7 +62,7 @@ export default function Navbar() {
           })}
         </nav>
 
-        <div className="hidden shrink-0 items-center gap-2 md:flex">
+        <div className="hidden shrink-0 items-center gap-1.5 md:flex">
           <ThemeToggle />
           <LanguageSelector compact />
           {user ? (
