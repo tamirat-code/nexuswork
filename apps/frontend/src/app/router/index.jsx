@@ -43,6 +43,8 @@ const SearchPage = lazy(() => import("../../features/search/SearchPage.jsx"));
 const AdminPage = lazy(() => import("../../features/admin/AdminPage.jsx"));
 const TermsPage = lazy(() => import("../../features/legal/TermsPage.jsx"));
 const PrivacyPage = lazy(() => import("../../features/legal/PrivacyPage.jsx"));
+const PoliciesPage = lazy(() => import("../../features/legal/PoliciesPage.jsx"));
+const SupportPage = lazy(() => import("../../features/support/SupportPage.jsx"));
 const NotFoundPage = lazy(() => import("../../features/misc/NotFoundPage.jsx"));
 const MeetingPage = lazy(() => import("../../features/meetings/MeetingPage.jsx"));
 const MeetingsListPage = lazy(() => import("../../features/meetings/MeetingsListPage.jsx"));
@@ -73,6 +75,8 @@ export default function AppRouter() {
       <Route path="/mfa/verify" element={<MfaVerifyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/policies" element={<PoliciesPage />} />
+      <Route path="/support" element={<SupportPage />} />
       <Route path="/projects" element={<ProjectListPage />} />
       <Route path="/projects/new" element={protect(<PostProjectPage />, [ROLES.CLIENT])} />
       <Route path="/projects/:id" element={<ProjectDetailPage />} />

@@ -40,6 +40,7 @@ import {
 } from "../../components/ui/shadcn/select.jsx";
 import { reportValidation } from "../../lib/validation.js";
 import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
+import OperationalStatusCard from "./OperationalStatusCard.jsx";
 
 function CreateUniversityDialog({ token }) {
   const qc = useQueryClient();
@@ -606,6 +607,7 @@ export default function AdminPage() {
         <TabsContent value="overview">
       <div className="mt-6">
         <div id="admin-overview" className="min-w-0">
+      <OperationalStatusCard />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((s) => (
           <Card key={s.label}>

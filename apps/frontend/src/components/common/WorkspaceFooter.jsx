@@ -30,6 +30,12 @@ export default function WorkspaceFooter() {
           <Link to="/privacy" className="transition-colors hover:text-brass">
             Privacy
           </Link>
+          <Link to="/policies" className="transition-colors hover:text-brass">
+            Policies
+          </Link>
+          <Link to="/support" className="transition-colors hover:text-brass">
+            Support
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2 rounded-full border border-escrow/30 bg-escrow-100 px-3 py-1 text-xs font-bold text-escrow">

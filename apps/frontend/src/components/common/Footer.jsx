@@ -6,7 +6,7 @@ export default function Footer() {
   const columns = [
     { title: t("footer.marketplace"), links: [["/projects", t("footer.browseProjects")], ["/students", t("footer.findTalent")], ["/skills", t("footer.skillsDirectory")]] },
     { title: t("footer.community"), links: [["/universities", t("footer.forUniversities")], ["/learning", t("footer.learningHub")], ["/portfolios", t("footer.portfolios")]] },
-    { title: t("footer.legal"), links: [["/terms", t("footer.terms")], ["/privacy", t("footer.privacy")]] },
+    { title: t("footer.legal"), links: [["/terms", t("footer.terms")], ["/privacy", t("footer.privacy")], ["/policies", "Platform policies"], ["/support", "Support"]] },
   ];
   return (
     <footer className="border-t border-ink-300 bg-ink">
