@@ -321,9 +321,26 @@ function DisputeEvidenceDialog({ dispute, token }) {
               <h3 className="font-semibold text-slate">Signed contract terms</h3>
               <p className="mt-2 font-medium text-slate">{contractTerms?.title || "No contract title provided."}</p>
               <p className="mt-1 whitespace-pre-wrap text-slate-300">{contractTerms?.description || "No contract description provided."}</p>
+              <p className="mt-3 text-xs text-slate-400"><span className="font-semibold text-slate-300">Client:</span> {data.contract?.client_id?.name || data.contract?.client_id?.email || "Not recorded"} · <span className="font-semibold text-slate-300">Student:</span> {data.contract?.student_id?.name || data.contract?.student_id?.email || "Not recorded"}</p>
               {contractTerms?.payment_terms && <p className="mt-3 text-xs text-slate-400"><span className="font-semibold text-slate-300">Payment terms:</span> {contractTerms.payment_terms}</p>}
               {contractTerms?.revision_policy && <p className="mt-1 text-xs text-slate-400"><span className="font-semibold text-slate-300">Revision policy:</span> {contractTerms.revision_policy}</p>}
-              <p className="mt-2 text-xs text-slate-400">Contract version {data.contract?.version || "—"} · Client signed {data.contract?.client_signed_at ? formatDate(data.contract.client_signed_at) : "not recorded"} · Student signed {data.contract?.student_signed_at ? formatDate(data.contract.student_signed_at) : "not recorded"}</p>
+              <p className="mt-2 text-xs text-slate-400">Contract version {data.contract?.version || "—"} · Terms fingerprint: <span className="font-mono">{data.contract?.terms_fingerprint || "not recorded"}</span></p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {[{ label: "Client signature", value: data.contract?.client_signature, date: data.contract?.client_signed_at }, { label: "Student signature", value: data.contract?.student_signature, date: data.contract?.student_signed_at }].map((signature) => <div key={signature.label} className="rounded border border-ink-300 p-3 text-xs text-slate-400"><p className="font-semibold text-slate-300">{signature.label}</p><p className="mt-1">{signature.value ? `Recorded ${signature.date ? formatDate(signature.date) : ""}` : "Not recorded"}</p>{signature.value && <><p>Signed terms version: {signature.value.contract_version}</p><p className="truncate" title={signature.value.terms_fingerprint}>Fingerprint: {signature.value.terms_fingerprint}</p>{signature.value.ip && <p>Signing IP: {signature.value.ip}</p>}{signature.value.user_agent && <p className="truncate" title={signature.value.user_agent}>Device: {signature.value.user_agent}</p>}</>}</div>)}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">
+              <h3 className="font-semibold text-slate">Work progress at dispute</h3>
+              <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
+                <p><span className="font-semibold text-slate-300">Status when disputed:</span> {data.dispute?.pre_dispute_status || "—"}</p>
+                <p><span className="font-semibold text-slate-300">Current status:</span> {milestone?.status || "—"}</p>
+                <p><span className="font-semibold text-slate-300">Funded:</span> {milestone?.funded_at ? formatDate(milestone.funded_at) : "Not recorded"}</p>
+                <p><span className="font-semibold text-slate-300">Last updated:</span> {milestone?.updatedAt ? formatDate(milestone.updatedAt) : "Not recorded"}</p>
+                <p><span className="font-semibold text-slate-300">Revisions:</span> {milestone?.revision_count ?? 0} / {milestone?.max_revisions ?? "—"}</p>
+                <p><span className="font-semibold text-slate-300">Delivered:</span> {milestone?.delivered_at ? formatDate(milestone.delivered_at) : "Not recorded"}</p>
+              </div>
+              <p className="mt-3 text-xs text-slate-400">If no submission exists, the conversation and shared attachments below are the available record of progress.</p>
             </section>
 
             <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">

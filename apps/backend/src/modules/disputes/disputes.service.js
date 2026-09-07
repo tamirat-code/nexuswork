@@ -70,12 +70,19 @@ export async function getDisputeEvidence(disputeId, requestingUser) {
   const dispute = await Dispute.findById(disputeId).lean();
   if (!dispute) throw new NotFoundError("Dispute not found");
 
-  const milestone = await Milestone.findById(dispute.milestone_id).populate("contract_id");
+  const milestone = await Milestone.findById(dispute.milestone_id).populate({
+    path: "contract_id",
+    populate: [
+      { path: "client_id", select: "name email" },
+      { path: "student_id", select: "name email" },
+    ],
+  });
   if (!milestone) throw new NotFoundError("Milestone not found");
   const contract = milestone.contract_id;
 
   const requestingUserId = String(requestingUser._id);
-  const isParty = [String(contract.client_id), String(contract.student_id)].includes(requestingUserId);
+  const contractPartyIds = [contract.client_id?._id || contract.client_id, contract.student_id?._id || contract.student_id];
+  const isParty = contractPartyIds.map(String).includes(requestingUserId);
   if (requestingUser.role !== "admin" && !isParty) {
     throw new ForbiddenError("Not authorized to view this dispute's evidence");
   }
