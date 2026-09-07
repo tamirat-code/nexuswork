@@ -5,3 +5,4 @@ export const openDispute = (milestoneId, payload, token) =>
 export const listDisputes = (token) => apiRequest("/disputes", { token });
 export const listMyDisputes = (token) => apiRequest("/disputes/mine", { token });
 export const getDispute = (id, token) => apiRequest(`/disputes/${id}`, { token });
+export const getDisputeEvidence = (id, token) => apiRequest(`/disputes/${id}/evidence`, { token });

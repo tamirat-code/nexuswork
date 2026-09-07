@@ -3,12 +3,13 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText, Eye } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText, Eye, MessageSquare, Paperclip } from "lucide-react";
 
 import { listAdminStats, listAdminUsers, getAdminUserProfile, listAdminDisputes, resolveAdminDispute, listAdminReports, reviewAdminReport, suspendAdminUser, restoreAdminUser, changeAdminUserRole, deleteAdminUser } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity, updateUniversity, deleteUniversity } from "../../services/api/universities.api.js";
 import { getStaffVerifications, reviewStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { openFilePreview } from "../../services/api/files.api.js";
+import { getDisputeEvidence } from "../../services/api/disputes.api.js";
 import { displayFilename } from "../../utils/filename.utils.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -253,6 +254,99 @@ function ResolveDisputeDialog({ dispute, token }) {
             Resolve dispute
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EvidenceFile({ file, token }) {
+  if (!file) return null;
+  const id = file._id || file.id || file;
+  return (
+    <button
+      type="button"
+      className="inline-flex max-w-full items-center gap-1.5 truncate text-left text-xs font-semibold text-brass underline-offset-2 hover:underline"
+      onClick={async () => {
+        try { await openFilePreview(id, token); } catch (error) { toast.error(error.message || "Could not preview file"); }
+      }}
+      title={displayFilename(file.original_name, "Attached file")}
+    >
+      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{displayFilename(file.original_name, "Attached file")}</span>
+    </button>
+  );
+}
+
+function DisputeEvidenceDialog({ dispute, token }) {
+  const [open, setOpen] = useState(false);
+  const evidence = useQuery({
+    queryKey: ["admin-dispute-evidence", dispute._id],
+    queryFn: () => getDisputeEvidence(dispute._id, token),
+    enabled: open && !!token,
+  });
+  const data = evidence.data?.data;
+  const milestone = data?.milestone;
+  const contractTerms = data?.contract?.terms;
+  const submissions = data?.submissions || [];
+  const messages = data?.messages || [];
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8 gap-1.5"><Eye className="h-3.5 w-3.5" /> Evidence</Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Dispute evidence</DialogTitle>
+          <DialogDescription>Review the agreed scope, submissions, and contract conversation before resolving this dispute.</DialogDescription>
+        </DialogHeader>
+        {evidence.isLoading && <div className="py-8 text-center text-sm text-slate-300">Loading evidence…</div>}
+        {evidence.isError && <div className="rounded-lg border border-brick/30 bg-brick-100/20 p-3 text-sm text-brick">Could not load dispute evidence. Try again.</div>}
+        {data && (
+          <div className="space-y-5 text-sm">
+            <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">
+              <h3 className="font-semibold text-slate">Dispute claim</h3>
+              <p className="mt-2 whitespace-pre-wrap text-slate-300">{data.dispute?.reason || "No reason provided."}</p>
+              <p className="mt-2 text-xs text-slate-400">Opened {formatDate(data.dispute?.createdAt)} · Status: {data.dispute?.status || "open"}</p>
+            </section>
+
+            <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">
+              <h3 className="font-semibold text-slate">Agreed milestone scope</h3>
+              <p className="mt-2 font-medium text-slate">{milestone?.title || "Milestone"}</p>
+              <p className="mt-1 whitespace-pre-wrap text-slate-300">{milestone?.description || "No milestone description provided."}</p>
+              {!!milestone?.deliverables?.length && <ul className="mt-3 space-y-2 text-slate-300">{milestone.deliverables.map((item) => <li key={item.key}>• {item.title}{item.required ? " (required)" : ""}{item.description && <span className="ml-1 text-xs text-slate-400">{item.description}</span>}</li>)}</ul>}
+            </section>
+
+            <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">
+              <h3 className="font-semibold text-slate">Signed contract terms</h3>
+              <p className="mt-2 font-medium text-slate">{contractTerms?.title || "No contract title provided."}</p>
+              <p className="mt-1 whitespace-pre-wrap text-slate-300">{contractTerms?.description || "No contract description provided."}</p>
+              {contractTerms?.payment_terms && <p className="mt-3 text-xs text-slate-400"><span className="font-semibold text-slate-300">Payment terms:</span> {contractTerms.payment_terms}</p>}
+              {contractTerms?.revision_policy && <p className="mt-1 text-xs text-slate-400"><span className="font-semibold text-slate-300">Revision policy:</span> {contractTerms.revision_policy}</p>}
+              <p className="mt-2 text-xs text-slate-400">Contract version {data.contract?.version || "—"} · Client signed {data.contract?.client_signed_at ? formatDate(data.contract.client_signed_at) : "not recorded"} · Student signed {data.contract?.student_signed_at ? formatDate(data.contract.student_signed_at) : "not recorded"}</p>
+            </section>
+
+            <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">
+              <h3 className="font-semibold text-slate">Submitted deliverables</h3>
+              {!submissions.length && <p className="mt-2 text-slate-400">No submission evidence was found.</p>}
+              <div className="mt-3 space-y-3">{submissions.map((submission) => <div key={submission._id} className="rounded border border-ink-300 p-3">
+                <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-400"><span>Version {submission.version || 1}</span><span>{formatDate(submission.submitted_at || submission.createdAt)}</span></div>
+                {submission.note && <p className="mt-2 whitespace-pre-wrap text-slate-300">{submission.note}</p>}
+                {!!submission.file_ids?.length && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">{submission.file_ids.map((file) => <EvidenceFile key={file._id || file} file={file} token={token} />)}</div>}
+                {!!submission.file_url && <a className="mt-2 block text-xs font-semibold text-brass underline" href={submission.file_url} target="_blank" rel="noreferrer">Open submitted link</a>}
+              </div>)}</div>
+            </section>
+
+            <section className="rounded-lg border border-ink-300 bg-ink-700 p-4">
+              <h3 className="flex items-center gap-2 font-semibold text-slate"><MessageSquare className="h-4 w-4" /> Contract conversation</h3>
+              {!messages.length && <p className="mt-2 text-slate-400">No contract messages were found.</p>}
+              <div className="mt-3 max-h-80 space-y-3 overflow-y-auto">{messages.map((message) => <div key={message._id} className="rounded border border-ink-300 p-3">
+                <p className="whitespace-pre-wrap text-slate-300">{message.body}</p><p className="mt-2 text-xs text-slate-400">{formatDate(message.createdAt)}</p>
+                {!!message.attachments?.length && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">{message.attachments.map((file) => <EvidenceFile key={file._id || file} file={file} token={token} />)}</div>}
+              </div>)}</div>
+            </section>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -753,7 +847,7 @@ export default function AdminPage() {
                     <TableCell><StatusBadge kind="dispute" status={d.status} showDot /></TableCell>
                     <TableCell className="text-right">
                       {d.status !== "resolved" ? (
-                        <ResolveDisputeDialog dispute={d} token={token} />
+                        <div className="flex justify-end gap-2"><DisputeEvidenceDialog dispute={d} token={token} /><ResolveDisputeDialog dispute={d} token={token} /></div>
                       ) : (
                         <Badge variant="success">Resolved</Badge>
                       )}
