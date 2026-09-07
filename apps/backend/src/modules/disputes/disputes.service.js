@@ -1,4 +1,5 @@
 import Dispute from "./disputes.model.js";
+import User from "../users/users.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Wallet from "../wallets/wallets.model.js";
@@ -62,6 +63,23 @@ export async function openDispute(milestoneId, openedBy, reason, auditContext = 
     body: `A dispute was opened for milestone ${milestone.title || milestone._id}. Please review the details.`,
     data: { dispute_id: dispute._id, milestone_id: milestone._id, action: "view_dispute" },
   });
+
+  // Notify every platform admin so the dispute enters the admin review queue
+  // immediately without making dispute creation depend on notification delivery.
+  try {
+    const admins = await User.find({ role: "admin", status: "active" }).select("_id").lean();
+    await Promise.all(
+      admins.map((admin) => createNotification({
+        userId: admin._id,
+        type: "dispute_update",
+        title: "New dispute requires review",
+        body: `A dispute was opened for milestone ${milestone.title || milestone._id}. Review the evidence before resolving it.`,
+        data: { dispute_id: dispute._id, milestone_id: milestone._id, action: "view_dispute" },
+      }))
+    );
+  } catch (err) {
+    console.error("[disputes] failed to notify admins:", err.message);
+  }
   return dispute;
 }
 
