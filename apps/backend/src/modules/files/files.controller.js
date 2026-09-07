@@ -21,6 +21,20 @@ const VALID_RELATED_TYPES = new Set([
   "other",
 ]);
 
+// Node only accepts Latin-1 characters in response header values. Keep an
+// ASCII fallback for older clients and include the standards-compliant UTF-8
+// filename parameter for browsers that support it.
+function contentDispositionFilename(value) {
+  const source = String(value || "file")
+    .replace(/[\u0000-\u001f\u007f\r\n]/g, "_")
+    .replace(/[\\\"]/g, "_")
+    .trim() || "file";
+  const wellFormed = typeof source.toWellFormed === "function" ? source.toWellFormed() : source.replace(/[\uD800-\uDFFF]/g, "�");
+  const asciiFallback = wellFormed.replace(/[^\x20-\x7e]/g, "_") || "file";
+  const encoded = encodeURIComponent(wellFormed).replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+}
+
 export const uploadFile = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ValidationError('No file was uploaded (expected field name "file")');
@@ -115,7 +129,7 @@ export const content = asyncHandler(async (req, res) => {
     res.setHeader("Content-Length", String(file.size));
   }
   const disposition = ["1", "true"].includes(String(req.query.download).toLowerCase()) ? "attachment" : "inline";
-  res.setHeader("Content-Disposition", `${disposition}; filename="${String(file.original_name).replace(/[\"\r\n]/g, "_")}"`);
+  res.setHeader("Content-Disposition", `${disposition}; ${contentDispositionFilename(file.original_name)}`);
   res.setHeader("X-Content-Type-Options", "nosniff");
   try {
     await pipeline(object.Body, res);
