@@ -6,11 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, BadgeCheck, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Bookmark, BookmarkCheck, Sparkles, Users } from "lucide-react";
 import { getProject, updateProject, closeProject } from "../../services/api/projects.api.js";
 import { listSkills } from "../../services/api/skills.api.js";
 import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
 import { getProposalDraft, saveProposalDraft } from "../../services/api/proposal-drafts.api.js";
+import { listSavedProjects, saveProject, removeSavedProject } from "../../services/api/saved-projects.api.js";
 import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -392,6 +393,11 @@ export default function ProjectDetailPage() {
   const { user, token, refreshMe } = useAuth();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({ queryKey: ["project", id], queryFn: () => getProject(id) });
+  const savedProjectsQuery = useQuery({
+    queryKey: ["saved-projects"],
+    queryFn: () => listSavedProjects(token),
+    enabled: !!token && [ROLES.STUDENT, ROLES.CLIENT].includes(user?.role),
+  });
   const closeMutation = useMutation({
     mutationFn: () => closeProject(id, token),
     onSuccess: () => {
@@ -400,6 +406,14 @@ export default function ProjectDetailPage() {
       toast.success("Project closed");
     },
     onError: (closeError) => toast.error(closeError.message || "Could not close project"),
+  });
+  const savedProjectMutation = useMutation({
+    mutationFn: (saved) => saved ? removeSavedProject(id, token) : saveProject(id, token),
+    onSuccess: (_, saved) => {
+      queryClient.invalidateQueries({ queryKey: ["saved-projects"] });
+      toast.success(saved ? "Project removed from saved projects" : "Project saved");
+    },
+    onError: (saveError) => toast.error(saveError.message || "Could not update saved project"),
   });
 
   // The "submit proposal" gate below reads user.universityVerified from the cached auth
@@ -445,6 +459,8 @@ export default function ProjectDetailPage() {
   const project = data.data;
   const isClientOwner = user?.role === ROLES.CLIENT && String(project.client_id?._id || project.client_id) === String(user._id);
   const isStudent = user?.role === ROLES.STUDENT;
+  const canSave = Boolean(user && [ROLES.STUDENT, ROLES.CLIENT].includes(user.role) && !isClientOwner);
+  const isSaved = Boolean(savedProjectsQuery.data?.data?.some((entry) => String(entry.project_id?._id || entry.project_id) === String(project._id)));
   const clientName = project.client_id?.client_profile?.organization_name || project.client_id?.name || "Client";
 
   return (
@@ -465,7 +481,7 @@ export default function ProjectDetailPage() {
             {typeof project.proposals_count === "number" && <span>{t("projects.proposals", { count: project.proposals_count, defaultValue: `${project.proposals_count} proposals` })}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-2"><StatusBadge kind="project" status={project.status} showDot />{isClientOwner && project.status === "open" && <><EditProjectDialog project={project} projectId={id} token={token} /><Button size="sm" variant="outline" loading={closeMutation.isPending} onClick={() => { if (window.confirm("Close this project? It will stop accepting proposals.")) closeMutation.mutate(); }}>Close project</Button></>}</div>
+        <div className="flex items-center gap-2"><StatusBadge kind="project" status={project.status} showDot />{canSave && <Button size="sm" variant="outline" loading={savedProjectMutation.isPending} onClick={() => savedProjectMutation.mutate(isSaved)} aria-label={isSaved ? "Remove saved project" : "Save project"}>{isSaved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}{isSaved ? "Saved" : "Save"}</Button>}{isClientOwner && project.status === "open" && <><EditProjectDialog project={project} projectId={id} token={token} /><Button size="sm" variant="outline" loading={closeMutation.isPending} onClick={() => { if (window.confirm("Close this project? It will stop accepting proposals.")) closeMutation.mutate(); }}>Close project</Button></>}</div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
