@@ -6,6 +6,7 @@ import Wallet from "../wallets/wallets.model.js";
 import Message from "../messaging/messaging.model.js";
 import { listForMilestone as listSubmissionsForMilestone } from "../submissions/submissions.service.js";
 import { refundClient, releaseToStudent } from "../payments/payments.service.js";
+import { getChapaPayoutDestination } from "../wallets/wallets.service.js";
 import { paymentConfig } from "../../config/payment.config.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
@@ -148,7 +149,9 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
       milestoneId: milestone._id,
       amount: payout,
       amountMinor: Math.round(totalMoney.amountMinor * (10000 - paymentConfig.commissionRateBps) / 10000),
+      currency: totalMoney.currency,
       stripeAccountId: studentWallet?.stripe_account_id,
+      chapaPayoutDestination: getChapaPayoutDestination(studentWallet),
       auditContext,
     });
     milestone.status = "released";
