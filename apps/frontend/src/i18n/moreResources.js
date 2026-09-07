@@ -1045,12 +1045,11 @@ export const invoicesPageResources = {
     invoices: {
       eyebrow: "Money",
       title: "Invoices",
-      subtitle: "Downloadable statements with exact commission breakdowns.",
+      subtitle: "Downloadable invoice statements for your contract work.",
       invoice: "Invoice",
       client: "Client",
-      gross: "Gross",
-      commission: "Commission",
-      net: "Net",
+      amount: "Amount",
+      status: "Status",
       date: "Date",
       noInvoices: "No invoices yet. They're generated per released milestone."
     }
@@ -1062,9 +1061,8 @@ export const invoicesPageResources = {
       subtitle: "ከትክክለኛ የኮሚሽን ዝርዝር ጋር የሚወርዱ መግለጫዎች።",
       invoice: "ኢንቮይስ",
       client: "ደንበኛ",
-      gross: "ጠቅላላ",
-      commission: "ኮሚሽን",
-      net: "የተጣራ",
+      amount: "መጠን",
+      status: "ሁኔታ",
       date: "ቀን",
       noInvoices: "እስካሁን ምንም ኢንቮይስ የለም። በእያንዳንዱ በተለቀቀ ደረጃ ይፈጠራሉ።"
     }
@@ -1073,12 +1071,11 @@ export const invoicesPageResources = {
     invoices: {
       eyebrow: "Maallaqa",
       title: "Invooyisii",
-      description: "Sanadoota buufaman kanneen hir'ina komishinii sirrii qaban.",
+      description: "Sanadoota kaffaltii hojii waliigaltee irraa buufaman.",
       invoice: "Invooyisii",
       client: "Maamila",
-      gross: "Waliigala",
-      commission: "Komishinii",
-      net: "Hambaa",
+      amount: "Baay'ina",
+      status: "Haala",
       date: "Guyyaa",
       noInvoices: "Ammaaf invooyisiin hin jiru. Milestoona gadhiifame irratti uumamu."
     }

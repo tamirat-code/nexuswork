@@ -34,7 +34,9 @@ export async function getPublicStudentProfile(userId) {
     .lean();
   if (!user) throw new NotFoundError("Student not found");
 
-  const profile = await StudentProfile.findOne({ user_id: userId }).lean();
+  const profile = await StudentProfile.findOne({ user_id: userId })
+    .populate("university_id", "name")
+    .lean();
   const [totalContracts, completedContracts] = await Promise.all([
     Contract.countDocuments({ student_id: userId }),
     Contract.countDocuments({ student_id: userId, status: "completed" }),
@@ -54,7 +56,7 @@ export async function getPublicStudentProfile(userId) {
     headline: user.headline || "",
     bio: profile?.bio || user.bio || "",
     location: user.location || "",
-    university: user.university || "",
+    university: user.university || profile?.university_id?.name || "",
     website: user.website || "",
     avatar: user.avatarUrl,
     universityVerified: !!user.universityVerified,

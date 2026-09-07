@@ -62,7 +62,12 @@ export async function createInvoice({ contractId, requestingUserId, amount, curr
 export async function listInvoicesForUser(userId, { status } = {}) {
   const query = { $or: [{ client_id: userId }, { student_id: userId }] };
   if (status && status !== "all") query.status = status;
-  return Invoice.find(query).sort({ createdAt: -1 }).lean();
+  return Invoice.find(query)
+    .populate("client_id", "name email")
+    .populate("student_id", "name email")
+    .populate("contract_id", "terms.title")
+    .sort({ createdAt: -1 })
+    .lean();
 }
 
 export async function getInvoiceById(id, userId) {

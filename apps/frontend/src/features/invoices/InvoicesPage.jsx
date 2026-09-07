@@ -46,25 +46,23 @@ export default function InvoicesPage() {
               <TableRow>
                 <TableHead>{t("invoices.invoice")}</TableHead>
                 <TableHead>{t("invoices.client")}</TableHead>
-                <TableHead className="text-right">{t("invoices.gross")}</TableHead>
-                <TableHead className="text-right">{t("invoices.commission")}</TableHead>
-                <TableHead className="text-right">{t("invoices.net")}</TableHead>
+                <TableHead className="text-right">{t("invoices.amount")}</TableHead>
+                <TableHead>{t("invoices.status")}</TableHead>
                 <TableHead className="text-right">{t("invoices.date")}</TableHead>
                 <TableHead className="w-16" aria-label="Download" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && [...Array(4)].map((_, i) => <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)}
+              {isLoading && [...Array(4)].map((_, i) => <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)}
               {!isLoading && invoices.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="py-14 text-center text-slate-300">{t("invoices.noInvoices")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="py-14 text-center text-slate-300">{t("invoices.noInvoices")}</TableCell></TableRow>
               )}
               {invoices.map((inv) => (
                 <TableRow key={inv._id}>
-                  <TableCell className="font-mono text-sm text-brass">#{inv.number || inv._id.slice(-6)}</TableCell>
-                  <TableCell className="text-sm text-slate-300">{inv.client_name || inv.contract_id?.client_id?.name || "—"}</TableCell>
-                  <TableCell className="text-right font-mono text-slate-300">{formatCurrency(inv.gross_amount ?? 0)}</TableCell>
-                  <TableCell className="text-right font-mono text-slate-300">{formatCurrency(inv.commission ?? 0)}</TableCell>
-                  <TableCell className="text-right font-mono text-brass">{formatCurrency(inv.net_amount ?? 0)}</TableCell>
+                  <TableCell className="font-mono text-sm text-brass">#{inv.invoice_number || inv._id.slice(-6)}</TableCell>
+                  <TableCell className="text-sm text-slate-300">{inv.client_id?.name || "—"}</TableCell>
+                  <TableCell className="text-right font-mono text-brass">{formatCurrency(inv.amount ?? 0, inv.currency || "USD")}</TableCell>
+                  <TableCell><Badge variant={inv.status === "paid" ? "success" : inv.status === "overdue" ? "danger" : inv.status === "cancelled" ? "neutral" : "warning"}>{inv.status || "draft"}</Badge></TableCell>
                   <TableCell className="text-right font-mono text-xs text-slate-300">{formatDate(inv.createdAt)}</TableCell>
                   <TableCell>
                     <Button
