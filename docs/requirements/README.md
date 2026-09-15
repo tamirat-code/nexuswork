@@ -8,7 +8,7 @@ document (kept alongside this repo, not duplicated here) — this table is the
 living status tracker.
 
 **Status legend**: ✅ Implemented · 🟡 Partial · ⚠️ Divergent from proposal ·
-❌ Not implemented.
+🧭 Designed · ❌ Future/not implemented.
 
 ## Stakeholders
 
@@ -61,6 +61,143 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 | FR-26 | University staff view skill-demand analytics (client demand vs. verified student supply) | ✅ | `analytics.controller.js` `getMyUniversity`/`getUniversity` |
 | FR-27 | Portfolio entries auto-generated from approved milestones, subject to per-entry client consent | ✅ | `PortfolioItem.consent_status`/`consented_by`/`consented_at`, `PATCH /v1/portfolios/:id/consent` |
 | FR-28 | Reputation record structured for future portable-credential export | 🟡 | `Review` + verification credentials exist and are individually exportable (FR-19); there is no single combined "reputation credential" export endpoint bundling ratings + delivery metrics + verified credentials into one document yet |
+
+## Enterprise API / Talent Hub (FR-29–FR-35)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-29 | Enterprise partner registration and individually revocable API credentials | ❌ | No `ApiPartner`/`ApiKey` module or `/partner/v1` authentication boundary exists yet |
+| FR-30 | Sandbox/Growth/Enterprise tiers with rate limits and monthly quotas | ❌ | Existing global browser rate limiter is not partner-tier metering |
+| FR-31 | Separate student consent for Talent API discovery and field-level exposure | ❌ | Marketplace verification/portfolio consent does not implement Talent API consent |
+| FR-32 | Partner webhook subscriptions with idempotency, retries, and failure logging | ❌ | No partner webhook subscription or delivery module exists |
+| FR-33 | Audit every partner read/export of student data | ❌ | Existing audit logging is not connected to partner API reads |
+| FR-34 | Partner self-service portal for keys, usage, and billing | ❌ | No partner portal route or UI exists |
+| FR-35 | Usage-based partner billing independent of marketplace commission | ❌ | No partner usage ledger or billing model exists |
+
+## Project Oversight & Checkpoints (FR-36–FR-41)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-36 | Milestone task board with shared status history | ❌ | No `Task` model or task routes exist; milestone state is not a task board |
+| FR-37 | Student milestone check-ins | ❌ | No `CheckIn` model or check-in routes exist |
+| FR-38 | Configurable at-risk milestone detection | ❌ | No scheduled at-risk evaluator exists |
+| FR-39 | At-risk notifications on transition and recovery | ❌ | Existing notifications are not connected to at-risk state transitions |
+| FR-40 | Consolidated client oversight dashboard | ❌ | No cross-contract oversight dashboard exists |
+| FR-41 | On-time delivery analytics | ❌ | Existing analytics does not expose the required student/category metric |
+
+## Organization & Team Accounts (FR-42–FR-46)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-42 | Organization accounts with Admin, Recruiter, and Billing Viewer roles | ✅ | `organizations.*`, `org-membership.model.js`, and role checks implement organization membership |
+| FR-43 | Admin invitation, removal, and role assignment | ✅ | Organization member routes and service methods implement invite, update, and remove |
+| FR-44 | Recruiter-created projects/contracts owned by the organization | 🟡 | Organization membership exists, but project/contract ownership still uses individual user IDs |
+| FR-45 | Billing Viewer payment/invoice access without project/proposal actions | 🟡 | Organization roles exist, but project, proposal, payment, and invoice authorization is not fully organization-scoped |
+| FR-46 | Organization-scoped audit attribution and member filtering | 🟡 | Audit events retain the acting user; organization attribution/filtering is not complete across all org actions |
+
+## Enterprise Compliance & Audit (FR-47–FR-50)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-47 | Organization SSO through SAML or OAuth/OIDC | ❌ | Current authentication supports email/password and Google sign-in, not organization SSO enforcement |
+| FR-48 | Audit all client/org/API-partner reads or exports of student personal data | 🟡 | Audit infrastructure exists, but comprehensive sensitive-read coverage is not complete |
+| FR-49 | Organization-admin audit reporting scoped by date and member | ❌ | No organization self-service audit reporting route exists |
+| FR-50 | Documented data retention and deletion policy | ❌ | No implemented retention/deletion workflow or policy artifact exists |
+
+## Bulk / Cohort Hiring (FR-51–FR-54)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-51 | Cohort program creation with seats, skills, and shared terms | ❌ | No `Cohort` model or routes exist |
+| FR-52 | Multi-candidate cohort applications capped by seat count | ❌ | No cohort application workflow exists |
+| FR-53 | Individual contract generation for accepted cohort candidates | ❌ | Existing contracts are proposal-based, not cohort-generated |
+| FR-54 | Cohort progress dashboard | ❌ | No cohort rollup dashboard exists |
+
+## Enterprise Billing & Invoicing (FR-55–FR-58)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-55 | Organization billing-mode selection | 🟡 | Organization billing mode is stored and editable, but it is not yet applied to all organization contracts |
+| FR-56 | Escrow protection under consolidated billing | ❌ | Consolidated billing does not yet orchestrate milestone escrow and invoice timing |
+| FR-57 | Consolidated invoices with contract/milestone line items | 🟡 | Existing invoices support line items, but not organization-level consolidated invoice generation |
+| FR-58 | NET-30 credit terms with documented approval | 🧭 | Explicitly designed in the SRS and intentionally not enabled without financial/legal approval |
+
+## Multi-Tenancy / White-Label (FR-59–FR-62)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-59 | Institution as tenant root for all student/staff university records | 🟡 | Institution and university references exist, but institution ownership is not mandatory on every required record |
+| FR-60 | Institution-scoped university analytics | ✅ | University analytics resolves and authorizes the requesting staff member's institution |
+| FR-61 | Configuration-driven institution onboarding | ✅ | Admin approval provisions `Institution` data without a deployment |
+| FR-62 | Institution-scoped Talent API queries | ❌ | Talent API does not exist yet |
+
+## AI Governance & Explainability (FR-63–FR-66)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-63 | Recommendation factor breakdown | 🟡 | Recommendations expose matched skills and scores, but not a complete human-readable factor breakdown for every result |
+| FR-64 | Recommendation method transparency | ✅ | Responses include `ranking_source`, and deterministic fallback is used when AI is unavailable |
+| FR-65 | Aggregate recommendation outcome logging | ❌ | No separate aggregate outcome/fairness logging workflow exists |
+| FR-66 | Versioned evaluation and bias-review checklist | ❌ | No completed, dated bias-review artifact is tracked |
+
+## Objective Progress Evidence (FR-67–FR-72)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-67 | Incremental task work artifacts | ❌ | No task/artifact workflow exists |
+| FR-68 | Repository commit ingestion | ❌ | No repository integration or commit-event module exists |
+| FR-69 | Scoped repository authorization | ❌ | No repository OAuth linking workflow exists |
+| FR-70 | Client checkpoint reviews | ❌ | No `CheckpointReview` model or route exists |
+| FR-71 | Descriptive-only evidence timeline | ❌ | No task evidence timeline exists |
+| FR-72 | Check-in fallback when no repository evidence exists | ❌ | Check-in/at-risk engine does not exist |
+
+## Job Listing Types & Direct-Hire Applications (FR-73–FR-79)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-73 | Engagement type on every listing | ❌ | `Project` does not yet persist the SRS engagement-type enum |
+| FR-74 | Independent work-arrangement field and filtering | ❌ | `Project` does not yet persist the SRS work-arrangement enum |
+| FR-75 | Freelance/contract listings retain escrow workflow | 🟡 | Existing project/proposal/contract flow works, but it is not yet selected by an engagement-type field |
+| FR-76 | Direct-hire applications for internship/part-time/full-time | ❌ | No `Application` model or direct-hire workflow exists |
+| FR-77 | Independent engagement/work-arrangement filters | ❌ | Search filters do not expose these two independent facets |
+| FR-78 | Explicit workflow labels on listings | ❌ | Listing UI does not yet distinguish escrow-protected work from direct-hire applications |
+| FR-79 | Direct-hire posting fee/subscription | ❌ | No direct-hire billing product exists |
+
+## Company Profiles (FR-80–FR-82)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-80 | Public company profile with active listings | ❌ | No public organization profile route/model exists |
+| FR-81 | Follow-company notifications | ❌ | No company-follow model or notification workflow exists |
+| FR-82 | Configurable public company reputation signals | ❌ | No public organization reputation settings or projection exists |
+
+## Events (FR-83–FR-85)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-83 | Organization/staff event creation | ❌ | No `Event` model or event creation route exists |
+| FR-84 | Student event registration and reminders | ❌ | No `EventRegistration` or reminder workflow exists |
+| FR-85 | Past-event archive and resources | ❌ | No event archive exists |
+
+## Articles & Public Site (FR-86–FR-89)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-86 | Controlled-category article publishing | 🟡 | Learning resources exist, but the SRS Article publishing workflow is not implemented |
+| FR-87 | Public article browsing and category search | ❌ | No public Article route exists |
+| FR-88 | Public top-level Jobs, Companies, Events, Articles, Contact, About navigation | 🟡 | Public navigation exists, but the complete SRS section set is not wired |
+| FR-89 | Authenticated and visitor Contact Us routing | 🟡 | Support/dispute infrastructure exists, but the required visitor contact-message path is missing |
+
+## Institution Onboarding (FR-90–FR-95)
+
+| ID | Requirement (summary) | Status | Evidence |
+| --- | --- | --- | --- |
+| FR-90 | Staff submits institution onboarding request without live tenant creation | ✅ | `InstitutionOnboardingRequest` is created before approval; tenant provisioning occurs only in the admin decision path |
+| FR-91 | Claimed-domain ownership verification before review | 🟡 | Domain syntax and duplicate checks exist, but contact-email ownership verification is not implemented |
+| FR-92 | Admin-only pending review queue with no pre-approval provisioning | ✅ | Admin queue and pending-state checks exist; approval is required before institution provisioning |
+| FR-93 | Approval provisions institution and first staff admin | ✅ | `decideOnboardingRequest` creates the institution and assigns the requester as staff admin |
+| FR-94 | Duplicate-domain prevention with access-request guidance | ✅ | Existing active/pending domain checks prevent duplicate onboarding |
+| FR-95 | Rejection reason and no partial tenant/account creation | 🟡 | Rejection persists a reason and creates no tenant; requester notification is not yet implemented |
 
 ## Non-functional requirements
 
