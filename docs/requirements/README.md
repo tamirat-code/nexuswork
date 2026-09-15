@@ -71,8 +71,8 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 | FR-31 | Separate student consent for Talent API discovery and field-level exposure | 🟡 | Student Talent API consent is disabled by default and managed through `/v1/students/me/talent-api-consent`; `/partner/v1/talent/search` returns only verified, opted-in students and only consented fields |
 | FR-32 | Partner webhook subscriptions with idempotency, retries, and failure logging | ✅ | `api-webhooks.service.js` stores encrypted secrets, queues idempotent deliveries, signs payloads, retries with leases/backoff, marks exhausted deliveries, and exposes delivery history |
 | FR-33 | Audit every partner read/export of student data | 🟡 | Every Talent API search appends an immutable `partner_api_read` event with partner, endpoint, filters, fields returned, and result counts; admins can filter audit logs by `partner_id` |
-| FR-34 | Partner self-service portal for keys, usage, and billing | ✅ | `/partner-portal` provides key rotation/revocation, usage, billing statements, webhook management, and delivery history; raw secrets are shown only once and held in browser memory |
-| FR-35 | Usage-based partner billing independent of marketplace commission | 🟡 | `ApiBillingLedger` records partner API requests and calculates tier-priced usage independently; invoice status/history are exposed, while payment collection and settlement automation remain future |
+| FR-34 | Partner self-service portal for keys, usage, and billing | ✅ | `/partner-portal` provides key rotation/revocation, usage, billing statements, webhook management, and delivery history; `/admin?tab=api-partners` provides the administrative partner, key, status, and billing controls; raw secrets are shown only once and held in browser memory |
+| FR-35 | Usage-based partner billing independent of marketplace commission | 🟡 | `ApiBillingLedger` records partner API requests and calculates tier-priced usage independently; invoice status/history are exposed to partners and admins, while payment collection and settlement automation remain future |
 
 ## Project Oversight & Checkpoints (FR-36–FR-41)
 

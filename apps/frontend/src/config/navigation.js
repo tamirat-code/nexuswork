@@ -133,6 +133,7 @@ export const workspaceNav = [
       { to: "/admin", hash: "#admin-disputes", label: "Disputes", translationKey: "adminDisputes", icon: "scale", roles: [ROLES.ADMIN] },
       { to: "/admin", hash: "#admin-staff", label: "Staff verification", translationKey: "adminStaffVerification", icon: "shield", roles: [ROLES.ADMIN] },
       { to: "/admin", hash: "#admin-universities", label: "Universities", translationKey: "adminUniversities", icon: "building", roles: [ROLES.ADMIN] },
+      { to: "/admin?tab=api-partners", label: "Enterprise API partners", translationKey: "adminApiPartners", icon: "plug", roles: [ROLES.ADMIN] },
       { to: "/admin/institutions", label: "Institution onboarding", icon: "building", roles: [ROLES.ADMIN] },
     ],
   },

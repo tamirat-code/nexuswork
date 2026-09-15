@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText, Eye, MessageSquare, Paperclip } from "lucide-react";
+import { ShieldCheck, Users, Flag, Briefcase, GraduationCap, Plus, Pencil, Trash2, Scale, TrendingUp, Wallet, UserCheck, FileText, XCircle, BadgeCheck, LayoutDashboard, Tag, ScrollText, Eye, MessageSquare, Paperclip, PlugZap } from "lucide-react";
 
 import { listAdminStats, listAdminUsers, getAdminUserProfile, listAdminDisputes, resolveAdminDispute, listAdminReports, reviewAdminReport, suspendAdminUser, restoreAdminUser, changeAdminUserRole, deleteAdminUser } from "../../services/api/admin.api.js";
 import { listUniversities, createUniversity, updateUniversity, deleteUniversity } from "../../services/api/universities.api.js";
@@ -42,6 +42,7 @@ import {
 import { reportValidation } from "../../lib/validation.js";
 import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
 import OperationalStatusCard from "./OperationalStatusCard.jsx";
+import ApiPartnersAdminPanel from "./ApiPartnersAdminPanel.jsx";
 
 function CreateUniversityDialog({ token }) {
   const qc = useQueryClient();
@@ -700,11 +701,12 @@ export default function AdminPage() {
         <p className="mt-2 text-sm text-slate-300">{t("admin.subtitle")}</p>
       </header>
 
-      <Tabs defaultValue="overview" className="mt-6">
+      <Tabs defaultValue={searchParams.get("tab") === "api-partners" ? "api-partners" : "overview"} className="mt-6">
         <TabsList>
           <TabsTrigger value="overview"><LayoutDashboard className="h-4 w-4" /> {t("admin.tabDashboard")}</TabsTrigger>
           <TabsTrigger value="categories"><Tag className="h-4 w-4" /> {t("admin.tabCategories")}</TabsTrigger>
           <TabsTrigger value="audit-log"><ScrollText className="h-4 w-4" /> {t("admin.tabAuditLogs")}</TabsTrigger>
+          <TabsTrigger value="api-partners"><PlugZap className="h-4 w-4" /> {t("admin.tabApiPartners")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories">
@@ -713,6 +715,10 @@ export default function AdminPage() {
 
         <TabsContent value="audit-log">
           <AuditLogViewer />
+        </TabsContent>
+
+        <TabsContent value="api-partners">
+          <ApiPartnersAdminPanel token={token} />
         </TabsContent>
 
         <TabsContent value="overview">
