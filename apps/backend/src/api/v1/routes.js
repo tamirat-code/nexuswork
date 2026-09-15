@@ -34,6 +34,7 @@ import { MeetingsRoutes } from "../../modules/meetings/index.js";
 import { SavedProjectsRoutes } from "../../modules/saved-projects/index.js";
 import { ProposalDraftRoutes } from "../../modules/proposal-drafts/index.js";
 import { SafetyRoutes } from "../../modules/safety/index.js";
+import { OrganizationsRoutes } from "../../modules/organizations/index.js";
 
 const router = Router();
 
@@ -71,5 +72,6 @@ router.use("/meetings", MeetingsRoutes);
 router.use("/saved-projects", SavedProjectsRoutes);
 router.use("/proposal-drafts", ProposalDraftRoutes);
 router.use("/safety", SafetyRoutes);
+router.use("/organizations", OrganizationsRoutes);
 
 export default router;

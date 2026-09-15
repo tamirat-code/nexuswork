@@ -119,6 +119,8 @@ export const workspaceNav = [
       { to: "/learning", label: "Learning", icon: "book", roles: [ROLES.STUDENT] },
       { to: "/students", label: "Talent", icon: "users", roles: [ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/clients", label: "Clients", icon: "building", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
+      { to: "/organizations", label: "Organizations", icon: "building", roles: [ROLES.CLIENT, ROLES.ADMIN] },
+      { to: "/institution-onboarding", label: "Request institution", icon: "building", roles: [ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/analytics", label: "Analytics", icon: "chart", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
     ],
   },
@@ -131,6 +133,7 @@ export const workspaceNav = [
       { to: "/admin", hash: "#admin-disputes", label: "Disputes", translationKey: "adminDisputes", icon: "scale", roles: [ROLES.ADMIN] },
       { to: "/admin", hash: "#admin-staff", label: "Staff verification", translationKey: "adminStaffVerification", icon: "shield", roles: [ROLES.ADMIN] },
       { to: "/admin", hash: "#admin-universities", label: "Universities", translationKey: "adminUniversities", icon: "building", roles: [ROLES.ADMIN] },
+      { to: "/admin/institutions", label: "Institution onboarding", icon: "building", roles: [ROLES.ADMIN] },
     ],
   },
 ];
@@ -170,6 +173,9 @@ export const WORKSPACE_PATHS = [
   "/profile",
   "/recommendations",
   "/meetings",
+  "/organizations",
+  "/admin/institutions",
+  "/institution-onboarding",
 ];
 
 // Paths above that must match exactly, never as a prefix — because a sibling dynamic

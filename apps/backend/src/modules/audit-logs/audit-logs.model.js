@@ -20,6 +20,8 @@ const AUDIT_ACTION_TYPES = [
   "RELEASE_REQUESTED", "RELEASE_SUCCEEDED", "RELEASE_FAILED",
   "MEETING_CREATED", "MEETING_UPDATED", "MEETING_CANCELLED", "MEETING_STARTED", "MEETING_ENDED", "MEETING_JOINED", "MEETING_LEFT", "PROPOSAL_CV_VIEWED", "PROPOSAL_WITHDRAWN",
   "WITHDRAWAL_REQUESTED", "WITHDRAWAL_SUCCEEDED", "WITHDRAWAL_FAILED",
+  "organization_created", "organization_member_invited", "organization_member_role_changed", "organization_member_removed",
+  "institution_onboarding_requested", "institution_onboarding_approved", "institution_onboarding_rejected",
 ];
 
 
@@ -49,7 +51,7 @@ const auditLogsSchema = new mongoose.Schema(
     },
       entity_type: {
       type: String,
-      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting"],
+      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting", "organization", "institution", "org_membership", "institution_onboarding_request"],
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },
