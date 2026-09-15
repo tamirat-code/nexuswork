@@ -10,6 +10,12 @@ export const createOrganizationSchema = z.object({
   billing_mode: z.enum(["escrow", "consolidated_invoice"]).optional().default("escrow"),
 });
 
+export const updateOrganizationSchema = z.object({
+  name: z.string().trim().min(2).max(200).optional(),
+  institution_id: objectId.optional().nullable(),
+  billing_mode: z.enum(["escrow", "consolidated_invoice"]).optional(),
+}).refine((payload) => Object.keys(payload).length > 0, "Provide at least one organization setting to update");
+
 export const inviteMemberSchema = z.object({
   email,
   role: z.enum(["admin", "recruiter", "billing_viewer"]),

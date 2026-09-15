@@ -1,11 +1,12 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import {
-  createOrganization, listMyOrganizations, getOrganization, listMembers, inviteMember, updateMember, removeMember,
+  createOrganization, updateOrganizationSettings, listMyOrganizations, getOrganization, listMembers, inviteMember, updateMember, removeMember,
   submitOnboardingRequest, listOnboardingRequests, decideOnboardingRequest,
   listActiveInstitutions, listMyInstitutionRequests, listMyInstitutions,
 } from "./organizations.service.js";
 
 export const create = asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await createOrganization({ actor: req.user, ...req.body, req }) }));
+export const updateOrganization = asyncHandler(async (req, res) => res.json({ success: true, data: await updateOrganizationSettings(req.params.organizationId, req.user, req.body, req) }));
 export const mine = asyncHandler(async (req, res) => res.json({ success: true, data: await listMyOrganizations(req.user._id) }));
 export const getOne = asyncHandler(async (req, res) => res.json({ success: true, data: await getOrganization(req.params.organizationId, req.user._id) }));
 export const members = asyncHandler(async (req, res) => res.json({ success: true, data: await listMembers(req.params.organizationId, req.user._id) }));

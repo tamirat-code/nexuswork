@@ -52,6 +52,41 @@ export async function createOrganization({ actor, name, institution_id, billing_
   return Organization.findById(organization._id).populate("institution_id", "name domain").lean();
 }
 
+export async function updateOrganizationSettings(organizationId, actor, { name, institution_id, billing_mode }, req) {
+  await requireOrganizationRole(organizationId, actor._id, ["admin"]);
+  const organization = await Organization.findOne({ _id: organizationId, status: "active" });
+  if (!organization) throw new NotFoundError("Organization not found");
+
+  const changes = {};
+  if (name !== undefined && name !== organization.name) {
+    changes.name = { from: organization.name, to: name };
+    organization.name = name;
+  }
+  if (billing_mode !== undefined && billing_mode !== organization.billing_mode) {
+    changes.billing_mode = { from: organization.billing_mode, to: billing_mode };
+    organization.billing_mode = billing_mode;
+  }
+  if (institution_id !== undefined) {
+    if (institution_id) {
+      const institution = await Institution.findOne({ _id: institution_id, status: "active" });
+      if (!institution) throw new NotFoundError("Institution not found");
+    }
+    const currentInstitutionId = organization.institution_id ? String(organization.institution_id) : null;
+    const nextInstitutionId = institution_id || null;
+    if (currentInstitutionId !== nextInstitutionId) {
+      changes.institution_id = { from: currentInstitutionId, to: nextInstitutionId };
+      organization.institution_id = nextInstitutionId;
+    }
+  }
+
+  if (Object.keys(changes).length > 0) {
+    await organization.save();
+    await audit(actor, "organization_settings_updated", "organization_settings_updated", "organization", organization._id, { changes }, req);
+  }
+
+  return Organization.findById(organization._id).populate("institution_id", "name domain").lean();
+}
+
 export async function listMyOrganizations(userId) {
   const memberships = await OrgMembership.find({ user_id: userId, status: "active" })
     .populate({ path: "organization_id", populate: { path: "institution_id", select: "name domain" } })

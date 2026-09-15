@@ -53,6 +53,47 @@ describe("Organizations and institutions", () => {
     expect(members.body.data).toHaveLength(2);
   });
 
+  it("allows organization admins to update workspace settings and institution linkage", async () => {
+    const owner = await createUser("client");
+    const institution = await Institution.create({ name: "Gondar University", domain: "uog.edu.et", status: "active" });
+    const createRes = await request(app)
+      .post("/v1/organizations")
+      .set("Authorization", `Bearer ${owner.token}`)
+      .send({ name: "Rose Technologies" });
+
+    const res = await request(app)
+      .patch(`/v1/organizations/${createRes.body.data._id}`)
+      .set("Authorization", `Bearer ${owner.token}`)
+      .send({
+        name: "Rose Technologies Ethiopia",
+        billing_mode: "consolidated_invoice",
+        institution_id: institution._id.toString(),
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe("Rose Technologies Ethiopia");
+    expect(res.body.data.billing_mode).toBe("consolidated_invoice");
+    expect(String(res.body.data.institution_id._id)).toBe(String(institution._id));
+  });
+
+  it("prevents non-admin organization members from updating workspace settings", async () => {
+    const owner = await createUser("client");
+    const recruiter = await createUser("client");
+    const createRes = await request(app).post("/v1/organizations").set("Authorization", `Bearer ${owner.token}`).send({ name: "Acme" });
+    await request(app)
+      .post(`/v1/organizations/${createRes.body.data._id}/members`)
+      .set("Authorization", `Bearer ${owner.token}`)
+      .send({ email: recruiter.user.email, role: "recruiter" })
+      .expect(201);
+
+    const res = await request(app)
+      .patch(`/v1/organizations/${createRes.body.data._id}`)
+      .set("Authorization", `Bearer ${recruiter.token}`)
+      .send({ name: "Acme Updated" });
+
+    expect(res.status).toBe(403);
+  });
+
   it("prevents removing the last organization admin", async () => {
     const owner = await createUser("client");
     const createRes = await request(app).post("/v1/organizations").set("Authorization", `Bearer ${owner.token}`).send({ name: "Solo Org" });

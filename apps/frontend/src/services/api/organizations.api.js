@@ -4,6 +4,7 @@ export const listMyOrganizations = (token) => apiRequest("/organizations/mine", 
 export const listInstitutions = (token) => apiRequest("/organizations/institutions", { token });
 export const listMyInstitutions = (token) => apiRequest("/organizations/institutions/mine", { token });
 export const createOrganization = (payload, token) => apiRequest("/organizations", { method: "POST", body: payload, token });
+export const updateOrganization = (id, payload, token) => apiRequest(`/organizations/${id}`, { method: "PATCH", body: payload, token });
 export const getOrganization = (id, token) => apiRequest(`/organizations/${id}`, { token });
 export const listOrganizationMembers = (id, token) => apiRequest(`/organizations/${id}/members`, { token });
 export const inviteOrganizationMember = (id, payload, token) => apiRequest(`/organizations/${id}/members`, { method: "POST", body: payload, token });
