@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Plus, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth.js";
-import { createOrganization, inviteOrganizationMember, listMyOrganizations, listOrganizationMembers, removeOrganizationMember, updateOrganizationMember } from "../../services/api/organizations.api.js";
+import { createOrganization, inviteOrganizationMember, listInstitutions, listMyOrganizations, listOrganizationMembers, removeOrganizationMember, updateOrganizationMember } from "../../services/api/organizations.api.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
@@ -19,11 +19,13 @@ export default function OrganizationsPage() {
   const [selectedId, setSelectedId] = useState("");
   const [name, setName] = useState("");
   const [billingMode, setBillingMode] = useState("escrow");
+  const [institutionId, setInstitutionId] = useState("none");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("recruiter");
 
   const organizations = useQuery({ queryKey: ["organizations", "mine"], queryFn: () => listMyOrganizations(token) });
   const orgs = organizations.data?.data || [];
+  const institutions = useQuery({ queryKey: ["institutions", "active"], queryFn: () => listInstitutions(token), enabled: Boolean(token) });
   const selected = orgs.find((org) => String(org._id) === String(selectedId)) || orgs[0];
   const organizationId = selected?._id;
   const members = useQuery({ queryKey: ["organization-members", organizationId], queryFn: () => listOrganizationMembers(organizationId, token), enabled: Boolean(organizationId) });
@@ -31,7 +33,7 @@ export default function OrganizationsPage() {
   const isAdmin = currentMembership?.role === "admin";
 
   const create = useMutation({
-    mutationFn: () => createOrganization({ name: name.trim(), billing_mode: billingMode }, token),
+    mutationFn: () => createOrganization({ name: name.trim(), billing_mode: billingMode, institution_id: institutionId === "none" ? null : institutionId }, token),
     onSuccess: ({ data }) => { qc.invalidateQueries({ queryKey: ["organizations", "mine"] }); setName(""); setSelectedId(data._id); toast.success("Organization created"); },
     onError: (error) => toast.error(error.message),
   });
@@ -66,7 +68,7 @@ export default function OrganizationsPage() {
             {organizations.isLoading && <p className="text-sm text-slate-300">Loading organizations…</p>}
             {!organizations.isLoading && orgs.length === 0 && <p className="text-sm text-slate-300">You do not belong to an organization yet.</p>}
             {orgs.map((org) => <button type="button" key={org._id} onClick={() => setSelectedId(org._id)} className={`w-full rounded-control border p-3 text-left ${String(org._id) === String(organizationId) ? "border-brass bg-brass/10" : "border-ink-300 hover:border-brass/50"}`}><p className="font-semibold text-slate">{org.name}</p><p className="mt-1 text-xs text-slate-300">{roleLabels[org.membership?.role] || org.membership?.role}</p></button>)}
-            {(user?.role === "client" || user?.role === "admin") && <div className="border-t border-ink-300 pt-4"><Label htmlFor="organization-name">Create organization</Label><Input id="organization-name" className="mt-2" value={name} onChange={(event) => setName(event.target.value)} placeholder="Organization name" /><Select value={billingMode} onValueChange={setBillingMode}><SelectTrigger className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="escrow">Escrow billing</SelectItem><SelectItem value="consolidated_invoice">Consolidated invoice</SelectItem></SelectContent></Select><Button className="mt-3 w-full" size="sm" disabled={!name.trim() || create.isPending} loading={create.isPending} onClick={() => create.mutate()}><Plus className="h-4 w-4" /> Create</Button></div>}
+            {(user?.role === "client" || user?.role === "admin") && <div className="border-t border-ink-300 pt-4"><Label htmlFor="organization-name">Create organization</Label><Input id="organization-name" className="mt-2" value={name} onChange={(event) => setName(event.target.value)} placeholder="Organization name" /><Select value={institutionId} onValueChange={setInstitutionId}><SelectTrigger className="mt-2"><SelectValue placeholder="Institution tenant (optional)" /></SelectTrigger><SelectContent><SelectItem value="none">No institution tenant</SelectItem>{institutions.data?.data?.map((institution) => <SelectItem key={institution._id} value={institution._id}>{institution.name}</SelectItem>)}</SelectContent></Select><Select value={billingMode} onValueChange={setBillingMode}><SelectTrigger className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="escrow">Escrow billing</SelectItem><SelectItem value="consolidated_invoice">Consolidated invoice</SelectItem></SelectContent></Select><Button className="mt-3 w-full" size="sm" disabled={!name.trim() || create.isPending} loading={create.isPending} onClick={() => create.mutate()}><Plus className="h-4 w-4" /> Create</Button></div>}
           </CardContent>
         </Card>
 

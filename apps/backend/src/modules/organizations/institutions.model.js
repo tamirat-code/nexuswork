@@ -4,6 +4,7 @@ const institutionSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 200 },
     domain: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    university_id: { type: mongoose.Schema.Types.ObjectId, ref: "University", default: null },
     verificationContact: {
       name: { type: String, trim: true },
       email: { type: String, lowercase: true, trim: true },

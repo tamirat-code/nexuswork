@@ -7,6 +7,7 @@ import OrgMembership from "../../src/modules/organizations/org-membership.model.
 import Institution from "../../src/modules/organizations/institutions.model.js";
 import InstitutionOnboardingRequest from "../../src/modules/organizations/institution-onboarding-request.model.js";
 import File from "../../src/modules/files/files.model.js";
+import University from "../../src/modules/universities/universities.model.js";
 
 beforeAll(connectTestDB);
 beforeEach(clearDB);
@@ -91,7 +92,23 @@ describe("Organizations and institutions", () => {
     const institution = await Institution.findOne({ domain: "newcollege.edu" });
     expect(institution).not.toBeNull();
     expect(institution.staff_admin_ids.map(String)).toContain(String(requester.user._id));
+    expect(institution.university_id).not.toBeNull();
+    expect(await University.findOne({ domain: "newcollege.edu", contact_staff: requester.user._id })).not.toBeNull();
     expect(await InstitutionOnboardingRequest.countDocuments({ status: "approved" })).toBe(1);
+
+    const visible = await request(app)
+      .get("/v1/organizations/institutions/mine")
+      .set("Authorization", `Bearer ${requester.token}`);
+    expect(visible.status).toBe(200);
+    expect(visible.body.data[0].name).toBe("New College");
+
+    const client = await createUser("client");
+    const organization = await request(app)
+      .post("/v1/organizations")
+      .set("Authorization", `Bearer ${client.token}`)
+      .send({ name: "New College Partners", institution_id: institution._id.toString() });
+    expect(organization.status).toBe(201);
+    expect(String(organization.body.data.institution_id._id)).toBe(String(institution._id));
   });
 
   it("rejects duplicate institution domains", async () => {

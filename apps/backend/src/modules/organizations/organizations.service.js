@@ -4,6 +4,7 @@ import OrgMembership from "./org-membership.model.js";
 import InstitutionOnboardingRequest from "./institution-onboarding-request.model.js";
 import User from "../users/users.model.js";
 import File from "../files/files.model.js";
+import University from "../universities/universities.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
@@ -128,6 +129,24 @@ export async function submitOnboardingRequest(actor, payload, req) {
   return request;
 }
 
+export async function listActiveInstitutions() {
+  return Institution.find({ status: "active" }).select("name domain university_id").sort({ name: 1 }).lean();
+}
+
+export async function listMyInstitutionRequests(userId) {
+  return InstitutionOnboardingRequest.find({ requested_by: userId })
+    .populate("reviewedBy", "name email")
+    .populate("provisioned_institution_id", "name domain status university_id")
+    .populate("evidence_file_id", "original_name mimetype size")
+    .sort({ createdAt: -1 })
+    .lean();
+}
+
+export async function listMyInstitutions(userId, role) {
+  const query = role === "admin" ? { status: "active" } : { status: "active", staff_admin_ids: userId };
+  return Institution.find(query).populate("university_id", "name domain contact_staff").sort({ name: 1 }).lean();
+}
+
 export async function listOnboardingRequests(status = "pending") {
   const query = status === "all" ? {} : { status };
   return InstitutionOnboardingRequest.find(query).populate("requested_by", "name email role").populate("reviewedBy", "name email").populate("evidence_file_id", "original_name mimetype size url").sort({ createdAt: -1 }).lean();
@@ -148,9 +167,18 @@ export async function decideOnboardingRequest(actor, requestId, { decision, reje
   }
   const existing = await Institution.findOne({ domain: request.domain });
   if (existing) throw new ConflictError("An institution with this domain already exists");
+  const university = await University.findOneAndUpdate(
+    { domain: request.domain },
+    {
+      $setOnInsert: { name: request.institutionName, domain: request.domain },
+      $addToSet: { contact_staff: request.requested_by },
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
   const institution = await Institution.create({
     name: request.institutionName,
     domain: request.domain,
+    university_id: university._id,
     verificationContact: { name: request.contactName, email: request.contactEmail, title: request.contactTitle },
     staff_admin_ids: [request.requested_by],
   });
@@ -160,7 +188,7 @@ export async function decideOnboardingRequest(actor, requestId, { decision, reje
   request.provisioned_institution_id = institution._id;
   await request.save();
   await audit(actor, "institution_onboarding_approved", "institution_onboarding_approved", "institution", institution._id, { request_id: request._id, domain: request.domain }, req);
-  return request.populate("provisioned_institution_id", "name domain status");
+  return request.populate("provisioned_institution_id", "name domain status university_id");
 }
 
 export { ORG_ROLES };

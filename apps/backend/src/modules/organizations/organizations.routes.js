@@ -7,15 +7,18 @@ import {
   createOrganizationSchema, inviteMemberSchema, updateMemberSchema, onboardingRequestSchema, onboardingDecisionSchema, organizationMemberParamsSchema,
 } from "./organizations.validators.js";
 import {
-  create, mine, getOne, members, invite, update, remove, requestInstitution, onboardingRequests, decideOnboarding,
+  create, mine, getOne, members, invite, update, remove, requestInstitution, onboardingRequests, decideOnboarding, institutions, myInstitutionRequests, myInstitutions,
 } from "./organizations.controller.js";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/mine", mine);
+router.get("/institutions", institutions);
+router.get("/institutions/mine", myInstitutions);
 router.post("/", validateBody(createOrganizationSchema), create);
 router.post("/institution-onboarding", validateBody(onboardingRequestSchema), requestInstitution);
+router.get("/institution-onboarding/mine", myInstitutionRequests);
 router.get("/institution-onboarding", requireRole("admin"), onboardingRequests);
 router.patch("/institution-onboarding/:requestId", requireRole("admin"), validateParams(objectIdParamsSchema("requestId")), validateBody(onboardingDecisionSchema), decideOnboarding);
 
