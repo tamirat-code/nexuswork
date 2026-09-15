@@ -120,7 +120,7 @@ export const workspaceNav = [
       { to: "/students", label: "Talent", icon: "users", roles: [ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/clients", label: "Clients", icon: "building", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/organizations", label: "Organizations", icon: "building", roles: [ROLES.CLIENT, ROLES.ADMIN] },
-      { to: "/institution-onboarding", label: "Request institution", icon: "building", roles: [ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
+      { to: "/institution-onboarding", label: "Institution onboarding", icon: "building", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
       { to: "/analytics", label: "Analytics", icon: "chart", roles: [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN] },
     ],
   },

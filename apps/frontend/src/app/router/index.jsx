@@ -122,7 +122,7 @@ export default function AppRouter() {
       <Route path="/meetings/:meetingId" element={protect(<MeetingPage />)} />
       <Route path="/meetings" element={protect(<MeetingsListPage />)} />
       <Route path="/organizations" element={protect(<OrganizationsPage />, [ROLES.CLIENT, ROLES.ADMIN])} />
-      <Route path="/institution-onboarding" element={protect(<InstitutionOnboardingPage />, [ROLES.CLIENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
+      <Route path="/institution-onboarding" element={protect(<InstitutionOnboardingPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
       <Route path="/admin/institutions" element={protect(<InstitutionOnboardingAdminPage />, [ROLES.ADMIN])} />
 
       <Route path="*" element={<NotFoundPage />} />

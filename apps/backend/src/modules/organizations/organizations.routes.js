@@ -17,8 +17,8 @@ router.get("/mine", mine);
 router.get("/institutions", institutions);
 router.get("/institutions/mine", myInstitutions);
 router.post("/", validateBody(createOrganizationSchema), create);
-router.post("/institution-onboarding", validateBody(onboardingRequestSchema), requestInstitution);
-router.get("/institution-onboarding/mine", myInstitutionRequests);
+router.post("/institution-onboarding", requireRole("university_staff", "admin"), validateBody(onboardingRequestSchema), requestInstitution);
+router.get("/institution-onboarding/mine", requireRole("university_staff", "admin"), myInstitutionRequests);
 router.get("/institution-onboarding", requireRole("admin"), onboardingRequests);
 router.patch("/institution-onboarding/:requestId", requireRole("admin"), validateParams(objectIdParamsSchema("requestId")), validateBody(onboardingDecisionSchema), decideOnboarding);
 

@@ -111,6 +111,23 @@ describe("Organizations and institutions", () => {
     expect(String(organization.body.data.institution_id._id)).toBe(String(institution._id));
   });
 
+  it("prevents client accounts from submitting institution onboarding requests", async () => {
+    const client = await createUser("client");
+    const res = await request(app)
+      .post("/v1/organizations/institution-onboarding")
+      .set("Authorization", `Bearer ${client.token}`)
+      .send({
+        institutionName: "Client College",
+        domain: "clientcollege.edu",
+        contactName: "Client Owner",
+        contactEmail: client.user.email,
+        contactTitle: "Owner",
+        evidence_file_id: "507f1f77bcf86cd799439011",
+      });
+
+    expect(res.status).toBe(403);
+  });
+
   it("rejects duplicate institution domains", async () => {
     const requester = await createUser("university_staff");
     await Institution.create({ name: "Existing", domain: "existing.edu" });
