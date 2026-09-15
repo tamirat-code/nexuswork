@@ -104,4 +104,25 @@ describe("Organizations and institutions", () => {
       .send({ institutionName: "Existing", domain: "existing.edu", contactName: "Staff", contactEmail: requester.user.email, contactTitle: "Registrar", evidence_file_id: evidence._id.toString() });
     expect(res.status).toBe(409);
   });
+
+  it("allows admins to reject legacy requests without evidence", async () => {
+    const requester = await createUser("university_staff");
+    const admin = await createUser("admin");
+    const legacy = await InstitutionOnboardingRequest.create({
+      institutionName: "Legacy College",
+      domain: "legacy.edu",
+      contactName: "Registrar",
+      contactEmail: requester.user.email,
+      contactTitle: "Registrar",
+      requested_by: requester.user._id,
+    });
+
+    const res = await request(app)
+      .patch(`/v1/organizations/institution-onboarding/${legacy._id}`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ decision: "rejected", rejectionReason: "Please resubmit with official evidence." });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("rejected");
+  });
 });
