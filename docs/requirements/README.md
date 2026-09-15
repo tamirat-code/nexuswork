@@ -66,8 +66,8 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 
 | ID | Requirement (summary) | Status | Evidence |
 | --- | --- | --- | --- |
-| FR-29 | Enterprise partner registration and individually revocable API credentials | ❌ | No `ApiPartner`/`ApiKey` module or `/partner/v1` authentication boundary exists yet |
-| FR-30 | Sandbox/Growth/Enterprise tiers with rate limits and monthly quotas | ❌ | Existing global browser rate limiter is not partner-tier metering |
+| FR-29 | Enterprise partner registration and individually revocable API credentials | 🟡 | `api-partners` provisions separate `ApiPartner`/`ApiKey` records, hashes one-time keys, exposes `/partner/v1`, and supports individual revocation; partner self-service registration remains future |
+| FR-30 | Sandbox/Growth/Enterprise tiers with rate limits and monthly quotas | 🟡 | Tier metadata and default quota/rate-limit definitions exist; enforcement and usage metering remain future |
 | FR-31 | Separate student consent for Talent API discovery and field-level exposure | ❌ | Marketplace verification/portfolio consent does not implement Talent API consent |
 | FR-32 | Partner webhook subscriptions with idempotency, retries, and failure logging | ❌ | No partner webhook subscription or delivery module exists |
 | FR-33 | Audit every partner read/export of student data | ❌ | Existing audit logging is not connected to partner API reads |

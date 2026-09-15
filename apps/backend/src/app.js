@@ -13,6 +13,7 @@ import { v1Router } from "./api/v1/index.js";
 import { WebhooksRoutes } from "./modules/webhooks/index.js";
 import { getCredentialIssuerPublicKey } from "./modules/verifications/credential-signing.js";
 import { csrfGuard } from "./modules/auth/auth.cookies.js";
+import { ApiPartnerRoutes } from "./modules/api-partners/index.js";
 
 const app = express();
 
@@ -58,6 +59,9 @@ app.use(express.json({ limit: "2mb" }));
 app.use(requestLogger);
 app.use(rateLimiter);
 
+// Partner integrations use API-key authentication and never share the
+// browser-session authentication boundary under /v1.
+app.use("/partner/v1", ApiPartnerRoutes);
 app.use(appConfig.apiPrefix, v1Router);
 
 app.use(notFound);

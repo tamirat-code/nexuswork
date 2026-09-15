@@ -29,6 +29,30 @@ Full detail in [`auth-api.md`](./auth-api.md).
 \* MFA setup/verify don't carry `requireAuth` on the route itself because they
 complete an in-progress login/setup flow using a short-lived token in the body.
 
+## Enterprise API partner administration — `/v1/admin/api-partners`
+
+These routes use the browser authentication boundary and are administrator-only.
+The raw API key is returned only when it is created; it cannot be recovered later.
+
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| GET | `/` | admin | list partners with tier limits and key counts |
+| POST | `/` | admin | provision a separate API partner and return its initial key once |
+| GET | `/:partnerId` | admin | retrieve partner configuration |
+| GET | `/:partnerId/keys` | admin | list redacted key metadata |
+| POST | `/:partnerId/keys` | admin | issue another scoped key; raw key returned once |
+| PATCH | `/:partnerId/status` | admin | activate, suspend, or revoke a partner |
+| POST | `/:partnerId/keys/:keyId/revoke` | admin | revoke one key without revoking sibling keys |
+
+## Enterprise partner API — `/partner/v1`
+
+Partner requests must use `X-NexusWork-API-Key`. Browser session cookies and
+Bearer user sessions are rejected at this boundary.
+
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| GET | `/me` | partner API key | returns partner identity, tier, scopes, and configured limits |
+
 ## Users — `/v1/users`
 | Method | Path | Auth |
 | --- | --- | --- |

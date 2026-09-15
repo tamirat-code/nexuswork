@@ -35,6 +35,7 @@ import { SavedProjectsRoutes } from "../../modules/saved-projects/index.js";
 import { ProposalDraftRoutes } from "../../modules/proposal-drafts/index.js";
 import { SafetyRoutes } from "../../modules/safety/index.js";
 import { OrganizationsRoutes } from "../../modules/organizations/index.js";
+import { ApiPartnerAdminRoutes } from "../../modules/api-partners/index.js";
 
 const router = Router();
 
@@ -73,5 +74,6 @@ router.use("/saved-projects", SavedProjectsRoutes);
 router.use("/proposal-drafts", ProposalDraftRoutes);
 router.use("/safety", SafetyRoutes);
 router.use("/organizations", OrganizationsRoutes);
+router.use("/admin/api-partners", ApiPartnerAdminRoutes);
 
 export default router;
