@@ -68,9 +68,9 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 | --- | --- | --- | --- |
 | FR-29 | Enterprise partner registration and individually revocable API credentials | 🟡 | `api-partners` provisions separate `ApiPartner`/`ApiKey` records, hashes one-time keys, exposes `/partner/v1`, and supports individual revocation; partner self-service registration remains future |
 | FR-30 | Sandbox/Growth/Enterprise tiers with rate limits and monthly quotas | 🟡 | Mongo-backed per-minute/month counters enforce limits with `429`/`Retry-After`, and `/partner/v1/me` exposes current usage; partner portal dashboards remain future |
-| FR-31 | Separate student consent for Talent API discovery and field-level exposure | ❌ | Marketplace verification/portfolio consent does not implement Talent API consent |
+| FR-31 | Separate student consent for Talent API discovery and field-level exposure | 🟡 | Student Talent API consent is disabled by default and managed through `/v1/students/me/talent-api-consent`; `/partner/v1/talent/search` returns only verified, opted-in students and only consented fields |
 | FR-32 | Partner webhook subscriptions with idempotency, retries, and failure logging | ❌ | No partner webhook subscription or delivery module exists |
-| FR-33 | Audit every partner read/export of student data | ❌ | Existing audit logging is not connected to partner API reads |
+| FR-33 | Audit every partner read/export of student data | 🟡 | Every Talent API search appends an immutable `partner_api_read` event with partner, endpoint, filters, fields returned, and result counts; admins can filter audit logs by `partner_id` |
 | FR-34 | Partner self-service portal for keys, usage, and billing | ❌ | No partner portal route or UI exists |
 | FR-35 | Usage-based partner billing independent of marketplace commission | ❌ | No partner usage ledger or billing model exists |
 
@@ -129,7 +129,7 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 | FR-59 | Institution as tenant root for all student/staff university records | 🟡 | Institution and university references exist, but institution ownership is not mandatory on every required record |
 | FR-60 | Institution-scoped university analytics | ✅ | University analytics resolves and authorizes the requesting staff member's institution |
 | FR-61 | Configuration-driven institution onboarding | ✅ | Admin approval provisions `Institution` data without a deployment |
-| FR-62 | Institution-scoped Talent API queries | ❌ | Talent API does not exist yet |
+| FR-62 | Institution-scoped Talent API queries | 🟡 | `/partner/v1/talent/search` accepts comma-separated `institution_ids` and applies the filter after verified-student and consent checks; institutional tenancy and partner policy controls remain future |
 
 ## AI Governance & Explainability (FR-63–FR-66)
 

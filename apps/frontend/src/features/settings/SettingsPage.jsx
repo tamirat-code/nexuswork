@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { KeyRound, ShieldCheck, User } from "lucide-react";
 import { changePassword, initiateMfaSetup } from "../../services/api/auth.api.js";
 import { updateMe } from "../../services/api/users.api.js";
+import { getTalentApiConsent, updateTalentApiConsent } from "../../services/api/students.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
@@ -27,7 +28,40 @@ export default function SettingsPage() {
   const [pushNotifs, setPushNotifs] = useState(user?.notification_prefs?.push ?? true);
   const [profileError, setProfileError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [talentApiEnabled, setTalentApiEnabled] = useState(false);
+  const [talentApiFields, setTalentApiFields] = useState([]);
   const isGoogleAccount = user?.auth_provider === "google";
+  const isStudent = user?.role === "student";
+
+  const talentConsentQuery = useQuery({
+    queryKey: ["talent-api-consent", token],
+    queryFn: () => getTalentApiConsent(token),
+    enabled: Boolean(token && isStudent),
+  });
+
+  useEffect(() => {
+    const consent = talentConsentQuery.data?.data;
+    if (!consent) return;
+    setTalentApiEnabled(Boolean(consent.enabled));
+    setTalentApiFields(consent.fields || []);
+  }, [talentConsentQuery.data]);
+
+  const talentConsentMutation = useMutation({
+    mutationFn: () => updateTalentApiConsent({ enabled: talentApiEnabled, fields: talentApiFields }, token),
+    onSuccess: ({ data }) => {
+      setTalentApiEnabled(Boolean(data?.enabled));
+      setTalentApiFields(data?.fields || []);
+      toast.success(t("settings.talentConsentSaved"));
+      talentConsentQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message || t("settings.talentConsentError")),
+  });
+
+  const toggleTalentField = (field) => {
+    setTalentApiFields((current) => current.includes(field)
+      ? current.filter((value) => value !== field)
+      : [...current, field]);
+  };
 
   const profileMutation = useMutation({
     mutationFn: () => updateMe({ name }, token),
@@ -100,6 +134,49 @@ export default function SettingsPage() {
             <Button size="sm" loading={profileMutation.isPending} onClick={() => { const value = name.trim(); if (!value || value.length > 120) { const message = "Name is required and must be 120 characters or fewer."; setProfileError(message); reportValidation(message, { form: "settings-profile", field: "name" }); return; } setProfileError(""); profileMutation.mutate(); }}>{t("settings.saveProfile")}</Button>
           </CardContent>
         </Card>
+
+        {isStudent && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brass" /> {t("settings.talentConsentTitle")}</CardTitle>
+              <CardDescription>{t("settings.talentConsentDescription")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-ink-300 bg-ink-100/50 p-4">
+                <div>
+                  <p className="font-semibold text-slate">{t("settings.talentConsentToggle")}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-300">{t("settings.talentConsentToggleHint")}</p>
+                </div>
+                <Switch checked={talentApiEnabled} onCheckedChange={setTalentApiEnabled} disabled={talentConsentQuery.isLoading} />
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate">{t("settings.talentConsentFieldsTitle")}</p>
+                <p className="mt-1 text-xs text-slate-300">{t("settings.talentConsentFieldsHint")}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {["name", "skills", "verification", "institution", "program", "bio"].map((field) => (
+                    <label key={field} className="flex cursor-pointer items-center gap-3 rounded-lg border border-ink-300 bg-ink-100/40 px-3 py-2.5 text-sm text-slate transition hover:border-brass/50">
+                      <input
+                        type="checkbox"
+                        checked={talentApiFields.includes(field)}
+                        onChange={() => toggleTalentField(field)}
+                        className="h-4 w-4 accent-brass"
+                      />
+                      <span>{t(`settings.talentFields.${field}`)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 border-t border-ink-300 pt-4">
+                <p className="max-w-xl text-xs leading-relaxed text-slate-300">{t("settings.talentConsentPrivacy")}</p>
+                <Button size="sm" loading={talentConsentMutation.isPending} onClick={() => talentConsentMutation.mutate()}>
+                  {t("settings.saveTalentConsent")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+export const TALENT_API_CONSENT_FIELDS = ["name", "skills", "verification", "institution", "program", "bio"];
+
 const studentProfileSchema = new mongoose.Schema(
   {
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
@@ -13,6 +15,11 @@ const studentProfileSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "verified", "rejected"],
       default: "pending",
+    },
+    talent_api_consent: {
+      enabled: { type: Boolean, default: false },
+      fields: [{ type: String, enum: TALENT_API_CONSENT_FIELDS }],
+      updated_at: { type: Date },
     },
    
     student_id_number: { type: String, trim: true, default: "" },
@@ -56,6 +63,11 @@ studentProfileSchema.index(
     name: "student_profiles_university_student_id_unique",
     partialFilterExpression: { student_id_number: { $type: "string", $gt: "" } },
   }
+);
+
+studentProfileSchema.index(
+  { verification_status: 1, "talent_api_consent.enabled": 1, university_id: 1 },
+  { name: "student_profiles_talent_api_search" }
 );
 
 export default mongoose.model("StudentProfile", studentProfileSchema);

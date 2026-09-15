@@ -4,6 +4,8 @@ import {
   updateProfile,
   listStudentDirectory,
   getPublicStudentProfile,
+  getTalentApiConsent,
+  updateTalentApiConsent,
 } from "./students.service.js";
 
 export const listStudents = asyncHandler(async (req, res) => {
@@ -28,4 +30,12 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
 export const updateMyProfile = asyncHandler(async (req, res) => {
   const profile = await updateProfile(req.user._id, req.body);
   res.json({ success: true, data: profile });
+});
+
+export const getMyTalentApiConsent = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await getTalentApiConsent(req.user._id) });
+});
+
+export const updateMyTalentApiConsent = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await updateTalentApiConsent(req.user._id, req.body) });
 });

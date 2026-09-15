@@ -10,7 +10,7 @@ import {
 
 /**
  * List audit log entries (admin/moderator only).
- * Query params: action_type, entity_type, entity_id, limit, skip, status, start_date, end_date
+ * Query params: action_type, entity_type, entity_id, partner_id, limit, skip, status, start_date, end_date
  */
 export const list = asyncHandler(async (req, res) => {
   if (![ROLES.ADMIN, "moderator"].includes(req.user.role)) {
@@ -21,6 +21,7 @@ export const list = asyncHandler(async (req, res) => {
     action_type: req.query.action_type,
     entity_type: req.query.entity_type,
     entity_id: req.query.entity_id,
+    partner_id: req.query.partner_id,
     limit: parseInt(req.query.limit) || 50,
     skip: parseInt(req.query.skip) || 0,
     status: req.query.status,

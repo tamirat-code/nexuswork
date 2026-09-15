@@ -32,8 +32,8 @@ export function parseApiKey(apiKey) {
 function auditContext(actor, req) {
   return {
     actor,
-    requestId: req?.id,
-    correlationId: req?.id || crypto.randomUUID(),
+    requestId: req?.requestId || req?.correlationId,
+    correlationId: req?.correlationId || req?.requestId || crypto.randomUUID(),
     ipAddress: req?.ip,
     userAgent: req?.get?.("user-agent"),
   };

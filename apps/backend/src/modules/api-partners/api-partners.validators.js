@@ -25,3 +25,12 @@ export const updatePartnerStatusSchema = z.object({
 
 export const apiPartnerParamsSchema = z.object({ partnerId: objectId });
 export const apiKeyParamsSchema = z.object({ partnerId: objectId, keyId: objectId });
+
+export const talentSearchQuerySchema = z.object({
+  q: z.string().trim().max(120).optional().default(""),
+  skills: z.string().trim().max(1000).optional().default(""),
+  institution_ids: z.string().trim().max(1000).optional().default(""),
+  fields: z.string().trim().max(500).optional().default(""),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  skip: z.coerce.number().int().min(0).max(100000).default(0),
+});

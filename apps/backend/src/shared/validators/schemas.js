@@ -132,6 +132,13 @@ export const updateStudentProfileSchema = z.object({
     .optional(),
 });
 
+export const updateTalentApiConsentSchema = z.object({
+  enabled: z.boolean(),
+  fields: z.array(z.enum(["name", "skills", "verification", "institution", "program", "bio"]))
+    .max(6)
+    .default([]),
+});
+
 // --- Clients ---
 export const updateClientProfileSchema = z.object({
   organization_name: z.string().trim().min(1).max(200).optional(),

@@ -4,6 +4,7 @@ import {
   createPartner, listPartners, getPartner, listPartnerKeys, createPartnerKey, revokePartnerKey, updatePartnerStatus,
 } from "./api-partners.service.js";
 import { getCurrentPartnerUsage } from "./api-usage.service.js";
+import { searchTalent } from "./talent-api.service.js";
 
 function requireAdmin(req) {
   if (req.user?.role !== "admin") throw new ForbiddenError("Only administrators can manage API partners");
@@ -47,4 +48,9 @@ export const updateStatus = asyncHandler(async (req, res) => {
 export const profile = asyncHandler(async (req, res) => {
   const partner = await getPartner(req.apiPartner._id);
   res.json({ success: true, data: { ...partner, usage: req.apiUsage || await getCurrentPartnerUsage(req.apiPartner) } });
+});
+
+export const talentSearch = asyncHandler(async (req, res) => {
+  const data = await searchTalent({ partner: req.apiPartner, query: req.validatedQuery, req });
+  res.json({ success: true, data });
 });

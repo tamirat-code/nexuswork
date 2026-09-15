@@ -52,6 +52,7 @@ Bearer user sessions are rejected at this boundary.
 | Method | Path | Auth | Notes |
 | --- | --- | --- | --- |
 | GET | `/me` | partner API key | returns partner identity, tier, scopes, and configured limits |
+| GET | `/talent/search` | partner API key + `talent:read` | returns only verified students with explicit Talent API consent; fields are filtered by consent |
 
 ## Users — `/v1/users`
 | Method | Path | Auth |
@@ -69,6 +70,8 @@ Bearer user sessions are rejected at this boundary.
 | GET | `/` | public — list |
 | GET | `/me` | student |
 | PATCH | `/me` | student |
+| GET | `/me/talent-api-consent` | student | view Talent API discovery and field-level consent |
+| PATCH | `/me/talent-api-consent` | student | body: `{ enabled, fields[] }`; consent fields are `name`, `skills`, `verification`, `institution`, `program`, `bio` |
 | GET | `/:id` | public — declared after `/me` so `"me"` is never matched as `:id` |
 
 ## Clients — `/v1/clients`

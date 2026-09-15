@@ -789,7 +789,18 @@ export const settingsPageResources = {
       emailNotifsTitle: "Email notifications",
       emailNotifsDesc: "Proposals received, milestone funded, payment released.",
       pushNotifsTitle: "Push notifications",
-      pushNotifsDesc: "Real-time alerts while you're signed in."
+      pushNotifsDesc: "Real-time alerts while you're signed in.",
+      talentConsentTitle: "Talent API privacy",
+      talentConsentDescription: "Control whether approved enterprise partners may discover your profile through the Talent API.",
+      talentConsentToggle: "Allow Talent API discovery",
+      talentConsentToggleHint: "Your profile stays hidden from enterprise API searches until you enable this setting.",
+      talentConsentFieldsTitle: "Fields you choose to share",
+      talentConsentFieldsHint: "Only selected fields are returned, and only after your university verification is approved.",
+      talentConsentPrivacy: "You can withdraw consent at any time. Contact details, email, CV files, and student numbers are never returned through this API.",
+      saveTalentConsent: "Save privacy choices",
+      talentConsentSaved: "Talent API privacy choices saved",
+      talentConsentError: "Could not save Talent API privacy choices",
+      talentFields: { name: "Name", skills: "Skills", verification: "Verification", institution: "Institution", program: "Program", bio: "Bio" }
     }
   },
   am: {
@@ -816,7 +827,18 @@ export const settingsPageResources = {
       emailNotifsTitle: "የኢሜይል ማሳወቂያዎች",
       emailNotifsDesc: "የገቡ ፕሮፖዛሎች፣ የተደገፉ ደረጃዎች፣ የተለቀቁ ክፍያዎች።",
       pushNotifsTitle: "የፑሽ ማሳወቂያዎች",
-      pushNotifsDesc: "በገቡበት ጊዜ የቀጥታ ማንቂያዎች።"
+      pushNotifsDesc: "በገቡበት ጊዜ የቀጥታ ማንቂያዎች።",
+      talentConsentTitle: "የተሰጥኦ API ግላዊነት",
+      talentConsentDescription: "የተፈቀዱ የድርጅት አጋሮች መገለጫዎን በTalent API እንዲያገኙ ወይም እንዳያገኙ ይቆጣጠሩ።",
+      talentConsentToggle: "በTalent API ፍለጋ እንዲገኝ ፍቀድ",
+      talentConsentToggleHint: "ይህን ቅንብር እስኪያነቁ ድረስ መገለጫዎ ከድርጅት API ፍለጋ ይደበቃል።",
+      talentConsentFieldsTitle: "ማጋራት የሚፈልጉት መረጃ",
+      talentConsentFieldsHint: "የዩኒቨርሲቲ ማረጋገጫዎ ከጸደቀ በኋላ የመረጧቸው መረጃዎች ብቻ ይመለሳሉ።",
+      talentConsentPrivacy: "ፈቃድዎን በማንኛውም ጊዜ መሰረዝ ይችላሉ። የእውቂያ መረጃ፣ ኢሜይል፣ CV ፋይሎችና የተማሪ ቁጥር በዚህ API በፍጹም አይመለሱም።",
+      saveTalentConsent: "የግላዊነት ምርጫዎችን አስቀምጥ",
+      talentConsentSaved: "የTalent API ግላዊነት ምርጫዎች ተቀምጠዋል",
+      talentConsentError: "የTalent API ግላዊነት ምርጫዎችን ማስቀመጥ አልተቻለም",
+      talentFields: { name: "ስም", skills: "ክህሎቶች", verification: "ማረጋገጫ", institution: "ተቋም", program: "የትምህርት መርሃ ግብር", bio: "ስለ እርስዎ" }
     }
   },
   af: {
@@ -843,7 +865,18 @@ export const settingsPageResources = {
       emailNotifsTitle: "Beeksisa imeelii",
       emailNotifsDesc: "Pirooppoozaala dhufan, milestoona kaffalame, kaffaltii gadhiifame.",
       pushNotifsTitle: "Beeksisa battallaa",
-      pushNotifsDesc: "Yeroo seentee jirtutti beeksisa kallattii."
+      pushNotifsDesc: "Yeroo seentee jirtutti beeksisa kallattii.",
+      talentConsentTitle: "Iccitii Talent API",
+      talentConsentDescription: "Michoonni dhaabbataa hayyamaman profaayila kee karaa Talent API arguu danda'uu fi dhiisuu isaanii to'adhu.",
+      talentConsentToggle: "Talent API'n akka barbaadamutti hayyami",
+      talentConsentToggleHint: "Hanga qindaa'ina kana banteetti profaayilaan kee barbaacha API dhaabbataa irraa dhokata.",
+      talentConsentFieldsTitle: "Dirreewwan qooduu barbaaddu",
+      talentConsentFieldsHint: "Erga mirkaneessi yuunivarsiitii kee ragga'ee booda dirreewwan ati filatte qofa deebifamu.",
+      talentConsentPrivacy: "Yeroo kamiyyuu hayyama kee haquu dandeessa. Odeeffannoon quunnamtii, imeelii, faayiloonni CV fi lakkoofsi barataa API kanaan matumaa hin deebifamu.",
+      saveTalentConsent: "Filannoo iccitii olkaa'i",
+      talentConsentSaved: "Filannoon iccitii Talent API olkaa'ameera",
+      talentConsentError: "Filannoo iccitii Talent API olkaa'uu hin dandeenye",
+      talentFields: { name: "Maqaa", skills: "Dandeettiiwwan", verification: "Mirkaneessa", institution: "Dhaabbata", program: "Sagantaa barnootaa", bio: "Waa'ee kee" }
     }
   }
 };

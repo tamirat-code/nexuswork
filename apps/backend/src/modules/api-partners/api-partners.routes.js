@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware.js";
-import { validateBody, validateParams } from "../../shared/validators/ZodValidator.js";
+import { validateBody, validateParams, validateQuery } from "../../shared/validators/ZodValidator.js";
 import {
-  createPartnerSchema, createApiKeySchema, updatePartnerStatusSchema, apiPartnerParamsSchema, apiKeyParamsSchema,
+  createPartnerSchema, createApiKeySchema, updatePartnerStatusSchema, apiPartnerParamsSchema, apiKeyParamsSchema, talentSearchQuerySchema,
 } from "./api-partners.validators.js";
-import { create, list, get, keys, createKey, revokeKey, updateStatus, profile } from "./api-partners.controller.js";
-import { requirePartnerApiKey } from "./api-partners.middleware.js";
+import { create, list, get, keys, createKey, revokeKey, updateStatus, profile, talentSearch } from "./api-partners.controller.js";
+import { requirePartnerApiKey, requirePartnerScope } from "./api-partners.middleware.js";
 
 const adminRouter = Router();
 adminRouter.use(requireAuth);
@@ -20,6 +20,7 @@ adminRouter.post("/:partnerId/keys/:keyId/revoke", validateParams(apiKeyParamsSc
 const partnerRouter = Router();
 partnerRouter.use(requirePartnerApiKey);
 partnerRouter.get("/me", profile);
+partnerRouter.get("/talent/search", requirePartnerScope("talent:read"), validateQuery(talentSearchQuerySchema), talentSearch);
 
 export { adminRouter as ApiPartnerAdminRoutes };
 export default partnerRouter;

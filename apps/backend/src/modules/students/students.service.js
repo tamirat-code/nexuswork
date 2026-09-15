@@ -1,8 +1,8 @@
 
-import StudentProfile from "./students.model.js";
+import StudentProfile, { TALENT_API_CONSENT_FIELDS } from "./students.model.js";
 import User from "../users/users.model.js";
 import Contract from "../contracts/contracts.model.js";
-import { NotFoundError } from "../../shared/exceptions/AppError.js";
+import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
 export async function getProfileByUserId(userId) {
   let profile = await StudentProfile.findOne({ user_id: userId });
@@ -162,4 +162,35 @@ export async function updateProfile(userId, updates) {
   }
 
   return StudentProfile.findOneAndUpdate({ user_id: userId }, patch, { new: true });
+}
+
+export async function getTalentApiConsent(userId) {
+  const profile = await getProfileByUserId(userId);
+  return {
+    enabled: Boolean(profile.talent_api_consent?.enabled),
+    fields: profile.talent_api_consent?.fields || [],
+    updated_at: profile.talent_api_consent?.updated_at || null,
+    available_fields: TALENT_API_CONSENT_FIELDS,
+  };
+}
+
+export async function updateTalentApiConsent(userId, { enabled, fields }) {
+  const uniqueFields = [...new Set(fields || [])];
+  if (enabled && uniqueFields.length === 0) {
+    throw new ValidationError("Select at least one Talent API field before opting in");
+  }
+  if (uniqueFields.some((field) => !TALENT_API_CONSENT_FIELDS.includes(field))) {
+    throw new ValidationError("One or more Talent API consent fields are invalid");
+  }
+  const profile = await StudentProfile.findOneAndUpdate(
+    { user_id: userId },
+    { $set: { talent_api_consent: { enabled: Boolean(enabled), fields: uniqueFields, updated_at: new Date() } } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  return {
+    enabled: Boolean(profile.talent_api_consent?.enabled),
+    fields: profile.talent_api_consent?.fields || [],
+    updated_at: profile.talent_api_consent?.updated_at || null,
+    available_fields: TALENT_API_CONSENT_FIELDS,
+  };
 }

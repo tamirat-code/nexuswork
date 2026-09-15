@@ -29,3 +29,16 @@ export async function requirePartnerApiKey(req, res, next) {
     next(error);
   }
 }
+
+export function requirePartnerScope(scope) {
+  return (req, res, next) => {
+    if (!req.apiKey?.scopes?.includes(scope)) {
+      return res.status(403).json({
+        success: false,
+        code: "PARTNER_SCOPE_REQUIRED",
+        message: `This endpoint requires the ${scope} scope`,
+      });
+    }
+    next();
+  };
+}

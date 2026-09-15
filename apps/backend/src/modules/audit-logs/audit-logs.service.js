@@ -112,12 +112,13 @@ export async function logAction({
   });
 }
 
-export async function listLogs({ actor_role, action_type, entity_type, entity_id, limit = 50, skip = 0, status, start_date, end_date }) {
+export async function listLogs({ actor_role, action_type, entity_type, entity_id, partner_id, limit = 50, skip = 0, status, start_date, end_date }) {
   const query = {};
   if (actor_role) query.actor_role = actor_role;
   if (action_type) query.action_type = action_type;
   if (entity_type) query.entity_type = entity_type;
   if (entity_id) query.entity_id = entity_id;
+  if (partner_id) query["metadata.partner_id"] = String(partner_id);
   if (status) query.status = status;
   if (start_date || end_date) {
     query.createdAt = {};

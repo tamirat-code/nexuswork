@@ -20,7 +20,7 @@ const AUDIT_ACTION_TYPES = [
   "RELEASE_REQUESTED", "RELEASE_SUCCEEDED", "RELEASE_FAILED",
   "MEETING_CREATED", "MEETING_UPDATED", "MEETING_CANCELLED", "MEETING_STARTED", "MEETING_ENDED", "MEETING_JOINED", "MEETING_LEFT", "PROPOSAL_CV_VIEWED", "PROPOSAL_WITHDRAWN",
   "WITHDRAWAL_REQUESTED", "WITHDRAWAL_SUCCEEDED", "WITHDRAWAL_FAILED",
-  "organization_created", "organization_member_invited", "organization_member_role_changed", "organization_member_removed",
+  "organization_created", "organization_settings_updated", "organization_member_invited", "organization_member_role_changed", "organization_member_removed",
   "institution_onboarding_requested", "institution_onboarding_approved", "institution_onboarding_rejected",
   "api_partner_created", "api_partner_active", "api_partner_suspended", "api_partner_revoked",
   "api_key_created", "api_key_revoked", "partner_api_read",
