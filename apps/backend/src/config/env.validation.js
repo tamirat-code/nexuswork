@@ -125,6 +125,17 @@ export function validateEnv(config = env) {
   }
   if (config.maxFileSizeMB <= 0) throw new Error("MAX_FILE_SIZE_MB must be greater than zero");
 
+  for (const [name, value] of [
+    ["PARTNER_SANDBOX_MONTHLY_QUOTA", config.partnerSandboxMonthlyQuota],
+    ["PARTNER_GROWTH_MONTHLY_QUOTA", config.partnerGrowthMonthlyQuota],
+    ["PARTNER_ENTERPRISE_MONTHLY_QUOTA", config.partnerEnterpriseMonthlyQuota],
+    ["PARTNER_SANDBOX_REQUESTS_PER_MINUTE", config.partnerSandboxRequestsPerMinute],
+    ["PARTNER_GROWTH_REQUESTS_PER_MINUTE", config.partnerGrowthRequestsPerMinute],
+    ["PARTNER_ENTERPRISE_REQUESTS_PER_MINUTE", config.partnerEnterpriseRequestsPerMinute],
+  ]) {
+    if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`);
+  }
+
   if (config.webrtcTurnUrl && (!config.webrtcTurnUsername || !config.webrtcTurnCredential)) {
     missing.push("WEBRTC_TURN_USERNAME and WEBRTC_TURN_CREDENTIAL (required with WEBRTC_TURN_URL)");
   }

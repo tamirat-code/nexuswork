@@ -105,6 +105,12 @@ export function buildEnv(source = process.env) {
 
     logLevel: source.LOG_LEVEL || "info",
     analyticsMinCohortSize: Math.max(1, Math.floor(number(source.ANALYTICS_MIN_COHORT_SIZE, 5))),
+    partnerSandboxMonthlyQuota: Math.max(1, Math.floor(number(source.PARTNER_SANDBOX_MONTHLY_QUOTA, 10_000))),
+    partnerGrowthMonthlyQuota: Math.max(1, Math.floor(number(source.PARTNER_GROWTH_MONTHLY_QUOTA, 100_000))),
+    partnerEnterpriseMonthlyQuota: Math.max(1, Math.floor(number(source.PARTNER_ENTERPRISE_MONTHLY_QUOTA, 1_000_000))),
+    partnerSandboxRequestsPerMinute: Math.max(1, Math.floor(number(source.PARTNER_SANDBOX_REQUESTS_PER_MINUTE, 60))),
+    partnerGrowthRequestsPerMinute: Math.max(1, Math.floor(number(source.PARTNER_GROWTH_REQUESTS_PER_MINUTE, 300))),
+    partnerEnterpriseRequestsPerMinute: Math.max(1, Math.floor(number(source.PARTNER_ENTERPRISE_REQUESTS_PER_MINUTE, 1_200))),
   });
 }
 

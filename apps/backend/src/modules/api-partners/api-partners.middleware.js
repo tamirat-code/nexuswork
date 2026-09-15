@@ -1,5 +1,6 @@
 import { getCookie, AUTH_COOKIE } from "../auth/auth.cookies.js";
 import { authenticateApiKey, markApiKeyUsed } from "./api-partners.service.js";
+import { consumePartnerRequest } from "./api-usage.service.js";
 
 export async function requirePartnerApiKey(req, res, next) {
   try {
@@ -14,6 +15,15 @@ export async function requirePartnerApiKey(req, res, next) {
     req.apiPartner = authenticated.partner;
     req.apiKey = authenticated.apiKey;
     await markApiKeyUsed(authenticated.apiKey._id);
+    const usage = await consumePartnerRequest(authenticated.partner);
+    res.setHeader("X-RateLimit-Limit", String(usage.rate?.limit || 0));
+    res.setHeader("X-RateLimit-Remaining", String(usage.rate?.remaining || 0));
+    if (usage.rate?.resetAt) res.setHeader("X-RateLimit-Reset", String(Math.ceil(usage.rate.resetAt.getTime() / 1000)));
+    if (!usage.allowed) {
+      res.setHeader("Retry-After", String(usage.retryAfterSeconds));
+      return res.status(429).json({ success: false, code: usage.code, message: usage.code === "PARTNER_RATE_LIMITED" ? "Partner API rate limit exceeded" : "Partner API monthly quota exceeded", retry_after_seconds: usage.retryAfterSeconds, usage: usage.usage });
+    }
+    req.apiUsage = usage.usage;
     next();
   } catch (error) {
     next(error);

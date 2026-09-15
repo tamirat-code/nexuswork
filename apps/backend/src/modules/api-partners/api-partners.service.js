@@ -3,11 +3,12 @@ import ApiPartner, { API_PARTNER_SCOPES } from "./api-partners.model.js";
 import ApiKey from "./api-keys.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { env } from "../../config/env.js";
 
 const TIER_DEFAULTS = Object.freeze({
-  sandbox: { monthlyQuota: 10_000, requestsPerMinute: 60 },
-  growth: { monthlyQuota: 100_000, requestsPerMinute: 300 },
-  enterprise: { monthlyQuota: 1_000_000, requestsPerMinute: 1_200 },
+  sandbox: { monthlyQuota: env.partnerSandboxMonthlyQuota, requestsPerMinute: env.partnerSandboxRequestsPerMinute },
+  growth: { monthlyQuota: env.partnerGrowthMonthlyQuota, requestsPerMinute: env.partnerGrowthRequestsPerMinute },
+  enterprise: { monthlyQuota: env.partnerEnterpriseMonthlyQuota, requestsPerMinute: env.partnerEnterpriseRequestsPerMinute },
 });
 
 export function hashApiKey(apiKey) {

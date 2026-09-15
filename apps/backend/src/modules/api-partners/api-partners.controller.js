@@ -3,6 +3,7 @@ import { ForbiddenError } from "../../shared/exceptions/AppError.js";
 import {
   createPartner, listPartners, getPartner, listPartnerKeys, createPartnerKey, revokePartnerKey, updatePartnerStatus,
 } from "./api-partners.service.js";
+import { getCurrentPartnerUsage } from "./api-usage.service.js";
 
 function requireAdmin(req) {
   if (req.user?.role !== "admin") throw new ForbiddenError("Only administrators can manage API partners");
@@ -44,5 +45,6 @@ export const updateStatus = asyncHandler(async (req, res) => {
 });
 
 export const profile = asyncHandler(async (req, res) => {
-  res.json({ success: true, data: { ...req.apiPartner, ...await getPartner(req.apiPartner._id) } });
+  const partner = await getPartner(req.apiPartner._id);
+  res.json({ success: true, data: { ...partner, usage: req.apiUsage || await getCurrentPartnerUsage(req.apiPartner) } });
 });
