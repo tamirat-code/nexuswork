@@ -78,7 +78,7 @@ lifecycle, MFA, cookies) is in [`auth-api.md`](./auth-api.md).
 | Recommendations | `/v1/recommendations` | AI/heuristic project matching, career guidance, price suggestion |
 | Analytics | `/v1/analytics` | event tracking, platform/personal/university dashboards |
 | Admin | `/v1/admin` | platform-wide dashboard, user and dispute administration |
-| Enterprise API | `/partner/v1` and `/v1/admin/api-partners` | API-key partner boundary and administrator-managed partner credentials |
+| Enterprise API | `/partner/v1` and `/v1/admin/api-partners` | API-key partner boundary, self-service portal APIs, encrypted webhooks, usage limits, and administrator-managed partner credentials |
 | Audit logs | `/v1/audit-logs` | append-only audit trail read/flag |
 | Health | `/v1/health` | readiness/liveness detail (distinct from the top-level `/health`) |
 | Meetings | `/v1/meetings` | scheduling and WebRTC signaling handshake for video calls |

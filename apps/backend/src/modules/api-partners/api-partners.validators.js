@@ -9,7 +9,7 @@ export const createPartnerSchema = z.object({
   organization_name: z.string().trim().max(200).optional(),
   contact_email: email,
   tier: z.enum(API_PARTNER_TIERS).default("sandbox"),
-  scopes: z.array(scope).min(1).default(["talent:read"]),
+  scopes: z.array(scope).min(1).default(["talent:read", "usage:read"]),
 });
 
 export const createApiKeySchema = z.object({
@@ -25,6 +25,7 @@ export const updatePartnerStatusSchema = z.object({
 
 export const apiPartnerParamsSchema = z.object({ partnerId: objectId });
 export const apiKeyParamsSchema = z.object({ partnerId: objectId, keyId: objectId });
+export const ownKeyParamsSchema = z.object({ keyId: objectId });
 
 export const talentSearchQuerySchema = z.object({
   q: z.string().trim().max(120).optional().default(""),
@@ -34,3 +35,17 @@ export const talentSearchQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   skip: z.coerce.number().int().min(0).max(100000).default(0),
 });
+
+export const createWebhookSubscriptionSchema = z.object({
+  url: z.string().trim().url().max(2000),
+  events: z.array(z.enum(["talent.consent.updated", "usage.threshold"])).min(1).max(10),
+});
+
+export const updateWebhookSubscriptionSchema = z.object({
+  url: z.string().trim().url().max(2000).optional(),
+  events: z.array(z.enum(["talent.consent.updated", "usage.threshold"])).min(1).max(10).optional(),
+  status: z.enum(["active", "disabled"]).optional(),
+}).refine((payload) => Object.keys(payload).length > 0, "Provide at least one webhook setting to update");
+
+export const webhookParamsSchema = z.object({ subscriptionId: objectId });
+export const partnerLimitQuerySchema = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) });

@@ -6,6 +6,7 @@ import { expireMeetings } from "../modules/meetings/meetings.service.js";
 import { expireProjects } from "../modules/projects/projects.service.js";
 import { reconcilePendingReleases, reconcilePendingRefunds } from "../modules/payments/payments.service.js";
 import JobLock from "./job-lock.model.js";
+import { dispatchDueWebhookDeliveries } from "../modules/api-partners/api-webhooks.service.js";
 
 const JOB_LOCK_TTL_MS = 4 * 60 * 1000;
 
@@ -77,9 +78,21 @@ export function registerJobs() {
   }, 5 * 60 * 1000);
   refundReconciliationTimer.unref?.();
 
+  const webhookDeliveryTimer = setInterval(async () => {
+    await withJobLock("partner-webhook-delivery", async () => {
+      try {
+        await dispatchDueWebhookDeliveries({ limit: 100 });
+      } catch (error) {
+        console.error("[jobs] partner webhook delivery failed:", error.message);
+      }
+    });
+  }, 5 * 1000);
+  webhookDeliveryTimer.unref?.();
+
   return () => {
     clearInterval(timer);
     clearInterval(reconciliationTimer);
     clearInterval(refundReconciliationTimer);
+    clearInterval(webhookDeliveryTimer);
   };
 }

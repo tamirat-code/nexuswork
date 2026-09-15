@@ -111,6 +111,9 @@ export function buildEnv(source = process.env) {
     partnerSandboxRequestsPerMinute: Math.max(1, Math.floor(number(source.PARTNER_SANDBOX_REQUESTS_PER_MINUTE, 60))),
     partnerGrowthRequestsPerMinute: Math.max(1, Math.floor(number(source.PARTNER_GROWTH_REQUESTS_PER_MINUTE, 300))),
     partnerEnterpriseRequestsPerMinute: Math.max(1, Math.floor(number(source.PARTNER_ENTERPRISE_REQUESTS_PER_MINUTE, 1_200))),
+    partnerSandboxPricePerThousandMinor: Math.max(1, Math.floor(number(source.PARTNER_SANDBOX_PRICE_PER_1000_MINOR, 100))),
+    partnerGrowthPricePerThousandMinor: Math.max(1, Math.floor(number(source.PARTNER_GROWTH_PRICE_PER_1000_MINOR, 75))),
+    partnerEnterprisePricePerThousandMinor: Math.max(1, Math.floor(number(source.PARTNER_ENTERPRISE_PRICE_PER_1000_MINOR, 50))),
   });
 }
 

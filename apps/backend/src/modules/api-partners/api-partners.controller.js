@@ -2,9 +2,15 @@ import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { ForbiddenError } from "../../shared/exceptions/AppError.js";
 import {
   createPartner, listPartners, getPartner, listPartnerKeys, createPartnerKey, revokePartnerKey, updatePartnerStatus,
+  listOwnPartnerKeys, createOwnPartnerKey, revokeOwnPartnerKey,
 } from "./api-partners.service.js";
 import { getCurrentPartnerUsage } from "./api-usage.service.js";
 import { searchTalent } from "./talent-api.service.js";
+import { getPartnerBilling, listPartnerBilling } from "./api-billing.service.js";
+import {
+  createWebhookSubscription, listWebhookSubscriptions, updateWebhookSubscription, rotateWebhookSecret,
+  disableWebhookSubscription, listWebhookDeliveries,
+} from "./api-webhooks.service.js";
 
 function requireAdmin(req) {
   if (req.user?.role !== "admin") throw new ForbiddenError("Only administrators can manage API partners");
@@ -53,4 +59,57 @@ export const profile = asyncHandler(async (req, res) => {
 export const talentSearch = asyncHandler(async (req, res) => {
   const data = await searchTalent({ partner: req.apiPartner, query: req.validatedQuery, req });
   res.json({ success: true, data });
+});
+
+export const selfKeys = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listOwnPartnerKeys(req.apiPartner._id) });
+});
+
+export const selfCreateKey = asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await createOwnPartnerKey({ partnerId: req.apiPartner._id, payload: req.body, req }) });
+});
+
+export const selfRevokeKey = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await revokeOwnPartnerKey({ partnerId: req.apiPartner._id, keyId: req.params.keyId, req }) });
+});
+
+export const usage = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await getCurrentPartnerUsage(req.apiPartner) });
+});
+
+export const billing = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await getPartnerBilling(req.apiPartner) });
+});
+
+export const billingHistory = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listPartnerBilling(req.params.partnerId, req.validatedQuery.limit) });
+});
+
+export const adminBilling = asyncHandler(async (req, res) => {
+  requireAdmin(req);
+  res.json({ success: true, data: await listPartnerBilling(req.params.partnerId, req.validatedQuery.limit) });
+});
+
+export const webhooks = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listWebhookSubscriptions(req.apiPartner._id) });
+});
+
+export const createWebhook = asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await createWebhookSubscription({ partnerId: req.apiPartner._id, ...req.body }) });
+});
+
+export const updateWebhook = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await updateWebhookSubscription({ partnerId: req.apiPartner._id, subscriptionId: req.params.subscriptionId, ...req.body }) });
+});
+
+export const rotateWebhook = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await rotateWebhookSecret({ partnerId: req.apiPartner._id, subscriptionId: req.params.subscriptionId }) });
+});
+
+export const disableWebhook = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await disableWebhookSubscription({ partnerId: req.apiPartner._id, subscriptionId: req.params.subscriptionId }) });
+});
+
+export const webhookDeliveries = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listWebhookDeliveries(req.apiPartner._id, req.validatedQuery.limit) });
 });

@@ -1,6 +1,7 @@
 import { logger } from "./logger.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
+const PARTNER_API_BASE_URL = API_BASE_URL.replace(/\/v1\/?$/, "/partner/v1");
 let csrfToken = null;
 
 function authHeader(token) {
@@ -64,6 +65,27 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
   // Login, registration, and MFA rotate the CSRF cookie together with the
   // session cookie. Force the next mutation to read the newly issued token.
   if (path.startsWith("/auth/") && method.toUpperCase() === "POST") csrfToken = null;
+  return data;
+}
+
+export async function partnerApiRequest(path, { method = "GET", body, apiKey } = {}) {
+  const res = await fetch(`${PARTNER_API_BASE_URL}${path}`, {
+    method,
+    credentials: "omit",
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { "X-NexusWork-API-Key": apiKey } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(data.message || `Partner request failed with status ${res.status}`);
+    error.status = res.status;
+    Object.assign(error, data);
+    logger.error("Partner API request failed", error, { method, path, status: res.status, code: data.code });
+    throw error;
+  }
   return data;
 }
 

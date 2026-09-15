@@ -8,6 +8,7 @@ const apiUsageSchema = new mongoose.Schema(
     request_count: { type: Number, default: 0, min: 0 },
     data_read_count: { type: Number, default: 0, min: 0 },
     export_count: { type: Number, default: 0, min: 0 },
+    thresholds_notified: { type: [Number], default: [] },
     last_request_at: { type: Date },
   },
   { timestamps: true }

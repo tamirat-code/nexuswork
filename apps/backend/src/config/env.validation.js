@@ -132,6 +132,9 @@ export function validateEnv(config = env) {
     ["PARTNER_SANDBOX_REQUESTS_PER_MINUTE", config.partnerSandboxRequestsPerMinute],
     ["PARTNER_GROWTH_REQUESTS_PER_MINUTE", config.partnerGrowthRequestsPerMinute],
     ["PARTNER_ENTERPRISE_REQUESTS_PER_MINUTE", config.partnerEnterpriseRequestsPerMinute],
+    ["PARTNER_SANDBOX_PRICE_PER_1000_MINOR", config.partnerSandboxPricePerThousandMinor],
+    ["PARTNER_GROWTH_PRICE_PER_1000_MINOR", config.partnerGrowthPricePerThousandMinor],
+    ["PARTNER_ENTERPRISE_PRICE_PER_1000_MINOR", config.partnerEnterprisePricePerThousandMinor],
   ]) {
     if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`);
   }

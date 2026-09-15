@@ -6,9 +6,9 @@ import { ConflictError, NotFoundError, ValidationError } from "../../shared/exce
 import { env } from "../../config/env.js";
 
 const TIER_DEFAULTS = Object.freeze({
-  sandbox: { monthlyQuota: env.partnerSandboxMonthlyQuota, requestsPerMinute: env.partnerSandboxRequestsPerMinute },
-  growth: { monthlyQuota: env.partnerGrowthMonthlyQuota, requestsPerMinute: env.partnerGrowthRequestsPerMinute },
-  enterprise: { monthlyQuota: env.partnerEnterpriseMonthlyQuota, requestsPerMinute: env.partnerEnterpriseRequestsPerMinute },
+  sandbox: { monthlyQuota: env.partnerSandboxMonthlyQuota, requestsPerMinute: env.partnerSandboxRequestsPerMinute, pricePerThousandMinor: env.partnerSandboxPricePerThousandMinor },
+  growth: { monthlyQuota: env.partnerGrowthMonthlyQuota, requestsPerMinute: env.partnerGrowthRequestsPerMinute, pricePerThousandMinor: env.partnerGrowthPricePerThousandMinor },
+  enterprise: { monthlyQuota: env.partnerEnterpriseMonthlyQuota, requestsPerMinute: env.partnerEnterpriseRequestsPerMinute, pricePerThousandMinor: env.partnerEnterprisePricePerThousandMinor },
 });
 
 export function hashApiKey(apiKey) {
@@ -16,7 +16,9 @@ export function hashApiKey(apiKey) {
 }
 
 export function createApiKeyMaterial() {
-  const keyId = crypto.randomBytes(9).toString("base64url");
+  // Keep the identifier separator-safe. Base64url can contain `_`, which is
+  // also the delimiter used by parseApiKey and makes the prefix ambiguous.
+  const keyId = crypto.randomBytes(9).toString("hex");
   const secret = crypto.randomBytes(32).toString("base64url");
   const key = `nw_${keyId}_${secret}`;
   return { key, keyPrefix: `nw_${keyId}` };
@@ -76,7 +78,12 @@ function normalizedScopes(scopes, fallback = ["talent:read"]) {
 }
 
 export function tierLimits(tier) {
-  return TIER_DEFAULTS[tier] || TIER_DEFAULTS.sandbox;
+  const { monthlyQuota, requestsPerMinute } = TIER_DEFAULTS[tier] || TIER_DEFAULTS.sandbox;
+  return { monthlyQuota, requestsPerMinute };
+}
+
+export function tierPricing(tier) {
+  return (TIER_DEFAULTS[tier] || TIER_DEFAULTS.sandbox).pricePerThousandMinor;
 }
 
 export async function issueApiKey({ partner, name, scopes, expires_at, createdBy, req }) {
@@ -147,6 +154,29 @@ export async function createPartnerKey({ partnerId, payload, actor, req }) {
   if (partner.status !== "active") throw new ConflictError("Keys cannot be created for an inactive API partner");
   const issued = await issueApiKey({ partner, ...payload, createdBy: actor._id, req });
   return { api_key: issued.key, key: issued.keyRecord };
+}
+
+export async function listOwnPartnerKeys(partnerId) {
+  return listPartnerKeys(partnerId);
+}
+
+export async function createOwnPartnerKey({ partnerId, payload, req }) {
+  const partner = await ApiPartner.findById(partnerId);
+  if (!partner) throw new NotFoundError("API partner not found");
+  if (partner.status !== "active") throw new ConflictError("Keys cannot be created for an inactive API partner");
+  const issued = await issueApiKey({ partner, ...payload, createdBy: undefined, req });
+  return { api_key: issued.key, key: issued.keyRecord };
+}
+
+export async function revokeOwnPartnerKey({ partnerId, keyId, req }) {
+  const key = await ApiKey.findOne({ _id: keyId, partner_id: partnerId });
+  if (!key) throw new NotFoundError("API key not found");
+  if (!key.revoked_at) {
+    key.revoked_at = new Date();
+    await key.save();
+    await audit({ role: "system" }, "api_key_revoked", "api_key.revoked", "api_key", key._id, { partner_id: partnerId, key_prefix: key.key_prefix }, req);
+  }
+  return sanitizeKey(key.toObject());
 }
 
 export async function revokePartnerKey({ partnerId, keyId, actor, req }) {

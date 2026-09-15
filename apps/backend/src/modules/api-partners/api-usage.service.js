@@ -1,20 +1,11 @@
 import ApiUsage from "./api-usage.model.js";
 import ApiRateLimitBucket from "./api-rate-limit.model.js";
 import { tierLimits } from "./api-partners.service.js";
+import { recordPartnerBillingUsage } from "./api-billing.service.js";
+import { monthWindow, minuteWindow } from "./api-windows.js";
+import { publishPartnerEvent } from "./api-webhooks.service.js";
 
-export function monthWindow(value = new Date()) {
-  const date = new Date(value);
-  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1));
-  return { start, end };
-}
-
-export function minuteWindow(value = new Date()) {
-  const date = new Date(value);
-  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes()));
-  const end = new Date(start.getTime() + 60_000);
-  return { start, end };
-}
+export { monthWindow, minuteWindow } from "./api-windows.js";
 
 async function incrementWithLimit(Model, filter, limit, defaults, increment = { request_count: 1 }) {
   try {
@@ -73,6 +64,9 @@ export async function consumePartnerRequest(partner, now = new Date()) {
     };
   }
 
+  await recordPartnerBillingUsage(partner, now);
+  await publishUsageThresholdEvents({ partner, usage, quota: limits.monthlyQuota });
+
   return {
     allowed: true,
     usage: {
@@ -88,6 +82,27 @@ export async function consumePartnerRequest(partner, now = new Date()) {
       resetAt: minute.end,
     },
   };
+}
+
+async function publishUsageThresholdEvents({ partner, usage, quota }) {
+  const thresholds = [80, 100];
+  for (const threshold of thresholds) {
+    if (usage.request_count < Math.ceil((quota * threshold) / 100)) continue;
+    const claimed = await ApiUsage.updateOne(
+      { _id: usage._id, thresholds_notified: { $ne: threshold } },
+      { $addToSet: { thresholds_notified: threshold } }
+    );
+    if (claimed.modifiedCount === 1) {
+      void publishPartnerEvent("usage.threshold", {
+        partner_id: String(partner._id),
+        threshold_percent: threshold,
+        request_count: usage.request_count,
+        quota,
+        period_start: usage.period_start,
+        period_end: usage.period_end,
+      }).catch(() => {});
+    }
+  }
 }
 
 export async function getCurrentPartnerUsage(partner, now = new Date()) {

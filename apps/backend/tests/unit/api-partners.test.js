@@ -2,6 +2,8 @@ import {
   createApiKeyMaterial, hashApiKey, parseApiKey, tierLimits,
 } from "../../src/modules/api-partners/api-partners.service.js";
 import { monthWindow, minuteWindow } from "../../src/modules/api-partners/api-usage.service.js";
+import { calculateUsageAmountMinor } from "../../src/modules/api-partners/api-billing.service.js";
+import { decryptWebhookSecret, encryptWebhookSecret } from "../../src/modules/api-partners/webhook-secrets.js";
 
 describe("enterprise API partner credentials", () => {
   test("creates parseable high-entropy key material without exposing a hash", () => {
@@ -38,5 +40,19 @@ describe("enterprise API partner credentials", () => {
       start: new Date("2026-09-15T06:40:00.000Z"),
       end: new Date("2026-09-15T06:41:00.000Z"),
     });
+  });
+
+  test("calculates usage billing in minor currency units and rounds up partial thousands", () => {
+    expect(calculateUsageAmountMinor(0, 100)).toBe(0);
+    expect(calculateUsageAmountMinor(1, 100)).toBe(1);
+    expect(calculateUsageAmountMinor(1000, 75)).toBe(75);
+    expect(calculateUsageAmountMinor(1001, 75)).toBe(76);
+  });
+
+  test("encrypts webhook secrets without storing the plaintext", () => {
+    const secret = "whsec_test_secret_value";
+    const encrypted = encryptWebhookSecret(secret);
+    expect(encrypted).not.toContain(secret);
+    expect(decryptWebhookSecret(encrypted)).toBe(secret);
   });
 });

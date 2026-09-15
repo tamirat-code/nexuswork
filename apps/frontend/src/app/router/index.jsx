@@ -51,6 +51,7 @@ const MeetingsListPage = lazy(() => import("../../features/meetings/MeetingsList
 const OrganizationsPage = lazy(() => import("../../features/organizations/OrganizationsPage.jsx"));
 const InstitutionOnboardingAdminPage = lazy(() => import("../../features/organizations/InstitutionOnboardingAdminPage.jsx"));
 const InstitutionOnboardingPage = lazy(() => import("../../features/organizations/InstitutionOnboardingPage.jsx"));
+const PartnerPortalPage = lazy(() => import("../../features/partners/PartnerPortalPage.jsx"));
 
 const protect = (element, allowedRoles) => (
   <ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>
@@ -90,6 +91,7 @@ export default function AppRouter() {
       <Route path="/verifications" element={protect(<UniversitiesPage />, [ROLES.UNIVERSITY_STAFF])} />
       <Route path="/verify-credential" element={<CredentialVerifyPage />} />
       <Route path="/search" element={<SearchPage />} />
+      <Route path="/partner-portal" element={<PartnerPortalPage />} />
 
       {/* Workspace */}
       <Route path="/dashboard" element={protect(<DashboardPage />)} />

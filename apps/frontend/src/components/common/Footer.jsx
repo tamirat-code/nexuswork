@@ -5,7 +5,7 @@ export default function Footer() {
   const { t } = useTranslation();
   const columns = [
     { title: t("footer.marketplace"), links: [["/projects", t("footer.browseProjects")], ["/students", t("footer.findTalent")], ["/skills", t("footer.skillsDirectory")]] },
-    { title: t("footer.community"), links: [["/universities", t("footer.forUniversities")], ["/learning", t("footer.learningHub")], ["/portfolios", t("footer.portfolios")]] },
+    { title: t("footer.community"), links: [["/universities", t("footer.forUniversities")], ["/learning", t("footer.learningHub")], ["/portfolios", t("footer.portfolios")], ["/partner-portal", t("footer.partnerPortal")]] },
     { title: t("footer.legal"), links: [["/terms", t("footer.terms")], ["/privacy", t("footer.privacy")], ["/policies", "Platform policies"], ["/support", "Support"]] },
   ];
   return (

@@ -3,6 +3,7 @@ import StudentProfile, { TALENT_API_CONSENT_FIELDS } from "./students.model.js";
 import User from "../users/users.model.js";
 import Contract from "../contracts/contracts.model.js";
 import { NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { publishPartnerEvent } from "../api-partners/api-webhooks.service.js";
 
 export async function getProfileByUserId(userId) {
   let profile = await StudentProfile.findOne({ user_id: userId });
@@ -187,10 +188,17 @@ export async function updateTalentApiConsent(userId, { enabled, fields }) {
     { $set: { talent_api_consent: { enabled: Boolean(enabled), fields: uniqueFields, updated_at: new Date() } } },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
-  return {
+  const result = {
     enabled: Boolean(profile.talent_api_consent?.enabled),
     fields: profile.talent_api_consent?.fields || [],
     updated_at: profile.talent_api_consent?.updated_at || null,
     available_fields: TALENT_API_CONSENT_FIELDS,
   };
+  void publishPartnerEvent("talent.consent.updated", {
+    student_id: String(userId),
+    enabled: result.enabled,
+    fields: result.fields,
+    updated_at: result.updated_at,
+  }).catch(() => {});
+  return result;
 }

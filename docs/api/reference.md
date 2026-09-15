@@ -43,6 +43,7 @@ The raw API key is returned only when it is created; it cannot be recovered late
 | POST | `/:partnerId/keys` | admin | issue another scoped key; raw key returned once |
 | PATCH | `/:partnerId/status` | admin | activate, suspend, or revoke a partner |
 | POST | `/:partnerId/keys/:keyId/revoke` | admin | revoke one key without revoking sibling keys |
+| GET | `/:partnerId/billing` | admin | list usage-based API billing statements |
 
 ## Enterprise partner API — `/partner/v1`
 
@@ -53,6 +54,28 @@ Bearer user sessions are rejected at this boundary.
 | --- | --- | --- | --- |
 | GET | `/me` | partner API key | returns partner identity, tier, scopes, and configured limits |
 | GET | `/talent/search` | partner API key + `talent:read` | returns only verified students with explicit Talent API consent; fields are filtered by consent |
+| GET | `/me/keys` | partner API key | list redacted keys belonging to the current partner |
+| POST | `/me/keys` | partner API key | issue a scoped key; raw key returned once |
+| POST | `/me/keys/:keyId/revoke` | partner API key | revoke one current-partner key |
+| GET | `/me/usage` | partner API key + `usage:read` | current UTC-month request count and remaining quota |
+| GET | `/me/billing` | partner API key + `usage:read` | current statement and recent usage-based billing history |
+| GET | `/me/webhooks` | partner API key + `webhooks:manage` | list webhook subscriptions |
+| POST | `/me/webhooks` | partner API key + `webhooks:manage` | create a subscription; signing secret returned once |
+| PATCH | `/me/webhooks/:subscriptionId` | partner API key + `webhooks:manage` | update URL, events, or active/disabled status |
+| POST | `/me/webhooks/:subscriptionId/rotate-secret` | partner API key + `webhooks:manage` | rotate signing secret; new secret returned once |
+| DELETE | `/me/webhooks/:subscriptionId` | partner API key + `webhooks:manage` | disable a subscription without deleting history |
+| GET | `/me/webhook-deliveries` | partner API key + `webhooks:manage` | list delivery status, attempts, and failure details |
+
+### Partner webhooks
+
+Supported event types are `talent.consent.updated` and `usage.threshold`. Each
+delivery is a JSON POST with an event `id`, `type`, `created_at`, and `data`.
+The receiver should deduplicate using `Idempotency-Key` (equal to the event
+ID). Requests include `X-NexusWork-Webhook-Timestamp` and
+`X-NexusWork-Webhook-Signature: v1=<hex>`; verify the HMAC-SHA256 signature
+against `<timestamp>.<raw request body>` using the signing secret. Delivery
+attempts are retried with exponential backoff and stop as `exhausted` after
+eight attempts.
 
 ## Users — `/v1/users`
 | Method | Path | Auth |
