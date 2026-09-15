@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth.js";
 import { createOrganization, inviteOrganizationMember, listInstitutions, listMyOrganizations, listOrganizationMembers, removeOrganizationMember, updateOrganization, updateOrganizationMember } from "../../services/api/organizations.api.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
-import { Button } from "../../components/ui/shadcn/button.jsx";
+import { Button, buttonVariants } from "../../components/ui/shadcn/button.jsx";
 import { Input } from "../../components/ui/shadcn/input.jsx";
 import { Label } from "../../components/ui/shadcn/label.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
@@ -146,8 +146,8 @@ export default function OrganizationsPage() {
                   <h3 className="font-semibold text-slate">Next in the workflow</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-300">After the workspace is ready, move into hiring and delivery.</p>
                   <div className="mt-4 space-y-2">
-                    <Button asChild className="w-full justify-between"><Link to="/projects/new"><span className="inline-flex items-center gap-2"><BriefcaseBusiness className="h-4 w-4" />Post project</span><ArrowRight className="h-4 w-4" /></Link></Button>
-                    <Button asChild variant="secondary" className="w-full justify-between"><Link to="/proposals"><span className="inline-flex items-center gap-2"><FileText className="h-4 w-4" />Review proposals</span><ArrowRight className="h-4 w-4" /></Link></Button>
+                    <Link className={buttonVariants({ className: "w-full justify-between" })} to="/projects/new"><span className="inline-flex items-center gap-2"><BriefcaseBusiness className="h-4 w-4" />Post project</span><ArrowRight className="h-4 w-4" /></Link>
+                    <Link className={buttonVariants({ variant: "secondary", className: "w-full justify-between" })} to="/proposals"><span className="inline-flex items-center gap-2"><FileText className="h-4 w-4" />Review proposals</span><ArrowRight className="h-4 w-4" /></Link>
                   </div>
                 </div>
               </div>
