@@ -20,6 +20,7 @@ const fileSchema = new mongoose.Schema(
         "verification_document",
         "staff_verification_document",
         "skill_certification_evidence",
+        "institution_onboarding_evidence",
         "cv",
         "other",
       ],

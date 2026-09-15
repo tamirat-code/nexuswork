@@ -25,6 +25,7 @@ export const onboardingRequestSchema = z.object({
   contactName: z.string().trim().min(2).max(150),
   contactEmail: email,
   contactTitle: z.string().trim().min(2).max(150),
+  evidence_file_id: objectId,
 });
 
 export const onboardingDecisionSchema = z.object({

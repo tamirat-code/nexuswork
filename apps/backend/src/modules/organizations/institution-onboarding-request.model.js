@@ -8,6 +8,7 @@ const institutionOnboardingRequestSchema = new mongoose.Schema(
     contactEmail: { type: String, required: true, lowercase: true, trim: true, maxlength: 254 },
     contactTitle: { type: String, required: true, trim: true, maxlength: 150 },
     requested_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    evidence_file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File", required: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     reviewedAt: { type: Date, default: null },

@@ -3,6 +3,7 @@ import Institution from "./institutions.model.js";
 import OrgMembership from "./org-membership.model.js";
 import InstitutionOnboardingRequest from "./institution-onboarding-request.model.js";
 import User from "../users/users.model.js";
+import File from "../files/files.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 
@@ -118,6 +119,8 @@ export async function removeMember(organizationId, actor, userId, req) {
 
 export async function submitOnboardingRequest(actor, payload, req) {
   const domain = normalizeDomain(payload.domain);
+  const evidence = await File.findOne({ _id: payload.evidence_file_id, owner_id: actor._id, related_type: "institution_onboarding_evidence" });
+  if (!evidence) throw new ForbiddenError("Upload institution evidence before submitting the request");
   if (await Institution.exists({ domain })) throw new ConflictError("An institution with this domain already exists");
   if (await InstitutionOnboardingRequest.exists({ domain, status: "pending" })) throw new ConflictError("An onboarding request for this domain is already pending");
   const request = await InstitutionOnboardingRequest.create({ ...payload, domain, requested_by: actor._id });
@@ -127,7 +130,7 @@ export async function submitOnboardingRequest(actor, payload, req) {
 
 export async function listOnboardingRequests(status = "pending") {
   const query = status === "all" ? {} : { status };
-  return InstitutionOnboardingRequest.find(query).populate("requested_by", "name email role").populate("reviewedBy", "name email").sort({ createdAt: -1 }).lean();
+  return InstitutionOnboardingRequest.find(query).populate("requested_by", "name email role").populate("reviewedBy", "name email").populate("evidence_file_id", "original_name mimetype size url").sort({ createdAt: -1 }).lean();
 }
 
 export async function decideOnboardingRequest(actor, requestId, { decision, rejectionReason }, req) {

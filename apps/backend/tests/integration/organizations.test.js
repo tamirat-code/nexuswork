@@ -6,6 +6,7 @@ import Organization from "../../src/modules/organizations/organizations.model.js
 import OrgMembership from "../../src/modules/organizations/org-membership.model.js";
 import Institution from "../../src/modules/organizations/institutions.model.js";
 import InstitutionOnboardingRequest from "../../src/modules/organizations/institution-onboarding-request.model.js";
+import File from "../../src/modules/files/files.model.js";
 
 beforeAll(connectTestDB);
 beforeEach(clearDB);
@@ -66,6 +67,7 @@ describe("Organizations and institutions", () => {
   it("allows a user to request institution onboarding and an admin to approve it", async () => {
     const requester = await createUser("university_staff", { email: "registrar@newcollege.edu" });
     const admin = await createUser("admin");
+    const evidence = await File.create({ owner_id: requester.user._id, filename: "evidence.pdf", original_name: "evidence.pdf", mimetype: "application/pdf", size: 1024, url: "https://example.test/evidence.pdf", related_type: "institution_onboarding_evidence" });
     const requestRes = await request(app)
       .post("/v1/organizations/institution-onboarding")
       .set("Authorization", `Bearer ${requester.token}`)
@@ -75,6 +77,7 @@ describe("Organizations and institutions", () => {
         contactName: "Registrar",
         contactEmail: requester.user.email,
         contactTitle: "Registrar",
+        evidence_file_id: evidence._id.toString(),
       });
 
     expect(requestRes.status).toBe(201);
@@ -94,10 +97,11 @@ describe("Organizations and institutions", () => {
   it("rejects duplicate institution domains", async () => {
     const requester = await createUser("university_staff");
     await Institution.create({ name: "Existing", domain: "existing.edu" });
+    const evidence = await File.create({ owner_id: requester.user._id, filename: "evidence.pdf", original_name: "evidence.pdf", mimetype: "application/pdf", size: 1024, url: "https://example.test/evidence.pdf", related_type: "institution_onboarding_evidence" });
     const res = await request(app)
       .post("/v1/organizations/institution-onboarding")
       .set("Authorization", `Bearer ${requester.token}`)
-      .send({ institutionName: "Existing", domain: "existing.edu", contactName: "Staff", contactEmail: requester.user.email, contactTitle: "Registrar" });
+      .send({ institutionName: "Existing", domain: "existing.edu", contactName: "Staff", contactEmail: requester.user.email, contactTitle: "Registrar", evidence_file_id: evidence._id.toString() });
     expect(res.status).toBe(409);
   });
 });
