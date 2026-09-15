@@ -153,13 +153,23 @@ export async function flagForReview(log_id, { reviewer, reason, correlationId } 
     throw new ForbiddenError("Only admins and moderators can flag audit entries");
   }
 
-  return AuditReview.create({
+  const review = {
     audit_log_id: entry._id,
     reviewer_id: actor.actor_id,
     reviewer_role: actor.actor_role,
     reason,
     correlationId: correlationId || crypto.randomUUID(),
-  });
+  };
+
+  try {
+    return await AuditReview.create(review);
+  } catch (error) {
+    // Flagging is intentionally idempotent. A double-click, retry, or two
+    // admins acting at the same time must not turn an already-flagged event
+    // into a 500 response because audit_log_id is unique.
+    if (error?.code !== 11000) throw error;
+    return AuditReview.findOne({ audit_log_id: entry._id });
+  }
 }
 
 export async function getAuditSummary(days = 30) {

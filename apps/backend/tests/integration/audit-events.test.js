@@ -115,5 +115,13 @@ describe("Audit event foundation", () => {
     expect(original.status).toBe("logged");
     expect(original.eventType).toBe("PAYMENT_CREATED");
     expect(original.actor_id.toString()).toBe(client._id.toString());
+
+    const repeated = await request(app)
+      .patch(`/v1/audit-logs/${event._id}/flag`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ reason: "The event still needs review" });
+
+    expect(repeated.status).toBe(200);
+    expect(String(repeated.body.data._id)).toBe(String(review._id));
   });
 });
