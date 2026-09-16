@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
+  ClipboardList,
   CheckCircle2,
   Clock,
   Download,
@@ -1192,6 +1193,7 @@ export default function ContractDetailPage() {
   }
 
   const partnerName = isClient ? contract?.student_id?.name : contract?.client_id?.name;
+  const projectId = contract?.project_id?._id || contract?.project_id;
   const partnerId = isClient ? studentId : clientId;
 
   return (
@@ -1206,7 +1208,7 @@ export default function ContractDetailPage() {
           <h1 className="mt-1 font-display text-2xl leading-tight tracking-tight text-slate">{contract?.project_id?.title || "Contract"}</h1>
           <p className="mt-1 text-sm text-slate-300">With {partnerName || "Partner"} · {formatDate(contract?.createdAt)}</p>
         </div>
-        <StatusBadge kind="contract" status={contract?.status} showDot />
+        <div className="flex flex-wrap items-center gap-2"><StatusBadge kind="contract" status={contract?.status} showDot />{projectId && <Link to={`/projects/${projectId}/oversight`}><Button size="sm" variant="outline"><ClipboardList className="h-4 w-4" />{t("oversight.openButton")}</Button></Link>}</div>
       </div>
 
       {contract?.status === "active" && (

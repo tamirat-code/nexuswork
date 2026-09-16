@@ -37,6 +37,8 @@ const notificationSchema = new mongoose.Schema(
         "meeting_starting_soon",
         "meeting_cancelled",
         "meeting_ended",
+        "project_check_in",
+        "at_risk_update",
         "system",
       ],
       required: true,

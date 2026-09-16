@@ -7,6 +7,7 @@ import { expireProjects } from "../modules/projects/projects.service.js";
 import { reconcilePendingReleases, reconcilePendingRefunds } from "../modules/payments/payments.service.js";
 import JobLock from "./job-lock.model.js";
 import { dispatchDueWebhookDeliveries } from "../modules/api-partners/api-webhooks.service.js";
+import { evaluateAtRiskMilestones } from "../modules/oversight/index.js";
 
 const JOB_LOCK_TTL_MS = 4 * 60 * 1000;
 
@@ -89,10 +90,22 @@ export function registerJobs() {
   }, 5 * 1000);
   webhookDeliveryTimer.unref?.();
 
+  const oversightTimer = setInterval(async () => {
+    await withJobLock("oversight-at-risk-evaluation", async () => {
+      try {
+        await evaluateAtRiskMilestones({ limit: 100 });
+      } catch (error) {
+        console.error("[jobs] at-risk evaluation failed:", error.message);
+      }
+    });
+  }, 5 * 60 * 1000);
+  oversightTimer.unref?.();
+
   return () => {
     clearInterval(timer);
     clearInterval(reconciliationTimer);
     clearInterval(refundReconciliationTimer);
     clearInterval(webhookDeliveryTimer);
+    clearInterval(oversightTimer);
   };
 }

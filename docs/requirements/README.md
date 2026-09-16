@@ -78,12 +78,12 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 
 | ID | Requirement (summary) | Status | Evidence |
 | --- | --- | --- | --- |
-| FR-36 | Milestone task board with shared status history | ❌ | No `Task` model or task routes exist; milestone state is not a task board |
-| FR-37 | Student milestone check-ins | ❌ | No `CheckIn` model or check-in routes exist |
-| FR-38 | Configurable at-risk milestone detection | ❌ | No scheduled at-risk evaluator exists |
-| FR-39 | At-risk notifications on transition and recovery | ❌ | Existing notifications are not connected to at-risk state transitions |
-| FR-40 | Consolidated client oversight dashboard | ❌ | No cross-contract oversight dashboard exists |
-| FR-41 | On-time delivery analytics | ❌ | Existing analytics does not expose the required student/category metric |
+| FR-36 | Milestone task board with shared status history | ✅ | `OversightTask`, `/v1/oversight/projects/:projectId/tasks`, and the localized project oversight page provide client task creation plus student status updates |
+| FR-37 | Student milestone check-ins | ✅ | `OversightCheckIn`, `/v1/oversight/projects/:projectId/check-ins`, and the student check-in form notify the contract client |
+| FR-38 | Configurable at-risk milestone detection | 🟡 | `AtRiskAssessment` and the locked five-minute evaluator detect overdue/deadline, blocked-task, overdue-task, and stale-check-in factors; the evaluator version is stored, but administrator-configurable thresholds are future work |
+| FR-39 | At-risk notifications on transition and recovery | ✅ | Risk transitions create deduplicated client/student notifications and email actions linking to project oversight |
+| FR-40 | Consolidated client oversight dashboard | 🟡 | `/projects/:id/oversight` consolidates milestone tasks, check-ins, risk state, and delivery metrics for one contracted project; cross-contract client roll-up is future work |
+| FR-41 | On-time delivery analytics | 🟡 | The oversight response exposes project-level completion rate, completed/on-time/late milestones, average delay, and at-risk counts; student/category portfolio analytics are future work |
 
 ## Organization & Team Accounts (FR-42–FR-46)
 

@@ -15,6 +15,7 @@ const MfaVerifyPage = lazy(() => import("../../features/auth/MfaVerifyPage.jsx")
 const ProjectListPage = lazy(() => import("../../features/projects/ProjectListPage.jsx"));
 const SavedProjectsPage = lazy(() => import("../../features/projects/SavedProjectsPage.jsx"));
 const ProjectDetailPage = lazy(() => import("../../features/projects/ProjectDetailPage.jsx"));
+const ProjectOversightPage = lazy(() => import("../../features/projects/ProjectOversightPage.jsx"));
 const PostProjectPage = lazy(() => import("../../features/projects/PostProjectPage.jsx"));
 const DashboardPage = lazy(() => import("../../features/workspace/DashboardPage.jsx"));
 const ContractsPage = lazy(() => import("../../features/contracts/ContractsPage.jsx"));
@@ -85,6 +86,7 @@ export default function AppRouter() {
       <Route path="/projects" element={<ProjectListPage />} />
       <Route path="/projects/new" element={protect(<PostProjectPage />, [ROLES.CLIENT])} />
       <Route path="/projects/:id" element={<ProjectDetailPage />} />
+      <Route path="/projects/:id/oversight" element={protect(<ProjectOversightPage />, [ROLES.STUDENT, ROLES.CLIENT])} />
       <Route path="/saved-projects" element={protect(<SavedProjectsPage />)} />
       <Route path="/students" element={<StudentsPage />} />
       <Route path="/profile/:id" element={<StudentProfilePage />} />

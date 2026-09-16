@@ -283,6 +283,30 @@ export const createProjectSchema = projectFieldsSchema.superRefine(validateProje
 
 export const updateProjectSchema = projectFieldsSchema.partial().superRefine(validateProjectBudget);
 
+export const createOversightTaskSchema = z.object({
+  milestone_id: objectId,
+  title: z.string().trim().min(2).max(200),
+  description: z.string().trim().max(3000).optional().default(""),
+  assignee_id: optionalObjectId,
+  due_date: z.coerce.date().optional().nullable(),
+  sort_order: z.coerce.number().int().min(0).optional().default(0),
+});
+
+export const updateOversightTaskSchema = z.object({
+  title: z.string().trim().min(2).max(200).optional(),
+  description: z.string().trim().max(3000).optional(),
+  status: z.enum(["todo", "in_progress", "completed", "blocked"]).optional(),
+  due_date: z.coerce.date().optional().nullable(),
+  sort_order: z.coerce.number().int().min(0).optional(),
+});
+
+export const createCheckInSchema = z.object({
+  milestone_id: objectId,
+  progress: z.coerce.number().min(0).max(100),
+  summary: z.string().trim().min(2).max(3000),
+  blockers: z.string().trim().max(2000).optional().default(""),
+});
+
 // --- Proposals ---
 export const submitProposalSchema = z.object({
   project_id: objectId,

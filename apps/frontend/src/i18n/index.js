@@ -109,6 +109,7 @@ import {
   miscPagesResources,
   landingPageResources,
   reputationVerificationResources,
+  oversightResources,
 } from "./moreResources.js";
 
 const extraBundles = [
@@ -136,6 +137,7 @@ const extraBundles = [
   miscPagesResources,
   landingPageResources,
   reputationVerificationResources,
+  oversightResources,
 ];
 
 

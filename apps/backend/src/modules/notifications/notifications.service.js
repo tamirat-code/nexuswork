@@ -13,6 +13,7 @@ function notificationActionUrl(data = {}) {
   const routes = {
     view_project: id ? `/projects/${id}` : "/projects",
     view_contract: id ? `/contracts/${id}` : "/contracts",
+    view_oversight: id ? `/projects/${id}/oversight` : "/projects",
     view_meeting: id ? `/meetings/${id}` : "/meetings",
     view_dispute: id ? `/disputes?dispute=${id}` : "/disputes",
     view_proposal: "/proposals",
