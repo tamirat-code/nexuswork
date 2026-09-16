@@ -37,7 +37,7 @@ export async function sendMail({ to, subject, html }) {
 
   if (driver === "log") {
     logger.info(`[mail:log] Simulated email send to: ${to} | Subject: ${subject}`);
-    logger.debug(`[mail:log] Content: ${html}`);
+    logger.debug("[mail:log] Email content omitted from logs for security.");
     return { id: `log_${Date.now()}` };
   }
 

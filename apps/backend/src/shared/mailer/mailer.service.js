@@ -3,6 +3,7 @@ import { mailConfig } from "../../config/mail.config.js";
 import { logger } from "../logger/logger.js";
 import { passwordResetEmail } from "../../templates/email/password-reset.template.js";
 import { verificationEmail } from "../../templates/email/email-verification.template.js";
+import { apiPartnerKeyEmail } from "../../templates/email/api-partner-key.template.js";
 import welcomeEmail from "../../templates/email/welcome.template.js";
 import { renderEmailLayout } from "../../templates/email/layout.template.js";
 
@@ -34,6 +35,11 @@ export async function sendVerificationEmail(email, verifyToken) {
 export async function sendWelcomeEmail(email, name) {
   const { subject, html } = welcomeEmail({ name, appUrl: mailConfig.appUrl });
   return send({ to: email, subject, html });
+}
+
+export async function sendPartnerApiKeyEmail({ to, partnerName, apiKey, tier, scopes }) {
+  const { subject, html } = apiPartnerKeyEmail({ partnerName, apiKey, tier, scopes });
+  return send({ to, subject, html });
 }
 
 

@@ -4,6 +4,8 @@ import ApiKey from "./api-keys.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { env } from "../../config/env.js";
+import { sendPartnerApiKeyEmail } from "../../shared/mailer/mailer.service.js";
+import { logger } from "../../shared/logger/logger.js";
 
 const TIER_DEFAULTS = Object.freeze({
   sandbox: { monthlyQuota: env.partnerSandboxMonthlyQuota, requestsPerMinute: env.partnerSandboxRequestsPerMinute, pricePerThousandMinor: env.partnerSandboxPricePerThousandMinor },
@@ -122,7 +124,20 @@ export async function createPartner({ actor, payload, req }) {
   try {
     const issued = await issueApiKey({ partner, name: "Initial key", scopes, createdBy: actor._id, req });
     await audit(actor, "api_partner_created", "api_partner.created", "api_partner", partner._id, { tier: partner.tier, scopes }, req);
-    return { partner: { ...partner.toObject(), ...tierLimits(partner.tier) }, api_key: issued.key, key: issued.keyRecord };
+    let emailSent = false;
+    try {
+      await sendPartnerApiKeyEmail({
+        to: partner.contact_email,
+        partnerName: partner.name,
+        apiKey: issued.key,
+        tier: partner.tier,
+        scopes,
+      });
+      emailSent = true;
+    } catch (error) {
+      logger.error(`[api-partners] initial key email failed for partner ${partner._id}:`, error.message);
+    }
+    return { partner: { ...partner.toObject(), ...tierLimits(partner.tier) }, api_key: issued.key, key: issued.keyRecord, email_sent: emailSent };
   } catch (error) {
     await ApiPartner.findByIdAndDelete(partner._id);
     throw error;

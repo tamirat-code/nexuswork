@@ -71,7 +71,7 @@ function CreatePartnerDialog({ token, onCreated }) {
     onSuccess: (response) => {
       onCreated(response.data.api_key);
       setName(""); setOrganizationName(""); setContactEmail(""); setTier("sandbox"); setScopes(["talent:read", "usage:read"]); setOpen(false);
-      toast.success(t("admin.apiPartnerCreated"));
+      toast[response.data.email_sent ? "success" : "warning"](t(response.data.email_sent ? "admin.apiPartnerInviteSent" : "admin.apiPartnerInviteFailed"));
     },
     onError: (error) => toast.error(error.message || t("admin.apiPartnerCreateFailed")),
   });

@@ -66,7 +66,7 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 
 | ID | Requirement (summary) | Status | Evidence |
 | --- | --- | --- | --- |
-| FR-29 | Enterprise partner registration and individually revocable API credentials | 🟡 | `api-partners` provisions separate `ApiPartner`/`ApiKey` records, hashes one-time keys, exposes `/partner/v1`, supports individual revocation, and lets an authenticated partner issue/revoke its own keys; self-service partner registration remains future |
+| FR-29 | Enterprise partner registration and individually revocable API credentials | 🟡 | `api-partners` provisions separate `ApiPartner`/`ApiKey` records, hashes one-time keys, sends the initial raw key to the registered contact email, exposes `/partner/v1`, supports individual revocation, and lets an authenticated partner issue/revoke its own keys; self-service partner registration remains future |
 | FR-30 | Sandbox/Growth/Enterprise tiers with rate limits and monthly quotas | ✅ | Mongo-backed per-minute/month counters enforce tier limits with `429`/`Retry-After`; `/partner/v1/me`, `/me/usage`, and the partner portal expose current usage and remaining quota |
 | FR-31 | Separate student consent for Talent API discovery and field-level exposure | 🟡 | Student Talent API consent is disabled by default and managed through `/v1/students/me/talent-api-consent`; `/partner/v1/talent/search` returns only verified, opted-in students and only consented fields |
 | FR-32 | Partner webhook subscriptions with idempotency, retries, and failure logging | ✅ | `api-webhooks.service.js` stores encrypted secrets, queues idempotent deliveries, signs payloads, retries with leases/backoff, marks exhausted deliveries, and exposes delivery history |
