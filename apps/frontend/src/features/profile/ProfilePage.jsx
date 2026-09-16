@@ -66,7 +66,6 @@ export default function ProfilePage() {
   const { user, token, setLocalUser } = useAuth();
   const toast = useToast();
   const { t } = useTranslation();
-  const reputationSubjectId = user?.id || user?._id;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => {
@@ -803,14 +802,14 @@ function UniversityVerificationCard({ user, token }) {
   });
 
   const exportReputation = useMutation({
-    mutationFn: () => exportMyReputation(reputationSubjectId, token),
+    mutationFn: () => exportMyReputation(user?.id || user?._id, token),
     onSuccess: (res) => {
       const reputationDocument = res?.data ?? res;
       const blob = new Blob([JSON.stringify(reputationDocument, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `nexuswork-reputation-${reputationSubjectId}.json`;
+      link.download = `nexuswork-reputation-${user?.id || user?._id}.json`;
       link.click();
       URL.revokeObjectURL(url);
       toast.show(t("profile.reputationExported", { defaultValue: "Signed reputation export downloaded." }));
