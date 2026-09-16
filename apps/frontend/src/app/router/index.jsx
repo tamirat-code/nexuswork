@@ -37,6 +37,7 @@ const StudentProfilePage = lazy(() => import("../../features/students/ProfilePag
 const ClientsPage = lazy(() => import("../../features/clients/ClientsPage.jsx"));
 const UniversitiesPage = lazy(() => import("../../features/universities/UniversitiesPage.jsx"));
 const CredentialVerifyPage = lazy(() => import("../../features/verifications/CredentialVerifyPage.jsx"));
+const ReputationVerifyPage = lazy(() => import("../../features/verifications/ReputationVerifyPage.jsx"));
 const AnalyticsPage = lazy(() => import("../../features/analytics/AnalyticsPage.jsx"));
 const RecommendationPage = lazy(() => import("../../features/recommendation/RecommendationPage.jsx"));
 const SearchPage = lazy(() => import("../../features/search/SearchPage.jsx"));
@@ -90,6 +91,7 @@ export default function AppRouter() {
       <Route path="/universities" element={<UniversitiesPage />} />
       <Route path="/verifications" element={protect(<UniversitiesPage />, [ROLES.UNIVERSITY_STAFF])} />
       <Route path="/verify-credential" element={<CredentialVerifyPage />} />
+      <Route path="/verify-reputation" element={<ReputationVerifyPage />} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/partner-portal" element={<PartnerPortalPage />} />
 

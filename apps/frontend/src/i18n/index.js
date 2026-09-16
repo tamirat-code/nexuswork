@@ -108,6 +108,7 @@ import {
   navigationResources,
   miscPagesResources,
   landingPageResources,
+  reputationVerificationResources,
 } from "./moreResources.js";
 
 const extraBundles = [
@@ -134,6 +135,7 @@ const extraBundles = [
   navigationResources,
   miscPagesResources,
   landingPageResources,
+  reputationVerificationResources,
 ];
 
 

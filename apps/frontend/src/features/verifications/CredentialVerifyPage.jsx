@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, FileUp, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { verifyCredential, verifyPublicCredential } from "../../services/api/verifications.api.js";
@@ -24,6 +25,7 @@ function formatDate(value) {
 }
 
 export default function CredentialVerifyPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const verificationId = searchParams.get("id") || "";
   const [rawCredential, setRawCredential] = useState("");
@@ -93,6 +95,9 @@ export default function CredentialVerifyPage() {
             Paste or upload a signed VC/Open Badge file. NexusWork checks the cryptographic
             proof and shows whether the credential is authentic and unchanged.
           </p>
+          <Link to="/verify-reputation" className="mt-5 inline-flex text-sm font-bold text-brass underline-offset-4 hover:underline">
+            {t("reputationVerification.title")}
+          </Link>
 
           <div className="mt-8 grid gap-3 text-sm text-slate-300">
             <div className="flex gap-3">
