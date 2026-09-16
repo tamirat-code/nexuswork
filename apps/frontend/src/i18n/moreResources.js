@@ -14,6 +14,11 @@ export const commonResources = {
       iAgreeToThe: "I agree to the",
       and: "and",
     },
+    profile: {
+      reputationExport: "Export reputation",
+      reputationExported: "Signed reputation export downloaded.",
+      reputationExportFailed: "Could not export your reputation.",
+    },
   },
   am: {
     common: {
@@ -30,6 +35,11 @@ export const commonResources = {
       iAgreeToThe: "በነዚህ እስማማለሁ፦",
       and: "እና",
     },
+    profile: {
+      reputationExport: "የስም ማረጋገጫ መዝገብ ላክ",
+      reputationExported: "የተፈረመ የስም ማረጋገጫ መዝገብ ወርዷል።",
+      reputationExportFailed: "የስም ማረጋገጫ መዝገብዎን መላክ አልተቻለም።",
+    },
   },
   af: {
     common: {
@@ -45,6 +55,11 @@ export const commonResources = {
     auth: {
       iAgreeToThe: "Waliigalteewwan kanatti walii gala:",
       and: "fi",
+    },
+    profile: {
+      reputationExport: "Maqaa hojii kee baasi",
+      reputationExported: "Galmeen maqaa hojii mallatteeffame buufameera.",
+      reputationExportFailed: "Galmee maqaa hojii kee baasuu hin dandeenye.",
     },
   },
 };

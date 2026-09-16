@@ -5,6 +5,7 @@ import {
   verifyCredentialProof,
 } from "../../src/modules/verifications/credential-signing.js";
 import { renderCredentialCardPdf } from "../../src/templates/credential/credential-card.pdf.js";
+import { buildReputationExport, verifyReputationExport } from "../../src/modules/reviews/reviews.service.js";
 import { createPublicKey, verify } from "node:crypto";
 
 describe("credential export", () => {
@@ -116,6 +117,41 @@ describe("credential export", () => {
 
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("builds a signed reputation export from public-safe evidence only", () => {
+    const document = buildReputationExport({
+      user: { _id: "student-123", name: "Hanna Beyene" },
+      reviews: [{ _id: "review-1", rating: 5, text: "Private client comment", createdAt: new Date("2026-08-26") }],
+      milestones: [{
+        _id: "milestone-1",
+        due_date: new Date("2026-08-30"),
+        status: "released",
+        released_at: new Date("2026-08-29"),
+      }],
+      submissions: [{ milestone_id: "milestone-1", submitted_at: new Date("2026-08-28") }],
+      disputes: [{ milestone_id: "milestone-1", status: "resolved", outcome: "release_student", reason: "private" }],
+      verifications: [{ _id: "verification-1", reviewed_at: new Date("2026-08-20") }],
+      profile: { skills: [{ name: "React", category: "Development", level: "advanced", verification_method: "university_certified" }] },
+    });
+
+    expect(document.type).toEqual(["VerifiableCredential", "NexusWorkReputationCredential"]);
+    expect(document.ratings).toEqual([{ id: "review-1", rating: 5, createdAt: "2026-08-26T00:00:00.000Z" }]);
+    expect(document.deliveryMetrics[0].onTime).toBe(true);
+    expect(document.disputeOutcomes).toMatchObject({ total: 1, outcomeCounts: { release_student: 1 } });
+    expect(document).not.toHaveProperty("email");
+    expect(document).not.toHaveProperty("ratings.0.text");
+    expect(document).not.toHaveProperty("disputeOutcomes.reason");
+    expect(verifyReputationExport(document)).toEqual({ valid: true, reason: "Credential signature is valid" });
+  });
+
+  it("rejects a tampered reputation export", () => {
+    const document = buildReputationExport({ user: { _id: "student-123", name: "Hanna Beyene" } });
+    const tampered = { ...document, ratings: [{ id: "review-1", rating: 1, createdAt: null }] };
+    expect(verifyReputationExport(tampered)).toEqual({
+      valid: false,
+      reason: "Credential signature is invalid or the credential was changed",
+    });
   });
 
 });

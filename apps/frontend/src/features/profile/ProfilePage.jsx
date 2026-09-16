@@ -31,6 +31,7 @@ import {
   getMySkillCertificationRequests,
   submitSkillCertificationRequest,
 } from "../../services/api/verifications.api.js";
+import { exportMyReputation } from "../../services/api/reviews.api.js";
 import { getMyStaffVerifications, requestStaffVerification } from "../../services/api/staff-verifications.api.js";
 import { uploadFile, deleteFile } from "../../services/api/files.api.js";
 import AvatarUploader from "./AvatarUploader.jsx";
@@ -800,6 +801,22 @@ function UniversityVerificationCard({ user, token }) {
     onError: (err) => toast.show(err?.message || "Could not export your credential.", { variant: "error" }),
   });
 
+  const exportReputation = useMutation({
+    mutationFn: () => exportMyReputation(user._id, token),
+    onSuccess: (res) => {
+      const reputationDocument = res?.data ?? res;
+      const blob = new Blob([JSON.stringify(reputationDocument, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `nexuswork-reputation-${user._id}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.show(t("profile.reputationExported", { defaultValue: "Signed reputation export downloaded." }));
+    },
+    onError: (err) => toast.show(err?.message || t("profile.reputationExportFailed", { defaultValue: "Could not export your reputation." }), { variant: "error" }),
+  });
+
   useEffect(() => {
     if (latest?.status === "approved" && !user?.universityVerified) {
       refreshMe().catch(() => {});
@@ -906,6 +923,10 @@ function UniversityVerificationCard({ user, token }) {
                   <Button size="sm" variant="outline" onClick={() => exportCredential.mutate("vc")} loading={exportCredential.isPending}>
                     <FileJson className="h-4 w-4" aria-hidden="true" />
                     Signed VC
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => exportReputation.mutate()} loading={exportReputation.isPending}>
+                    <FileJson className="h-4 w-4" aria-hidden="true" />
+                    {t("profile.reputationExport", { defaultValue: "Export reputation" })}
                   </Button>
                 </div>
               </div>

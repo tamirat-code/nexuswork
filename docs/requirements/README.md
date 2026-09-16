@@ -60,7 +60,7 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 | FR-25 | Escrow held only through a licensed, NBE-compliant PSP for the transaction's currency/jurisdiction | ⚠️ | Chapa integration is implemented and contract-tested against Chapa's published API, but **sandbox/live verification was not performed** in this environment (explicitly flagged as NOT VERIFIED in [Phase 3](../architecture/phase-3-ethiopian-psp.md)) — compliance claim can't be signed off from code alone |
 | FR-26 | University staff view skill-demand analytics (client demand vs. verified student supply) | ✅ | `analytics.controller.js` `getMyUniversity`/`getUniversity` |
 | FR-27 | Portfolio entries auto-generated from approved milestones, subject to per-entry client consent | ✅ | `PortfolioItem.consent_status`/`consented_by`/`consented_at`, `PATCH /v1/portfolios/:id/consent` |
-| FR-28 | Reputation record structured for future portable-credential export | 🟡 | `Review` + verification credentials exist and are individually exportable (FR-19); there is no single combined "reputation credential" export endpoint bundling ratings + delivery metrics + verified credentials into one document yet |
+| FR-28 | Reputation record structured for future portable-credential export | ✅ | `GET /v1/reviews/user/:userId/reputation/export` builds a versioned, privacy-safe signed export from reviews, delivery milestones, dispute aggregates, verified skills, and credential references; `POST /v1/reviews/reputation/verify` validates integrity. The document is NexusWork-versioned; formal external credential-standard conformance remains a separate FR-19 gate |
 
 ## Enterprise API / Talent Hub (FR-29–FR-35)
 
@@ -228,8 +228,9 @@ Drawn from proposal §3.7–3.13, matched against the implementation:
   record of a completed NBE-licensing/compliance review — that's an
   organizational, not code, artifact and belongs in `deployment/` or an
   external compliance doc if/when it exists.
-- **FR-28**: no single "portable reputation credential" endpoint exists yet;
-  each verifiable credential (FR-19) is exported individually.
+- **FR-28**: the signed reputation export is now implemented, but it is a
+  NexusWork-versioned representation. It should not be marketed as a formal
+  external credential standard until the FR-19 interoperability gate passes.
 - **Moderator role**: referenced in enums (`AuditLog.actor_role`,
   `AuditReview.reviewer_role`) but has no registration/promotion path in the
   current `admin` module — effectively unused today.
