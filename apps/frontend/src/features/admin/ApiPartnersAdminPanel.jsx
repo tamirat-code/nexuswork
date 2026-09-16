@@ -73,7 +73,7 @@ function CreatePartnerDialog({ token, onCreated }) {
       setName(""); setOrganizationName(""); setContactEmail(""); setTier("sandbox"); setScopes(["talent:read", "usage:read"]); setOpen(false);
       toast[response.data.email_sent ? "success" : "warning"](t(response.data.email_sent ? "admin.apiPartnerInviteSent" : "admin.apiPartnerInviteFailed"));
     },
-    onError: (error) => toast.error(error.message || t("admin.apiPartnerCreateFailed")),
+    onError: (error) => toast.error(error.code === "API_PARTNER_EMAIL_EXISTS" ? t("admin.apiPartnerExists") : error.message || t("admin.apiPartnerCreateFailed")),
   });
 
   return (
@@ -117,7 +117,7 @@ export default function ApiPartnersAdminPanel({ token }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-api-partners"] });
   const createKey = useMutation({
     mutationFn: () => createApiPartnerKey(partnerId, { name: keyName.trim(), scopes: keyScopes }, token),
-    onSuccess: (response) => { setSecret(response.data.api_key); setKeyName(""); queryClient.invalidateQueries({ queryKey: ["admin-api-partner-keys", partnerId] }); toast.success(t("admin.apiKeyCreated")); },
+    onSuccess: (response) => { setSecret(response.data.api_key); setKeyName(""); queryClient.invalidateQueries({ queryKey: ["admin-api-partner-keys", partnerId] }); toast[response.data.email_sent ? "success" : "warning"](t(response.data.email_sent ? "admin.apiKeyInviteSent" : "admin.apiKeyInviteFailed")); },
     onError: (error) => toast.error(error.message || t("admin.apiKeyCreateFailed")),
   });
   const revokeKey = useMutation({

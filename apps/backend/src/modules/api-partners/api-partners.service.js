@@ -28,7 +28,10 @@ export function createApiKeyMaterial() {
 
 export function parseApiKey(apiKey) {
   if (typeof apiKey !== "string") return null;
-  const match = /^nw_([A-Za-z0-9_-]{8,24})_([A-Za-z0-9_-]{32,})$/.exec(apiKey.trim());
+  // The key id is always 9 random bytes rendered as 18 hex characters.
+  // Parse that fixed-width segment so underscores in the base64url secret do
+  // not get absorbed into the key prefix.
+  const match = /^nw_([a-f0-9]{18})_([A-Za-z0-9_-]{32,})$/.exec(apiKey.trim());
   if (!match) return null;
   return { keyPrefix: `nw_${match[1]}`, key: apiKey.trim() };
 }
@@ -114,7 +117,7 @@ export async function issueApiKey({ partner, name, scopes, expires_at, createdBy
 export async function createPartner({ actor, payload, req }) {
   const scopes = normalizedScopes(payload.scopes);
   const existing = await ApiPartner.findOne({ contact_email: payload.contact_email });
-  if (existing) throw new ConflictError("An API partner with this contact email already exists");
+  if (existing) throw new ConflictError("An API partner with this contact email already exists", "API_PARTNER_EMAIL_EXISTS");
 
   const partner = await ApiPartner.create({
     ...payload,
@@ -168,7 +171,20 @@ export async function createPartnerKey({ partnerId, payload, actor, req }) {
   if (!partner) throw new NotFoundError("API partner not found");
   if (partner.status !== "active") throw new ConflictError("Keys cannot be created for an inactive API partner");
   const issued = await issueApiKey({ partner, ...payload, createdBy: actor._id, req });
-  return { api_key: issued.key, key: issued.keyRecord };
+  let emailSent = false;
+  try {
+    await sendPartnerApiKeyEmail({
+      to: partner.contact_email,
+      partnerName: partner.name,
+      apiKey: issued.key,
+      tier: partner.tier,
+      scopes: issued.keyRecord.scopes,
+    });
+    emailSent = true;
+  } catch (error) {
+    logger.error(`[api-partners] key email failed for partner ${partner._id}:`, error.message);
+  }
+  return { api_key: issued.key, key: issued.keyRecord, email_sent: emailSent };
 }
 
 export async function listOwnPartnerKeys(partnerId) {
