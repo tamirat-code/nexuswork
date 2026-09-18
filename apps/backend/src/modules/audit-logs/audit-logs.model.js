@@ -22,6 +22,7 @@ const AUDIT_ACTION_TYPES = [
   "WITHDRAWAL_REQUESTED", "WITHDRAWAL_SUCCEEDED", "WITHDRAWAL_FAILED",
   "organization_created", "organization_settings_updated", "organization_member_invited", "organization_member_role_changed", "organization_member_removed",
   "institution_onboarding_requested", "institution_onboarding_approved", "institution_onboarding_rejected",
+  "staff_verification_approved", "staff_verification_rejected",
   "api_partner_created", "api_partner_application_submitted", "api_partner_approved", "api_partner_active", "api_partner_suspended", "api_partner_revoked", "api_partner_rejected", "api_billing_status_updated",
   "api_key_created", "api_key_revoked", "partner_api_read",
 ];
@@ -53,7 +54,7 @@ const auditLogsSchema = new mongoose.Schema(
     },
       entity_type: {
       type: String,
-      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting", "organization", "institution", "org_membership", "institution_onboarding_request", "api_partner", "api_key", "partner_api_call", "api_billing_ledger"],
+      enum: ["user", "contract", "dispute", "payment", "verification", "staff_verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting", "organization", "institution", "org_membership", "institution_onboarding_request", "api_partner", "api_key", "partner_api_call", "api_billing_ledger"],
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },

@@ -17,6 +17,7 @@ function notificationActionUrl(data = {}) {
     view_meeting: id ? `/meetings/${id}` : "/meetings",
     view_dispute: id ? `/disputes?dispute=${id}` : "/disputes",
     view_proposal: "/proposals",
+    view_verification: "/profile",
     view_staff_verification: "/verifications",
   };
 

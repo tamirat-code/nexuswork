@@ -8,8 +8,8 @@ import { submitStaffVerificationSchema, reviewStaffVerificationSchema } from "..
 
 const router = Router();
 
-router.post("/", requireAuth, validateBody(submitStaffVerificationSchema), requestStaffVerification);
-router.get("/mine", requireAuth, getMine);
+router.post("/", requireAuth, requireRole(ROLES.UNIVERSITY_STAFF), validateBody(submitStaffVerificationSchema), requestStaffVerification);
+router.get("/mine", requireAuth, requireRole(ROLES.UNIVERSITY_STAFF), getMine);
 router.get("/stats", requireAuth, requireRole(ROLES.ADMIN), stats);
 router.get("/", requireAuth, requireRole(ROLES.ADMIN), getAll);
 router.patch("/:id/review", requireAuth, requireRole(ROLES.ADMIN), validateBody(reviewStaffVerificationSchema), review);

@@ -1,6 +1,11 @@
 import request from "supertest";
 import app from "../../src/app.js";
 import { buildStudentCredential } from "../../src/modules/verifications/verifications.service.js";
+import { createUser } from "../helpers/fixtures.js";
+import { connectTestDB, disconnectTestDB } from "../helpers/db.js";
+
+beforeAll(connectTestDB);
+afterAll(disconnectTestDB);
 
 describe("Verifications module", () => {
   function makeCredential() {
@@ -80,5 +85,32 @@ describe("Verifications module", () => {
       .post("/v1/verifications")
       .send({ university_id: "000000000000000000000001" }); // missing full_name/student_id_number/program/document_file_id
     expect(res.status).toBe(401);
+  });
+
+  it("allows only students to submit university verification requests", async () => {
+    const { token } = await createUser("client");
+    const res = await request(app)
+      .post("/v1/verifications")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(403);
+  });
+
+  it("allows only university staff or admins to review student verification requests", async () => {
+    const { token } = await createUser("client");
+    const res = await request(app)
+      .patch("/v1/verifications/000000000000000000000001/review")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ decision: "approved" });
+    expect(res.status).toBe(403);
+  });
+
+  it("requires a rejection reason for verification review decisions", async () => {
+    const { token } = await createUser("admin");
+    const res = await request(app)
+      .patch("/v1/verifications/000000000000000000000001/review")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ decision: "rejected" });
+    expect(res.status).toBe(400);
   });
 });

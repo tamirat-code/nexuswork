@@ -3,7 +3,8 @@ import University from "../universities/universities.model.js";
 import User from "../users/users.model.js";
 import File from "../files/files.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
-import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { ConflictError, NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
 export async function submitStaffVerification({
   userId,
@@ -50,7 +51,7 @@ export async function submitStaffVerification({
       user_id: userId,
       university_id: university._id,
       email_domain: emailDomain,
-      email_domain_matched: university.domain === emailDomain,
+      email_domain_matched: String(university.domain || "").trim().toLowerCase() === emailDomain,
       full_name: fullName,
       job_title: jobTitle,
       department,
@@ -119,7 +120,7 @@ export async function getStaffVerificationStats() {
   };
 }
 
-export async function reviewStaffVerification({ verificationId, reviewerId, reviewerRole, decision, rejectionReason }) {
+export async function reviewStaffVerification({ verificationId, reviewerId, reviewerRole, decision, rejectionReason, req }) {
   if (reviewerRole !== "admin") {
     throw new ForbiddenError("Only a platform admin can review staff verification requests");
   }
@@ -129,6 +130,9 @@ export async function reviewStaffVerification({ verificationId, reviewerId, revi
 
   const verification = await StaffVerification.findById(verificationId);
   if (!verification) throw new NotFoundError("Staff verification request not found");
+  if (verification.status !== "pending") {
+    throw new ConflictError("Only pending staff verification requests can be reviewed");
+  }
 
   verification.status = decision;
   verification.reviewed_by = reviewerId;
@@ -158,6 +162,18 @@ export async function reviewStaffVerification({ verificationId, reviewerId, revi
   } catch (err) {
     console.error("[staff-verifications] failed to notify requester:", err.message);
   }
+
+  await recordEvent({
+    actor: { id: reviewerId, role: reviewerRole },
+    eventType: decision === "approved" ? "staff_verification_approved" : "staff_verification_rejected",
+    action: decision === "approved" ? "staff_verification.approved" : "staff_verification.rejected",
+    entityType: "staff_verification",
+    entityId: verification._id,
+    newState: { status: decision, user_id: verification.user_id, university_id: verification.university_id },
+    metadata: { rejection_reason: verification.rejection_reason },
+    correlationId: req?.correlationId || req?.requestId,
+    requestId: req?.requestId,
+  });
 
   return verification;
 }

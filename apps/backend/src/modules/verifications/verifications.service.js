@@ -9,6 +9,7 @@ import { createNotification } from "../notifications/notifications.service.js";
 import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from "../../shared/exceptions/AppError.js";
 import { env } from "../../config/env.js";
 import { signCredential } from "./credential-signing.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
 export function buildStudentCredential({ verification, university, user, profile }) {
   const credentialId = `${env.credentialIssuerUrl}/v1/verifications/${verification._id}/credential`;
@@ -214,15 +215,21 @@ export async function getVerificationStats({ requesterId, requesterRole }) {
   };
 }
 
-export async function reviewVerification({ verificationId, reviewerId, reviewerRole, decision, rejectionReason }) {
+export async function reviewVerification({ verificationId, reviewerId, reviewerRole, decision, rejectionReason, req }) {
   if (!["approved", "rejected"].includes(decision)) {
     throw new ValidationError("Decision must be 'approved' or 'rejected'");
   }
 
   const verification = await Verification.findById(verificationId);
   if (!verification) throw new NotFoundError("Verification request not found");
+  if (verification.status !== "pending") {
+    throw new ConflictError("Only pending verification requests can be reviewed");
+  }
 
   if (reviewerRole !== "admin") {
+    if (reviewerRole !== "university_staff") {
+      throw new ForbiddenError("Only university staff or admins can review verification requests");
+    }
     const university = await University.findById(verification.university_id);
     const isContactStaff = university?.contact_staff?.some((id) => String(id) === String(reviewerId));
     if (!isContactStaff) throw new ForbiddenError("Only university staff or admins can review verification requests");
@@ -277,11 +284,23 @@ export async function reviewVerification({ verificationId, reviewerId, reviewerR
         decision === "approved"
           ? "Your university has confirmed your identity — you can now submit proposals."
           : `Your verification was not approved: ${verification.rejection_reason || "Please try again."}`,
-      data: { verification_id: verification._id },
+      data: { verification_id: verification._id, action: "view_verification" },
     });
   } catch (err) {
     console.error("[verifications] failed to notify student:", err.message);
   }
+
+  await recordEvent({
+    actor: { id: reviewerId, role: reviewerRole },
+    eventType: decision === "approved" ? "verification_approved" : "verification_rejected",
+    action: decision === "approved" ? "verification.approved" : "verification.rejected",
+    entityType: "verification",
+    entityId: verification._id,
+    newState: { status: decision, user_id: verification.user_id, university_id: verification.university_id },
+    metadata: { rejection_reason: verification.rejection_reason },
+    correlationId: req?.correlationId || req?.requestId,
+    requestId: req?.requestId,
+  });
 
   return verification;
 }

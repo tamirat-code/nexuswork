@@ -49,6 +49,7 @@ export const review = asyncHandler(async (req, res) => {
     reviewerRole: req.user.role,
     decision: req.body.decision,
     rejectionReason: req.body.rejection_reason,
+    req,
   });
   res.json({ success: true, data: verification });
 });

@@ -199,6 +199,10 @@ export const submitVerificationSchema = z.object({
 export const reviewVerificationSchema = z.object({
   decision: z.enum(["approved", "rejected"]),
   rejection_reason: z.string().trim().max(500).optional(),
+}).superRefine((payload, context) => {
+  if (payload.decision === "rejected" && !payload.rejection_reason) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["rejection_reason"], message: "A rejection reason is required" });
+  }
 });
 
 
@@ -217,6 +221,10 @@ export const submitStaffVerificationSchema = z.object({
 export const reviewStaffVerificationSchema = z.object({
   decision: z.enum(["approved", "rejected"]),
   rejection_reason: z.string().trim().max(500).optional(),
+}).superRefine((payload, context) => {
+  if (payload.decision === "rejected" && !payload.rejection_reason) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["rejection_reason"], message: "A rejection reason is required" });
+  }
 });
 
 // --- Skills ---

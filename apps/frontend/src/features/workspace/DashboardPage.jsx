@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, FileText, Wallet, PlusCircle, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Briefcase, FileText, Wallet, PlusCircle, CheckCircle2, ShieldAlert, ArrowUpRight, ChevronRight, Clock3, CircleCheck, Image as ImageIcon } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getVerificationStats } from "../../services/api/verifications.api.js";
@@ -8,6 +8,7 @@ import { getMyAnalytics } from "../../services/api/analytics.api.js";
 import { listMyProposals, listIncomingProposals } from "../../services/api/proposals.api.js";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { getMyWallet } from "../../services/api/wallets.api.js";
+import { getMyPortfolio } from "../../services/api/portfolios.api.js";
 import { listAdminStats } from "../../services/api/admin.api.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { chartColors, chartTooltipStyle } from "../../lib/chartStyles.js";
@@ -95,6 +96,109 @@ function formatMultiCurrency(values, fallback, fallbackCurrency = "USD") {
     .join(" · ");
 }
 
+function StudentDashboard({ user, firstName, proposals, contracts, wallet, userMetrics, portfolio, loading }) {
+  const activeContract = contracts.find((contract) => ["active", "pending_signature", "pending_review"].includes(contract.status));
+  const recentItems = [
+    ...proposals.map((proposal) => ({
+      id: `proposal-${proposal._id}`,
+      title: proposal.project_id?.title || "Untitled project",
+      detail: `${proposal.status || "pending"} proposal`,
+      status: proposal.status === "accepted" ? "Accepted" : proposal.status === "rejected" ? "Closed" : "In review",
+      to: "/proposals",
+    })),
+    ...contracts.map((contract) => ({
+      id: `contract-${contract._id}`,
+      title: contract.project_id?.title || contract.terms?.title || "Untitled contract",
+      detail: `${contract.status || "active"} contract`,
+      status: contract.status === "completed" ? "Done" : "In progress",
+      to: `/contracts/${contract._id}`,
+    })),
+  ].slice(0, 4);
+  const todoItems = [
+    activeContract && { title: activeContract.project_id?.title || activeContract.terms?.title || "Active contract", detail: "Continue your current work", to: `/contracts/${activeContract._id}`, done: false },
+    proposals.find((proposal) => proposal.status === "pending") && { title: "Follow up on a proposal", detail: "A client is reviewing your application", to: "/proposals", done: false },
+    { title: "Complete your profile", detail: "Add skills and portfolio work", to: "/profile", done: Boolean(user?.profileCompleted) },
+  ].filter(Boolean).slice(0, 3);
+  const portfolioItems = Array.isArray(portfolio) ? portfolio.slice(0, 3) : [];
+  const initials = (user?.name || "Student").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  const income = userMetrics?.earnings ?? userMetrics?.total_earnings ?? wallet?.released ?? 0;
+  const incomeCurrency = wallet?.currency || userMetrics?.currency || "USD";
+
+  return (
+    <div className="-mx-3 min-h-[calc(100vh-5rem)] bg-[#f7f5f2] px-3 py-4 text-[#2d2927] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="mx-auto max-w-[1500px] space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a8f87]">Student workspace</p>
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Good morning, {firstName}</h1>
+          </div>
+          <Link to="/profile" className="hidden items-center gap-3 rounded-full bg-white p-1.5 pr-4 shadow-sm ring-1 ring-black/5 sm:flex">
+            {user?.avatar ? <img src={user.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="grid h-9 w-9 place-items-center rounded-full bg-[#d8f4c0] text-xs font-bold text-[#456f30]">{initials}</span>}
+            <span className="text-sm font-semibold">View profile</span>
+            <ArrowUpRight className="h-4 w-4 text-[#9a8f87]" />
+          </Link>
+        </div>
+
+        <section className="grid gap-5 xl:grid-cols-[1.05fr_1fr_0.88fr]">
+          <Card className="relative min-h-[290px] overflow-hidden border-0 bg-[#284b43] text-white shadow-lg">
+            <div className="absolute -right-10 -top-12 h-48 w-48 rounded-full bg-[#b7ec8c]/20 blur-2xl" />
+            <div className="relative flex h-full flex-col justify-between">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-white/70">Your profile</p>
+                  <h2 className="mt-2 font-display text-3xl font-semibold">{user?.name || "Student"}</h2>
+                  <p className="mt-1 text-sm text-white/70">{user?.headline || user?.program || "Student freelancer"}</p>
+                </div>
+                {user?.avatar ? <img src={user.avatar} alt={user.name || ""} className="h-16 w-16 rounded-2xl object-cover ring-2 ring-white/20" /> : <div className="grid h-16 w-16 place-items-center rounded-2xl bg-white/15 text-xl font-bold">{initials}</div>}
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-8">
+                {[[proposals.length, "Proposals"], [contracts.length, "Contracts"], [portfolio.length, "Portfolio"]].map(([value, label]) => (
+                  <div key={label} className="rounded-2xl bg-white/10 p-3 backdrop-blur-sm">
+                    <p className="text-xl font-bold">{value}</p><p className="mt-1 text-[11px] text-white/65">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="min-h-[290px] border-0 bg-white shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div><p className="text-sm font-semibold text-[#766c65]">Income</p><p className="mt-2 font-display text-4xl font-bold">{formatCurrency(income, incomeCurrency)}</p></div>
+              <span className="rounded-full bg-[#f1eee9] px-3 py-1 text-xs font-semibold text-[#766c65]">All time</span>
+            </div>
+            <div className="mt-8 h-32 rounded-xl bg-gradient-to-t from-[#fff3ed] to-transparent p-2">
+              <svg viewBox="0 0 420 115" className="h-full w-full" role="img" aria-label="Income trend">
+                <path d="M0 92 C35 82 48 98 83 76 S135 68 170 80 S218 42 250 60 S295 95 323 66 S365 22 420 45" fill="none" stroke="#ef7651" strokeWidth="4" strokeLinecap="round" />
+                <path d="M0 92 C35 82 48 98 83 76 S135 68 170 80 S218 42 250 60 S295 95 323 66 S365 22 420 45 V115 H0Z" fill="url(#incomeFill)" opacity=".65" />
+                <defs><linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#ef7651" stopOpacity=".28" /><stop offset="1" stopColor="#ef7651" stopOpacity="0" /></linearGradient></defs>
+              </svg>
+            </div>
+            <div className="mt-2 flex justify-between text-[11px] text-[#a69c95]"><span>Jan</span><span>Apr</span><span>Jul</span><span>Now</span></div>
+          </Card>
+
+          <Card className="min-h-[290px] border-0 bg-[#302c2b] text-white shadow-sm">
+            <p className="text-sm font-semibold text-white/65">Current</p>
+            {loading ? <div className="mt-8 text-sm text-white/60">Loading your work…</div> : activeContract ? (
+              <Link to={`/contracts/${activeContract._id}`} className="mt-7 block">
+                <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-xl bg-[#b7ec8c] text-[#284b43]"><Briefcase className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate font-semibold">{activeContract.project_id?.title || activeContract.terms?.title || "Active contract"}</p><p className="mt-1 text-xs text-white/55">{activeContract.status || "In progress"}</p></div></div>
+                <div className="mt-10 h-2 rounded-full bg-white/15"><div className="h-full w-3/5 rounded-full bg-[#ef7651]" /></div><div className="mt-2 flex justify-between text-xs text-white/55"><span>In progress</span><span>60%</span></div>
+              </Link>
+            ) : <div className="mt-8"><p className="text-xl font-semibold">No active contract</p><p className="mt-2 text-sm leading-relaxed text-white/60">Find a project that matches your skills and start building your track record.</p><Link to="/projects" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#b7ec8c] px-4 py-2.5 text-sm font-bold text-[#284b43]">Find work <ArrowUpRight className="h-4 w-4" /></Link></div>}
+          </Card>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr_0.8fr]">
+          <Card className="border-0 bg-white shadow-sm"><div className="flex items-center justify-between"><h2 className="font-display text-xl font-semibold">Recent projects</h2><Link to="/proposals" className="text-xs font-semibold text-[#ef7651]">View all</Link></div><div className="mt-4 space-y-2">{recentItems.length ? recentItems.map((item) => <Link key={item.id} to={item.to} className="flex items-center justify-between gap-3 rounded-2xl bg-[#faf9f7] p-4 transition hover:bg-[#f2eee9]"><div className="min-w-0"><div className="flex items-center gap-2"><span className="rounded-full bg-[#f7d6c8] px-2 py-1 text-[10px] font-bold text-[#9c4b32]">{item.status}</span></div><p className="mt-2 truncate text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-[#9a8f87]">{item.detail}</p></div><ChevronRight className="h-4 w-4 shrink-0 text-[#b0a59e]" /></Link>) : <div className="rounded-2xl bg-[#faf9f7] p-6 text-sm text-[#9a8f87]">Your project activity will appear here.</div>}</div></Card>
+
+          <Card className="border-0 bg-white shadow-sm"><div className="flex items-center justify-between"><h2 className="font-display text-xl font-semibold">To-do list</h2><Link to="/profile" className="grid h-8 w-8 place-items-center rounded-xl bg-[#f5f2ee] text-[#766c65]"><ArrowUpRight className="h-4 w-4" /></Link></div><div className="mt-4 space-y-3">{todoItems.map((item) => <Link key={item.title} to={item.to} className="flex items-center gap-3 rounded-2xl border border-[#f0ece8] p-3 transition hover:border-[#ef7651]/40"><span className={item.done ? "grid h-7 w-7 place-items-center rounded-lg bg-[#d8f4c0] text-[#4d8834]" : "grid h-7 w-7 place-items-center rounded-lg bg-[#fff0e9] text-[#ef7651]"}>{item.done ? <CircleCheck className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}</span><span className="min-w-0"><p className="truncate text-sm font-semibold">{item.title}</p><p className="mt-0.5 truncate text-xs text-[#9a8f87]">{item.detail}</p></span></Link>)}</div></Card>
+
+          <Card className="border-0 bg-white shadow-sm"><div className="flex items-center justify-between"><h2 className="font-display text-xl font-semibold">Portfolio</h2><Link to="/portfolios" className="grid h-8 w-8 place-items-center rounded-xl bg-[#f5f2ee] text-[#766c65]"><PlusCircle className="h-4 w-4" /></Link></div><div className="mt-4 grid grid-cols-2 gap-2">{portfolioItems.length ? portfolioItems.map((item) => <Link key={item._id} to="/portfolios" className="group relative aspect-square overflow-hidden rounded-2xl bg-[#eeeae5]"><img src={item.image_url || item.thumbnail_url || item.project_url} alt={item.title || "Portfolio item"} className="h-full w-full object-cover transition group-hover:scale-105" onError={(event) => { event.currentTarget.style.display = "none"; }} /><div className="absolute inset-0 grid place-items-center text-[#b0a59e]"><ImageIcon className="h-6 w-6" /></div></Link>) : <Link to="/portfolios" className="col-span-2 grid min-h-32 place-items-center rounded-2xl border border-dashed border-[#ded7d0] text-center text-xs text-[#9a8f87]"><span><PlusCircle className="mx-auto mb-2 h-5 w-5" />Add your first work</span></Link>}</div></Card>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { user, token } = useAuth();
   const { t } = useTranslation();
@@ -129,6 +233,11 @@ export default function DashboardPage() {
     queryFn: () => getMyWallet(token),
     enabled: !!token && (isStudent || isClient),
   });
+  const { data: portfolioRes, isLoading: portfolioLoading } = useQuery({
+    queryKey: ["dashboard-portfolio"],
+    queryFn: () => getMyPortfolio(token),
+    enabled: !!token && isStudent,
+  });
   const { data: adminStatsRes, isLoading: adminStatsLoading } = useQuery({
     queryKey: ["dashboard-admin-stats"],
     queryFn: () => listAdminStats(token),
@@ -149,6 +258,7 @@ export default function DashboardPage() {
   const incomingProposals = incomingProposalsRes?.data ?? [];
   const contracts = contractsRes?.data ?? [];
   const wallet = walletRes?.data ?? {};
+  const portfolio = portfolioRes?.data ?? [];
   const adminStats = adminStatsRes?.data ?? {};
   const liveStats = isStudent
     ? [
@@ -170,6 +280,9 @@ export default function DashboardPage() {
           ]
         : null;
   const liveLoading = userMetricsLoading || myProposalsLoading || incomingProposalsLoading || contractsLoading || walletLoading || adminStatsLoading;
+  if (isStudent) {
+    return <StudentDashboard user={user} firstName={firstName} proposals={proposals} contracts={contracts} wallet={wallet} userMetrics={userMetrics} portfolio={portfolio} loading={liveLoading || portfolioLoading} />;
+  }
   const activityItems = isStudent
     ? [
         ...proposals.slice(0, 3).map((proposal) => ({
