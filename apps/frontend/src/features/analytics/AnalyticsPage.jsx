@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { BarChart3, TrendingUp, Users, Briefcase, Wallet, FileText } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { getPlatformAnalytics, getMyUniversityAnalytics, getMyAnalytics } from "../../services/api/analytics.api.js";
+import { getMyWallet } from "../../services/api/wallets.api.js";
 import { listMyProposals } from "../../services/api/proposals.api.js";
 import { listMyContracts } from "../../services/api/contracts.api.js";
 import { listAdminStats } from "../../services/api/admin.api.js";
@@ -13,15 +14,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/sh
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
 
-function PersonalAnalytics({ t, analytics, proposals, contracts, loading }) {
+function PersonalAnalytics({ t, analytics, wallet, proposals, contracts, loading }) {
   const proposalData = ["pending", "accepted", "rejected", "withdrawn"]
     .map((status) => ({ name: status, value: proposals.filter((proposal) => proposal.status === status).length }))
     .filter((item) => item.value > 0);
   const contractData = ["active", "completed", "cancelled"]
     .map((status) => ({ name: status, value: contracts.filter((contract) => contract.status === status).length }))
     .filter((item) => item.value > 0);
+  const walletBalances = Object.fromEntries(
+    Object.entries(wallet?.balances || {}).map(([currency, balance]) => [currency, balance?.available ?? 0])
+  );
   const cards = [
-    { label: t("analyticsPersonal.earnings"), value: formatMultiCurrency(analytics?.earnings_by_currency, analytics?.earnings ?? 0, analytics?.currency || "USD"), icon: TrendingUp },
+    { label: t("analyticsPersonal.earnings"), value: formatMultiCurrency(walletBalances, analytics?.earnings ?? 0, wallet?.currency || analytics?.currency || "USD"), icon: TrendingUp },
     { label: t("analyticsPersonal.payments"), value: analytics?.payments_count ?? 0, icon: Wallet },
     { label: t("analyticsPersonal.proposals"), value: proposals.length, icon: FileText },
     { label: t("analyticsPersonal.activeContracts"), value: contracts.filter((contract) => ["active", "pending_signature", "pending_review"].includes(contract.status)).length, icon: Briefcase },
@@ -72,6 +76,11 @@ export default function AnalyticsPage() {
     queryFn: () => getMyAnalytics(token),
     enabled: !!token && isStudent,
   });
+  const { data: personalWalletRes, isLoading: personalWalletLoading } = useQuery({
+    queryKey: ["analytics", "personal", "wallet"],
+    queryFn: () => getMyWallet(token),
+    enabled: !!token && isStudent,
+  });
   const { data: proposalsRes, isLoading: proposalsLoading } = useQuery({
     queryKey: ["analytics", "personal", "proposals"],
     queryFn: () => listMyProposals(token),
@@ -91,7 +100,7 @@ export default function AnalyticsPage() {
   const a = data?.data ?? {};
   const adminDashboard = adminDashboardRes?.data ?? {};
   if (isStudent) {
-    return <PersonalAnalytics t={t} analytics={personalRes?.data ?? {}} proposals={proposalsRes?.data ?? []} contracts={contractsRes?.data ?? []} loading={personalLoading || proposalsLoading || contractsLoading} />;
+    return <PersonalAnalytics t={t} analytics={personalRes?.data ?? {}} wallet={personalWalletRes?.data ?? {}} proposals={proposalsRes?.data ?? []} contracts={contractsRes?.data ?? []} loading={personalLoading || personalWalletLoading || proposalsLoading || contractsLoading} />;
   }
   const universitySuppressed = !isAdmin && a.privacy_suppressed;
   const adminRoleData = (adminDashboard.users?.by_role || [])

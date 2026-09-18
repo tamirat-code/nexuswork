@@ -126,7 +126,10 @@ function StudentDashboard({ user, firstName, proposals, contracts, wallet, userM
   const initials = (user?.name || "Student").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const income = userMetrics?.earnings ?? userMetrics?.total_earnings ?? wallet?.released ?? 0;
   const incomeCurrency = wallet?.currency || userMetrics?.currency || "USD";
-  const incomeByCurrency = userMetrics?.earnings_by_currency;
+  const walletBalances = Object.fromEntries(
+    Object.entries(wallet?.balances || {}).map(([currency, balance]) => [currency, balance?.available ?? 0])
+  );
+  const incomeByCurrency = Object.keys(walletBalances).length ? walletBalances : userMetrics?.earnings_by_currency;
 
   return (
     <div className="-mx-3 min-h-[calc(100vh-5rem)] bg-[#f7f5f2] px-3 py-4 text-[#2d2927] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
