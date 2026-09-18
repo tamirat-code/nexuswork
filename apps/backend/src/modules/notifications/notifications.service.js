@@ -19,6 +19,7 @@ function notificationActionUrl(data = {}) {
     view_proposal: "/proposals",
     view_verification: "/profile",
     view_staff_verification: "/verifications",
+    view_pre_contract: data.pre_contract_id ? `/interviews/${data.pre_contract_id}` : "/notifications",
   };
 
   const route = routes[data.action];

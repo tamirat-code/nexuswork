@@ -199,7 +199,7 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
     .slice(0, 20);
 
   const userIds = shortlist.map((c) => c.profile.user_id);
-  const users = await User.find({ _id: { $in: userIds } }, "name avatar_url").lean();
+  const users = await User.find({ _id: { $in: userIds } }, "name avatarUrl").lean();
   const userById = new Map(users.map((u) => [String(u._id), u]));
 
   return shortlist.map(({ profile, score }) => ({

@@ -1,6 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { sendMessage, listMessages } from "./messaging.service.js";
 import { assertContractParty } from "../../shared/authorization/resource-authorization.js";
+import { getPreContractConversation, sendPreContractMessage, startPreContractConversation } from "./pre-contract.service.js";
 
 export const create = asyncHandler(async (req, res) => {
   await assertContractParty({ contractId: req.params.contractId, req });
@@ -33,4 +34,19 @@ export const getForContract = asyncHandler(async (req, res) => {
   );
 
   res.json({ success: true, data: messages });
+});
+
+export const startPreContract = asyncHandler(async (req, res) => {
+  const conversation = await startPreContractConversation(req.params.projectId, req.params.studentId, req.user);
+  res.status(201).json({ success: true, data: conversation });
+});
+
+export const getPreContract = asyncHandler(async (req, res) => {
+  const data = await getPreContractConversation(req.params.conversationId, req.user._id, req.pagination || {});
+  res.json({ success: true, data });
+});
+
+export const createPreContractMessage = asyncHandler(async (req, res) => {
+  const message = await sendPreContractMessage(req.params.conversationId, req.user._id, req.body?.body);
+  res.status(201).json({ success: true, data: message });
 });

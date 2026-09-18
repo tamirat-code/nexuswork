@@ -28,6 +28,7 @@ const ProposalsPage = lazy(() => import("../../features/proposals/ProposalsPage.
 const DisputesPage = lazy(() => import("../../features/disputes/DisputesPage.jsx"));
 const NotificationsPage = lazy(() => import("../../features/notifications/NotificationsPage.jsx"));
 const ChatPage = lazy(() => import("../../features/chat/ChatPage.jsx"));
+const PreContractPage = lazy(() => import("../../features/chat/PreContractPage.jsx"));
 const SettingsPage = lazy(() => import("../../features/settings/SettingsPage.jsx"));
 const ProfilePage = lazy(() => import("../../features/profile/ProfilePage.jsx"));
 const PortfoliosPage = lazy(() => import("../../features/portfolios/PortfoliosPage.jsx"));
@@ -102,6 +103,7 @@ export default function AppRouter() {
       <Route path="/notifications" element={protect(<NotificationsPage />)} />
       <Route path="/chat" element={protect(<ChatPage />, [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF])} />
       <Route path="/chat/:conversationId" element={protect(<ChatPage />, [ROLES.STUDENT, ROLES.CLIENT, ROLES.UNIVERSITY_STAFF])} />
+      <Route path="/interviews/:conversationId" element={protect(<PreContractPage />, [ROLES.STUDENT, ROLES.CLIENT])} />
       <Route path="/proposals" element={protect(<ProposalsPage />)} />
       <Route path="/contracts" element={protect(<ContractsPage />)} />
       <Route path="/contracts/:id" element={protect(<ContractDetailPage />)} />

@@ -26,6 +26,7 @@ const notificationSchema = new mongoose.Schema(
         "milestone_approved",
         "payment_received",
         "new_message",
+        "pre_contract_message",
         "review_received",
         "verification_approved",
         "verification_rejected",

@@ -309,6 +309,12 @@ export default function NotificationsPage() {
         return;
       }
 
+      const preContractId = notification.data?.pre_contract_id || notification.data?.preContractId;
+      if (notification.data?.action === "view_pre_contract" && preContractId) {
+        navigate(`/interviews/${preContractId}`);
+        return;
+      }
+
       if (notificationType === "project_expired" && notification.data?.project_id) {
         navigate(`/projects/${notification.data.project_id}`);
       }

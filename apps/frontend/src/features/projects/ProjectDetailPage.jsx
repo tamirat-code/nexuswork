@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, BadgeCheck, Bookmark, BookmarkCheck, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Bookmark, BookmarkCheck, Sparkles, Users, Send } from "lucide-react";
 import { getProject, updateProject, closeProject } from "../../services/api/projects.api.js";
 import { listSkills } from "../../services/api/skills.api.js";
 import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
@@ -32,6 +32,7 @@ import { uploadFile, openFilePreview } from "../../services/api/files.api.js";
 import { reportValidation } from "../../lib/validation.js";
 import { displayFilename } from "../../utils/filename.utils.js";
 import { GLOBAL_FILE_LIMIT_MB } from "../../utils/file-rules.js";
+import { getPreContractConversation, sendPreContractMessage, startPreContractConversation } from "../../services/api/messages.api.js";
 
 const PROJECT_CATEGORIES = [
   ["web-development", "Web Development"],
@@ -163,7 +164,7 @@ function ProposalSubmitDialog({ projectId, token, verified, currency = "USD", pr
               </p>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" loading={draftMutation.isPending} onClick={() => draftMutation.mutate()}>Save draft</Button>
+              <Button type="button" variant="outline" loading={draftMutation.isPending} onClick={() => draftMutation.mutate()}>{t("projects.saveDraft", { defaultValue: "Save draft" })}</Button>
               <Button type="submit" loading={mutation.isPending} disabled={!cvFile || cvUpload.isPending}>{t("projects.submitProposal", { defaultValue: "Submit proposal" })}</Button>
             </DialogFooter>
           </form>
@@ -283,8 +284,8 @@ function RecommendedStudents({ projectId, token }) {
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div className="flex min-w-0 items-center gap-3">
               <Avatar>
-                <AvatarImage src={m.user.avatar_url} alt="" />
-                <AvatarFallback>{(m.user.name || "S").slice(0, 2)}</AvatarFallback>
+                <AvatarImage src={m.user.avatarUrl || m.user.avatar_url} alt="" />
+              <AvatarFallback>{(m.user.name || "S").slice(0, 2)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <p className="truncate font-semibold text-slate">{m.user.name || "Student"}</p>
@@ -295,11 +296,38 @@ function RecommendedStudents({ projectId, token }) {
                 </div>
               </div>
             </div>
-            <Badge variant="outline" className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> {Math.round((m.match_score || 0) * 100)}% match</Badge>
+            <div className="flex items-center gap-2"><Badge variant="outline" className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> {Math.round((m.match_score || 0) * 100)}% match</Badge><PreContractInterviewDialog projectId={projectId} student={m.user} token={token} /></div>
           </CardContent>
         </Card>
       ))}
     </div>
+  );
+}
+
+function PreContractInterviewDialog({ projectId, student, token }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [body, setBody] = useState("");
+  const start = useMutation({ mutationFn: () => startPreContractConversation(projectId, student._id, token), onSuccess: (response) => setConversationId(response.data?._id) });
+  const conversation = useQuery({ queryKey: ["pre-contract-conversation", conversationId], queryFn: () => getPreContractConversation(conversationId, token), enabled: !!conversationId && open });
+  const send = useMutation({ mutationFn: () => sendPreContractMessage(conversationId, body, token), onSuccess: () => { setBody(""); conversation.refetch(); } });
+  function handleOpen(nextOpen) {
+    setOpen(nextOpen);
+    if (nextOpen && !conversationId) start.mutate();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogTrigger asChild><Button size="sm" variant="secondary">{t("projects.messageStudent", { defaultValue: "Message student" })}</Button></DialogTrigger>
+      <DialogContent className="max-w-xl">
+        <DialogHeader><DialogTitle>{t("projects.interviewStudent", { defaultValue: "Talk before creating a contract" })}</DialogTitle><DialogDescription>{t("projects.interviewStudentHint", { defaultValue: "Ask questions, discuss the brief, and decide whether to proceed. Work and payment remain disabled until a contract is created." })}</DialogDescription></DialogHeader>
+        <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-border-subtle bg-surface-soft p-3">
+          {start.isPending || conversation.isLoading ? <p className="p-6 text-center text-sm text-content-muted">{t("common.loading", { defaultValue: "Loading…" })}</p> : conversation.data?.data?.messages?.length ? conversation.data.data.messages.map((message) => <div key={message._id} className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${String(message.sender_id?._id) === String(student._id) ? "bg-surface text-content-primary" : "ml-auto bg-brand text-brand-foreground"}`}>{message.body}</div>) : <p className="p-6 text-center text-sm text-content-muted">{t("projects.noInterviewMessages", { defaultValue: "Start the conversation by introducing the project." })}</p>}
+        </div>
+        <div className="flex gap-2"><Textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder={t("projects.interviewPlaceholder", { defaultValue: "Ask about availability, approach, or relevant experience…" })} disabled={!conversationId || send.isPending} /><Button size="sm" className="self-end" disabled={!conversationId || !body.trim() || send.isPending} onClick={() => send.mutate()}><Send className="mr-1 h-4 w-4" />{t("common.send", { defaultValue: "Send" })}</Button></div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
