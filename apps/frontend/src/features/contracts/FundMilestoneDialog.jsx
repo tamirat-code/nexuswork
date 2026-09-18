@@ -100,8 +100,8 @@ function ChapaCheckout({ contractId, milestone, paymentIntentId, checkoutUrl, to
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-200">
-        <p className="font-semibold text-white">Continue securely with Chapa</p>
+      <div className="rounded-lg border border-border-subtle bg-surface-soft p-4 text-sm text-content-secondary">
+        <p className="font-semibold text-content-primary">Continue securely with Chapa</p>
         <p className="mt-1 text-slate-300">Your payment will be verified before the milestone is marked funded.</p>
       </div>
       <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">

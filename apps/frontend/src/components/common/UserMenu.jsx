@@ -27,17 +27,17 @@ export default function UserMenu({ compact = false }) {
           {...triggerProps}
           type="button"
           aria-label={t("common.accountMenu")}
-          className="flex items-center gap-2 rounded-control p-1 pr-2 transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+          className="flex items-center gap-2 rounded-control border border-transparent p-1 pr-2 transition-colors hover:border-border-subtle hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
           <Avatar name={user.name || user.email} src={user.avatarUrl} size="sm" decorative />
           {!compact && (
-            <span className="hidden max-w-[9rem] truncate text-sm text-slate sm:inline">
+            <span className="hidden max-w-[9rem] truncate text-sm text-content-primary sm:inline">
               {user.name || user.email}
             </span>
           )}
           <svg
             viewBox="0 0 24 24"
-            className={`h-4 w-4 text-slate-300 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`h-4 w-4 text-content-muted transition-transform ${open ? "rotate-180" : ""}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="1.8"
@@ -51,8 +51,8 @@ export default function UserMenu({ compact = false }) {
       {({ close }) => (
         <>
           <DropdownLabel>
-            <span className="block truncate text-slate">{user.name || t("common.yourAccount")}</span>
-            <span className="block truncate text-xs font-normal text-slate-300">
+            <span className="block truncate text-content-primary">{user.name || t("common.yourAccount")}</span>
+            <span className="block truncate text-xs font-normal text-content-muted">
               {ROLE_LABELS[user.role] || user.email}
             </span>
           </DropdownLabel>

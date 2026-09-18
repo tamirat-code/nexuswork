@@ -137,22 +137,22 @@ export default function WalletsPage() {
           <div className="flex flex-wrap items-center justify-between gap-5 p-1">
             <div className="flex items-start gap-3">
               {wallet?.payouts_enabled ? (
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-escrow" />
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
               ) : (
-                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-brass" />
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
               )}
 
               <div>
-                <p className="text-sm font-semibold text-slate">
+                <p className="text-sm font-semibold text-content-primary">
                   {wallet?.payouts_enabled ? t("wallets.payoutReadyTitle") : t("wallets.payoutSetupRequiredTitle")}
                 </p>
-                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300">
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-content-secondary">
                   {wallet?.payouts_enabled
                     ? t("wallets.payoutReadyDesc")
                     : t("wallets.payoutSetupRequiredDesc")}
                 </p>
                 {!wallet?.payouts_enabled && wallet?.requirements_due?.length > 0 && (
-                  <p className="mt-1.5 text-xs text-slate-300">
+                  <p className="mt-1.5 text-xs text-content-secondary">
                     {t("wallets.stripeNeedsItems", { count: wallet.requirements_due.length })}
                   </p>
                 )}
@@ -174,17 +174,17 @@ export default function WalletsPage() {
         <Card className="mb-6">
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-semibold text-slate">{t("wallets.etbPayoutAccount")}</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-300">
+              <p className="text-sm font-semibold text-content-primary">{t("wallets.etbPayoutAccount")}</p>
+              <p className="mt-1 text-xs leading-relaxed text-content-secondary">
                 {t("wallets.etbPayoutDesc")}
               </p>
             </div>
-            <div className="rounded-lg border border-ink-300 bg-ink-50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{t("wallets.etbEarnings")}</p>
-              <p className="mt-1 font-mono text-2xl font-bold text-brass">
+            <div className="rounded-lg border border-border-subtle bg-surface-soft p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-content-secondary">{t("wallets.etbEarnings")}</p>
+              <p className="mt-1 font-mono text-2xl font-bold text-brand">
                 {formatCurrency(wallet?.balances?.etb?.available ?? 0, "ETB")}
               </p>
-              <p className="mt-1 text-xs text-slate-300">{t("wallets.etbEarningsDesc")}</p>
+              <p className="mt-1 text-xs text-content-secondary">{t("wallets.etbEarningsDesc")}</p>
             </div>
             {wallet?.chapa_payout_ready && (
               <p className="text-xs text-escrow">{t("wallets.etbReady", { name: wallet.chapa_account_name, code: wallet.chapa_bank_code, last4: wallet.chapa_account_number_last4 })}</p>
@@ -222,21 +222,21 @@ export default function WalletsPage() {
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-4 p-1">
               <div>
-                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                  <Wallet className="h-4 w-4 text-brass" /> {t("wallets.availableBalance")}
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-content-secondary">
+                  <Wallet className="h-4 w-4 text-brand" /> {t("wallets.availableBalance")}
                 </p>
                 {wLoading ? (
                   <Skeleton className="mt-2 h-9 w-36" />
                 ) : (
-                  <p className="mt-1 font-mono text-3xl font-bold tracking-tight text-brass">
+                  <p className="mt-1 font-mono text-3xl font-bold tracking-tight text-brand">
                     {formatCurrency(wallet?.available ?? 0)}
                   </p>
                 )}
               </div>
 
               <div className="text-right">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{t("wallets.pending")}</p>
-                <p className="mt-1 font-mono text-base font-medium text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-content-secondary">{t("wallets.pending")}</p>
+                <p className="mt-1 font-mono text-base font-medium text-content-secondary">
                   {formatCurrency(wallet?.pending ?? 0)}
                 </p>
               </div>

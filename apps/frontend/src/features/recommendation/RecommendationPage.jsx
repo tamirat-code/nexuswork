@@ -39,9 +39,9 @@ export default function RecommendationPage() {
     return (
       <div className="mx-auto max-w-2xl animate-fade-up">
         <Card className="p-10 text-center">
-          <Sparkles className="mx-auto h-10 w-10 text-brass" />
-          <h1 className="mt-4 font-display text-xl text-slate">{t("recommendations.studentFacingTitle")}</h1>
-          <p className="mt-2 text-sm text-slate-300">
+          <Sparkles className="mx-auto h-10 w-10 text-brand" />
+          <h1 className="mt-4 font-display text-xl text-content-primary">{t("recommendations.studentFacingTitle")}</h1>
+          <p className="mt-2 text-sm text-content-secondary">
             {t("recommendations.studentFacingDesc")}
           </p>
           {user?.role === "client" && (
@@ -56,18 +56,18 @@ export default function RecommendationPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brass"><Sparkles className="h-3.5 w-3.5" /> {t("recommendations.eyebrow")}</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("recommendations.title")}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">{t("recommendations.subtitle")}</p>
+      <header className="border-b border-border-subtle pb-6">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand"><Sparkles className="h-3.5 w-3.5" /> {t("recommendations.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("recommendations.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-content-secondary">{t("recommendations.subtitle")}</p>
       </header>
 
-      <Card className="mt-6 border-brass/20 bg-brass/5">
+      <Card className="mt-6 border-brand/20 bg-brand-soft">
         <CardContent className="flex gap-3 p-4">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-brass" />
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
           <div>
-            <h2 className="font-display text-sm text-slate">{t("recommendations.howItWorks", { defaultValue: "How recommendations work" })}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-slate-300">
+            <h2 className="font-display text-sm text-content-primary">{t("recommendations.howItWorks", { defaultValue: "How recommendations work" })}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-content-secondary">
               {t("recommendations.howItWorksDesc", { defaultValue: "We compare your profile skills with each project’s required skills. Projects with matching skills are scored, then AI ranks the strongest matches when enabled. Every card shows the matching skills and score." })}
             </p>
           </div>
@@ -76,15 +76,15 @@ export default function RecommendationPage() {
 
       {isStudent && (
         <section className="mt-8">
-          <h2 className="flex items-center gap-1.5 font-display text-lg text-slate"><TrendingUp className="h-4 w-4 text-brass" /> {t("recommendations.careerPathTitle")}</h2>
-          <p className="mt-1 text-sm text-slate-300">{t("recommendations.careerPathDesc")}</p>
+          <h2 className="flex items-center gap-1.5 font-display text-lg text-content-primary"><TrendingUp className="h-4 w-4 text-brand" /> {t("recommendations.careerPathTitle")}</h2>
+          <p className="mt-1 text-sm text-content-secondary">{t("recommendations.careerPathDesc")}</p>
 
           {careerLoading && <Skeleton className="mt-4 h-28 w-full" />}
 
           {!careerLoading && career && (
             <Card className="mt-4 border-brass/20">
               <CardContent className="p-5">
-                {career.summary && <p className="text-sm text-slate-300">{career.summary}</p>}
+                {career.summary && <p className="text-sm text-content-secondary">{career.summary}</p>}
 
                 {career.skill_path?.length > 0 ? (
                   <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

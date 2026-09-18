@@ -18,10 +18,10 @@ export default function PaymentsPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("payments.eyebrow")}</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("payments.title")}</h1>
-        <p className="mt-2 text-sm text-slate-300">{t("payments.description")}</p>
+      <header className="border-b border-border-subtle pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("payments.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("payments.title")}</h1>
+        <p className="mt-2 text-sm text-content-secondary">{t("payments.description")}</p>
       </header>
 
       <Card className="mt-6 overflow-hidden">
@@ -39,15 +39,15 @@ export default function PaymentsPage() {
             <TableBody>
               {isLoading && [...Array(4)].map((_, i) => <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)}
               {!isLoading && payments.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="py-14 text-center text-slate-300">{t("payments.noPayments")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-14 text-center text-content-secondary">{t("payments.noPayments")}</TableCell></TableRow>
               )}
               {payments.map((p) => (
                 <TableRow key={p._id}>
-                  <TableCell className="font-mono text-sm text-brass">#{p.reference || p._id.slice(-6)}</TableCell>
-                  <TableCell className="text-sm text-slate-300">{p.milestone_id?.title || t("payments.milestone")}</TableCell>
-                  <TableCell className="text-right font-mono text-slate-300">{formatCurrency(p.amount ?? 0)}</TableCell>
+                  <TableCell className="font-mono text-sm text-brand">#{p.reference || p._id.slice(-6)}</TableCell>
+                  <TableCell className="text-sm text-content-secondary">{p.milestone_id?.title || t("payments.milestone")}</TableCell>
+                  <TableCell className="text-right font-mono text-content-secondary">{formatCurrency(p.amount ?? 0)}</TableCell>
                   <TableCell><StatusBadge kind="payment" status={p.status} showDot /></TableCell>
-                  <TableCell className="text-right font-mono text-xs text-slate-300">{formatDate(p.createdAt)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs text-content-secondary">{formatDate(p.createdAt)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

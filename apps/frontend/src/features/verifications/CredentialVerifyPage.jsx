@@ -87,25 +87,25 @@ export default function CredentialVerifyPage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
       <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <section className="pt-4">
-          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-brass">Credential verification</p>
-          <h1 className="mt-4 max-w-2xl font-display text-4xl font-black leading-tight text-slate sm:text-5xl">
+          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">Credential verification</p>
+          <h1 className="mt-4 max-w-2xl font-display text-4xl font-black leading-tight text-content-primary sm:text-5xl">
             Verify a NexusWork student credential.
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-300">
+          <p className="mt-4 max-w-xl text-base leading-7 text-content-secondary">
             Paste or upload a signed VC/Open Badge file. NexusWork checks the cryptographic
             proof and shows whether the credential is authentic and unchanged.
           </p>
-          <Link to="/verify-reputation" className="mt-5 inline-flex text-sm font-bold text-brass underline-offset-4 hover:underline">
+          <Link to="/verify-reputation" className="mt-5 inline-flex text-sm font-bold text-brand underline-offset-4 hover:underline">
             {t("reputationVerification.title")}
           </Link>
 
-          <div className="mt-8 grid gap-3 text-sm text-slate-300">
+          <div className="mt-8 grid gap-3 text-sm text-content-secondary">
             <div className="flex gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brass" aria-hidden="true" />
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
               <span>Confirms the credential was signed by the NexusWork issuer key.</span>
             </div>
             <div className="flex gap-3">
-              <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-brass" aria-hidden="true" />
+              <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
               <span>Detects tampering if the student name, university, skills, or dates were edited.</span>
             </div>
           </div>
@@ -114,15 +114,15 @@ export default function CredentialVerifyPage() {
         <Card as="section" className="p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-bold text-slate">Credential input</h2>
-              <p className="mt-1 text-sm text-slate-300">Scan the QR code on a credential card, or upload the signed `.vc.jsonld` export.</p>
+              <h2 className="font-display text-xl font-bold text-content-primary">Credential input</h2>
+              <p className="mt-1 text-sm text-content-secondary">Scan the QR code on a credential card, or upload the signed `.vc.jsonld` export.</p>
             </div>
-            <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-control border border-ink-300 bg-ink-50 px-4 text-sm font-semibold text-slate transition hover:border-brass/40 hover:bg-ink-700">
+            <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-control border border-border-subtle bg-surface-soft px-4 text-sm font-semibold text-content-primary transition hover:border-brand/40 hover:bg-surface-muted">
               <FileUp className="h-4 w-4" aria-hidden="true" />
               Upload file
               <input type="file" accept=".json,.jsonld,.vc,.pdf,application/json,application/ld+json,application/pdf" className="sr-only" onChange={handleFile} />
             </label>
-            <p className="mt-2 text-xs text-slate-400">Allowed: JSON, JSON-LD, VC, or PDF credential files.</p>
+            <p className="mt-2 text-xs text-content-muted">Allowed: JSON, JSON-LD, VC, or PDF credential files.</p>
           </div>
 
           <Textarea
@@ -172,20 +172,20 @@ export default function CredentialVerifyPage() {
               {result.valid && result.studentId && (
                 <Link
                   to={`/profile/${result.studentId}`}
-                  className="inline-flex items-center justify-center rounded-control bg-brass px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-brass-300"
+                  className="inline-flex items-center justify-center rounded-control bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground transition hover:bg-brand-hover"
                 >
                   View student profile and portfolio
                 </Link>
               )}
 
-              <div className="grid gap-3 rounded-card border border-ink-300 bg-ink p-4 text-sm sm:grid-cols-2">
+              <div className="grid gap-3 rounded-card border border-border-subtle bg-surface-soft p-4 text-sm sm:grid-cols-2">
                 <div>
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Student</p>
-                  <p className="mt-1 font-bold text-slate">{result.subject || "Not provided"}</p>
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-content-secondary">Student</p>
+                  <p className="mt-1 font-bold text-content-primary">{result.subject || "Not provided"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Issuer</p>
-                  <p className="mt-1 font-bold text-slate">{result.issuer || "Not provided"}</p>
+                  <p className="text-xs font-extrabold uppercase tracking-widest text-content-secondary">Issuer</p>
+                  <p className="mt-1 font-bold text-content-primary">{result.issuer || "Not provided"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Credential</p>

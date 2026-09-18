@@ -24,9 +24,9 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
     <div className={cn("flex h-full flex-col justify-between overflow-y-auto bg-sidebar-bg px-3 py-4", className)}>
       <nav aria-label="Workspace" className="flex flex-col gap-4">
         {showBrand && (
-          <Link to="/" onClick={onNavigate} className="mb-2 flex items-center gap-2.5 px-2 py-1">
-            <img src="/logo.svg" alt="NexusWork" className="h-9 w-9 object-contain" />
-            <span className="font-display text-lg font-extrabold tracking-tight text-content-primary">
+          <Link to="/" onClick={onNavigate} className="mb-2 flex items-center gap-2.5 rounded-xl border border-border-subtle/80 bg-surface-soft/60 px-2.5 py-2.5 shadow-[0_1px_0_rgba(148,163,184,0.05)]">
+            <img src="/logo.svg" alt="NexusWork" className="h-8 w-8 object-contain" />
+            <span className="font-display text-base font-extrabold tracking-tight text-content-primary">
               NexusWork
             </span>
           </Link>
@@ -34,10 +34,10 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
 
         {groups.map((group) => (
           <div key={group.section}>
-            <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-content-muted">
+            <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-content-muted">
               {t(`navigation.section${group.section}`, { defaultValue: group.section })}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-1">
               {group.items.map((item) => (
                 <li key={`${item.to}${item.hash || ""}`}>
                   <NavLink
@@ -46,12 +46,12 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        "relative flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
+                        "relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
                         (item.hash
                           ? location.hash === item.hash || (!location.hash && item.hash === "#admin-overview" && location.pathname === item.to)
                           : isActive)
-                          ? "bg-brand-soft font-semibold text-brand before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-1 before:rounded-r-full before:bg-brand"
+                          ? "bg-brand-soft font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(122,168,216,0.16)] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-1 before:rounded-r-full before:bg-brand"
                           : "text-content-secondary hover:bg-surface-soft hover:text-content-primary"
                       )
                     }
@@ -69,7 +69,7 @@ export default function Sidebar({ role, onNavigate, showBrand = false, className
       {/* ── User profile section ── */}
       {user && (
         <div className="border-t border-border-subtle pt-3">
-          <div className="flex items-center gap-2.5 rounded-control px-2 py-1.5 transition-colors hover:bg-surface-soft">
+          <div className="flex items-center gap-2.5 rounded-xl border border-border-subtle/80 bg-surface-soft/60 px-2 py-1.5 transition-colors hover:bg-surface-soft">
             {user.avatarUrl ? (
               <img
                 src={user.avatarUrl}

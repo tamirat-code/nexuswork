@@ -117,7 +117,7 @@ export default function ChatPage() {
       <div className="flex flex-1 gap-4 overflow-hidden">
         {/* Contract picker */}
         <Card padded={false} className="hidden w-64 shrink-0 overflow-y-auto p-3 md:block">
-          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-300">
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-content-secondary">
             {t("chat.conversations")}
           </p>
           {contractsQuery.isLoading && (
@@ -128,7 +128,7 @@ export default function ChatPage() {
             </div>
           )}
           {!contractsQuery.isLoading && contracts.length === 0 && (
-            <p className="px-2 py-4 text-center text-xs text-slate-300">
+            <p className="px-2 py-4 text-center text-xs text-content-secondary">
               {t("chat.noContracts")}
             </p>
           )}
@@ -142,8 +142,8 @@ export default function ChatPage() {
                   to={`/chat/${c._id}`}
                   className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-xs font-medium transition-all ${
                     isActive
-                      ? "bg-brass/12 font-semibold text-brass border-l-2 border-brass"
-                      : "text-slate-300 hover:bg-ink-50 hover:text-slate"
+                      ? "bg-brand-soft font-semibold text-brand border-l-2 border-brand"
+                      : "text-content-secondary hover:bg-surface-soft hover:text-content-primary"
                   }`}
                 >
                   <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-80" />
@@ -157,11 +157,11 @@ export default function ChatPage() {
         {!contractId ? (
           <Card padded={false} className="flex flex-1 items-center justify-center p-8 text-center">
             <div>
-              <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full border border-ink-300 bg-ink-100 text-brass">
+              <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full border border-border-subtle bg-surface-soft text-brand">
                 <MessageSquare className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-base font-semibold text-slate">{t("chat.pickContractTitle")}</h3>
-              <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-300">
+              <h3 className="font-display text-base font-semibold text-content-primary">{t("chat.pickContractTitle")}</h3>
+              <p className="mt-1 max-w-sm text-xs leading-relaxed text-content-secondary">
                 {t("chat.pickContractDesc")}
               </p>
               {contracts.length === 0 && (
@@ -173,14 +173,14 @@ export default function ChatPage() {
           </Card>
         ) : (
           <Card padded={false} className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-ink-300 px-4 py-3">
-              <MessageSquare className="h-4 w-4 text-brass" />
-              <span className="truncate text-xs font-semibold text-slate">
+            <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
+              <MessageSquare className="h-4 w-4 text-brand" />
+              <span className="truncate text-xs font-semibold text-content-primary">
                 {activeContract?.project_id?.title || "Contract"}
               </span>
-              <span className="ml-auto shrink-0 text-xs text-slate-300">{t("chat.withPartner", { name: partnerName })}</span>
+              <span className="ml-auto shrink-0 text-xs text-content-secondary">{t("chat.withPartner", { name: partnerName })}</span>
               <span
-                className={`ml-2 flex shrink-0 items-center gap-1.5 text-[11px] ${isLive ? "text-escrow" : "text-slate-300"}`}
+                className={`ml-2 flex shrink-0 items-center gap-1.5 text-[11px] ${isLive ? "text-success" : "text-content-secondary"}`}
                 title={isLive ? t("chat.live") : t("chat.reconnecting")}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-escrow" : "bg-slate-300"}`} />
@@ -197,7 +197,7 @@ export default function ChatPage() {
                 </div>
               )}
               {!isLoading && messages.length === 0 && (
-                <p className="py-10 text-center text-xs text-slate-300">
+                <p className="py-10 text-center text-xs text-content-secondary">
                   {t("chat.noMessages")}
                 </p>
               )}
@@ -209,15 +209,15 @@ export default function ChatPage() {
                     <div
                       className={`max-w-[78%] rounded-card border px-3.5 py-2 text-xs ${
                         mine
-                          ? "border-brass/30 bg-brass/10 text-slate"
-                          : "border-ink-300 bg-ink-100 text-slate"
+                          ? "border-brand/30 bg-brand-soft text-content-primary"
+                          : "border-border-subtle bg-surface-soft text-content-primary"
                       }`}
                     >
-                      <p className="text-[11px] font-semibold text-brass">
+                      <p className="text-[11px] font-semibold text-brand">
                         {mine ? t("chat.you") : m.sender_id?.name || "User"}
                       </p>
                       {m.body && (
-                        <p className="mt-0.5 leading-relaxed text-slate">{m.body}</p>
+                        <p className="mt-0.5 leading-relaxed text-content-primary">{m.body}</p>
                       )}
                       {m.attachments?.length > 0 && (
                         <div className="mt-2 space-y-1.5 border-t border-current/10 pt-2">

@@ -9,13 +9,13 @@ const base =
 
 const variants = {
   primary:
-    "bg-brass text-ink hover:bg-brass-300 active:bg-brass-700 shadow-[0_1px_3px_-1px_rgba(0,137,123,0.3)]",
+    "bg-brand text-brand-foreground hover:bg-brand-hover active:bg-brand-dark shadow-[0_10px_20px_rgba(107,143,229,0.22)]",
   secondary:
-    "border border-ink-300 bg-ink-50 text-slate hover:border-brass/40 hover:bg-ink-700 active:bg-ink",
+    "border border-border-subtle bg-surface-soft text-content-primary hover:border-brand/45 hover:bg-surface hover:text-brand active:bg-surface-muted",
   outline:
-    "border-2 border-brass/50 text-brass hover:bg-brass/10 active:bg-brass/15",
+    "border-2 border-brand/50 text-brand hover:bg-brand-soft active:bg-brand-soft/80",
   ghost:
-    "text-slate-300 hover:bg-ink-50 hover:text-slate active:bg-ink-700",
+    "text-content-secondary hover:bg-surface-soft hover:text-content-primary active:bg-surface-muted",
   danger:
     "bg-brick text-white hover:bg-brick/90 active:bg-brick/80",
   "danger-ghost":
@@ -23,7 +23,7 @@ const variants = {
   success:
     "bg-escrow text-ink-900 hover:bg-escrow/90 active:bg-escrow/80 shadow-[0_1px_3px_-1px_rgba(34,197,94,0.3)]",
   link:
-    "h-auto p-0 font-semibold text-brass underline-offset-4 hover:underline",
+    "h-auto p-0 font-semibold text-brand underline-offset-4 hover:underline",
 };
 
 const sizes = {

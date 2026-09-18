@@ -9,7 +9,7 @@ const SheetClose = SheetPrimitive.Close;
 const SheetPortal = SheetPrimitive.Portal;
 
 const SheetOverlay = React.forwardRef(function SheetOverlay({ className, ...props }, ref) {
-  return <SheetPrimitive.Overlay className={cn("fixed inset-0 z-50 bg-ink/80 backdrop-blur-sm", className)} {...props} ref={ref} />;
+  return <SheetPrimitive.Overlay className={cn("fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm", className)} {...props} ref={ref} />;
 });
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
@@ -25,11 +25,11 @@ const SheetContent = React.forwardRef(function SheetContent({ className, childre
       <SheetOverlay />
       <SheetPrimitive.Content
         ref={ref}
-        className={cn("fixed z-50 bg-ink-700 shadow-elevated transition ease-in-out", sideClasses[side], className)}
+        className={cn("fixed z-50 bg-surface/95 shadow-elevated transition ease-in-out backdrop-blur-xl", sideClasses[side], className)}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-control p-1 text-slate-300 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
+        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-control p-1 text-content-muted opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-brand">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -46,11 +46,11 @@ function SheetFooter({ className, ...props }) {
   return <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props} />;
 }
 const SheetTitle = React.forwardRef(function SheetTitle({ className, ...props }, ref) {
-  return <SheetPrimitive.Title ref={ref} className={cn("font-display text-lg font-semibold text-slate", className)} {...props} />;
+  return <SheetPrimitive.Title ref={ref} className={cn("font-display text-lg font-semibold text-content-primary", className)} {...props} />;
 });
 SheetTitle.displayName = SheetPrimitive.Title.displayName;
 const SheetDescription = React.forwardRef(function SheetDescription({ className, ...props }, ref) {
-  return <SheetPrimitive.Description ref={ref} className={cn("text-sm text-slate-300", className)} {...props} />;
+  return <SheetPrimitive.Description ref={ref} className={cn("text-sm text-content-secondary", className)} {...props} />;
 });
 SheetDescription.displayName = SheetPrimitive.Description.displayName;
 

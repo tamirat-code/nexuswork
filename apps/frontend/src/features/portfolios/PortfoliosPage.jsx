@@ -54,11 +54,11 @@ export default function PortfoliosPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-300 pb-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border-subtle pb-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("portfolios.eyebrow")}</p>
-          <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("portfolios.title")}</h1>
-          <p className="mt-2 text-sm text-slate-300">{t("portfolios.subtitle")}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("portfolios.eyebrow")}</p>
+          <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("portfolios.title")}</h1>
+          <p className="mt-2 text-sm text-content-secondary">{t("portfolios.subtitle")}</p>
         </div>
         <Dialog>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> {t("portfolios.addEntry")}</Button></DialogTrigger>
@@ -76,9 +76,9 @@ export default function PortfoliosPage() {
 
       {entries.length === 0 && (
         <Card className="mt-8 p-14 text-center">
-          <Sparkles className="mx-auto h-10 w-10 text-brass" />
-          <h3 className="mt-4 font-display text-lg text-slate">{t("portfolios.emptyTitle")}</h3>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-slate-300">{t("portfolios.emptyDesc")}</p>
+          <Sparkles className="mx-auto h-10 w-10 text-brand" />
+          <h3 className="mt-4 font-display text-lg text-content-primary">{t("portfolios.emptyTitle")}</h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-content-secondary">{t("portfolios.emptyDesc")}</p>
         </Card>
       )}
 
@@ -87,18 +87,18 @@ export default function PortfoliosPage() {
           <Card key={e._id} className="group">
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
-                <FolderOpen className="h-8 w-8 text-brass" />
+                <FolderOpen className="h-8 w-8 text-brand" />
                 <Button variant="ghost" size="sm" className="h-8 w-8 text-brick opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setRemoveTarget(e)} aria-label="Remove entry"><Trash2 className="h-4 w-4" /></Button>
               </div>
-              <h3 className="mt-3 font-display text-base text-slate">{e.title}</h3>
-              <p className="mt-1 line-clamp-3 text-sm text-slate-300">{e.description}</p>
+              <h3 className="mt-3 font-display text-base text-content-primary">{e.title}</h3>
+              <p className="mt-1 line-clamp-3 text-sm text-content-secondary">{e.description}</p>
               <div className="mt-3 flex flex-wrap gap-1">
                 {e.milestone_id && <Badge variant="secondary" className="text-xs">{t("portfolios.milestoneBadge")}</Badge>}
                 {e.consent_status === "pending" && <Badge variant="outline" className="text-xs">{t("portfolios.awaitingConsentBadge")}</Badge>}
                 {e.consent_status === "denied" && <Badge variant="outline" className="text-xs">{t("portfolios.privateBadge")}</Badge>}
                 {e.consent_status === "approved" && <Badge variant="secondary" className="text-xs">{t("portfolios.publishedBadge")}</Badge>}
               </div>
-              {e.project_url && <a href={e.project_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-brass hover:underline">{t("portfolios.viewProject")}</a>}
+              {e.project_url && <a href={e.project_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">{t("portfolios.viewProject")}</a>}
             </CardContent>
           </Card>
         ))}

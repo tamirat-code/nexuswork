@@ -85,11 +85,11 @@ export default function MfaSetupPage() {
             : t("mfa.setupExpiredLogin")
         }
       >
-        <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brass/30 bg-brass/10 text-brass">
+        <div className="rounded-2xl border border-border-subtle bg-surface-soft p-5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-brand/30 bg-brand-soft text-brand">
             <LockKeyhole className="h-5 w-5" />
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-slate-300">
+          <p className="mt-4 text-sm leading-relaxed text-content-secondary">
             {t("mfa.setupIncomplete")}
           </p>
           <Button className="mt-5 w-full" size="lg" onClick={() => navigate(isProactive ? "/settings" : "/login")}>
@@ -108,21 +108,21 @@ export default function MfaSetupPage() {
         subtitle={t("mfa.saveCodes")}
       >
         <div className="space-y-5">
-          <div className="flex items-start gap-3 rounded-2xl border border-brass/20 bg-brass/5 p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brass/10 text-brass">
+          <div className="flex items-start gap-3 rounded-2xl border border-brand/20 bg-brand-soft p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate">{t("mfa.keepPrivate")}</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-300">
+              <p className="text-sm font-semibold text-content-primary">{t("mfa.keepPrivate")}</p>
+              <p className="mt-1 text-xs leading-relaxed text-content-secondary">
                 {t("mfa.codesShownOnce")}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-ink-300 bg-ink-500/20 p-4 font-mono text-sm text-slate">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border-subtle bg-surface-soft p-4 font-mono text-sm text-content-primary">
             {recoveryCodes.map((item) => (
-              <div key={item} className="rounded-lg bg-ink-500/40 px-3 py-2 text-center tracking-wide">
+              <div key={item} className="rounded-lg bg-surface px-3 py-2 text-center tracking-wide">
                 {item}
               </div>
             ))}
@@ -149,52 +149,52 @@ export default function MfaSetupPage() {
       subtitle={t("mfa.setupSubtitle")}
     >
       <div className="space-y-5">
-        <div className="flex items-center gap-2.5 rounded-xl border border-brass/20 bg-brass/5 px-4 py-3 text-xs leading-relaxed text-slate-300">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-brass" />
+        <div className="flex items-center gap-2.5 rounded-xl border border-brand/20 bg-brand-soft px-4 py-3 text-xs leading-relaxed text-content-secondary">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
           <span>{t("mfa.passwordNotEnough")}</span>
         </div>
 
         <div className="grid gap-3">
           <SetupStep number="1" title={t("mfa.openApp")} description={t("mfa.appDescription")} />
 
-          <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
+          <div className="rounded-2xl border border-border-subtle bg-surface-soft p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass/10 text-xs font-semibold text-brass">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">
                 2
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate">{t("mfa.addNexus")}</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                <p className="text-sm font-semibold text-content-primary">{t("mfa.addNexus")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-content-secondary">
                   {t("mfa.addDescription")}
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-ink-300 bg-ink/60 p-3">
+            <div className="mt-4 rounded-xl border border-border-subtle bg-surface p-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("mfa.manualKey")}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-content-muted">{t("mfa.manualKey")}</p>
                 <button
                   type="button"
                   onClick={() => copyText(setup.secret, t("mfa.keyCopied"))}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-brass transition hover:bg-brass/10"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft"
                 >
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? t("mfa.copied") : t("mfa.copy")}
                 </button>
               </div>
-              <p className="mt-2 break-all font-mono text-sm leading-relaxed tracking-wide text-slate">{setup.secret}</p>
+              <p className="mt-2 break-all font-mono text-sm leading-relaxed tracking-wide text-content-primary">{setup.secret}</p>
             </div>
 
-            <details className="mt-3 rounded-xl border border-ink-300 bg-ink/20">
-              <summary className="cursor-pointer px-3 py-2.5 text-xs font-medium text-slate-300 hover:text-brass">
+            <details className="mt-3 rounded-xl border border-border-subtle bg-surface-soft/60">
+              <summary className="cursor-pointer px-3 py-2.5 text-xs font-medium text-content-secondary hover:text-brand">
                 {t("mfa.advancedUri")}
               </summary>
-              <div className="border-t border-ink-300 px-3 py-3">
-                <p className="break-all font-mono text-[11px] leading-relaxed text-slate-400">{setup.otpauthUri}</p>
+              <div className="border-t border-border-subtle px-3 py-3">
+                <p className="break-all font-mono text-[11px] leading-relaxed text-content-muted">{setup.otpauthUri}</p>
                 <button
                   type="button"
                   onClick={() => copyText(setup.otpauthUri, t("mfa.uriCopied"))}
-                  className="mt-2 text-xs font-medium text-brass hover:underline"
+                  className="mt-2 text-xs font-medium text-brand hover:underline"
                 >
                   {t("mfa.copyUri")}
                 </button>
@@ -202,14 +202,14 @@ export default function MfaSetupPage() {
             </details>
           </div>
 
-          <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
+          <div className="rounded-2xl border border-border-subtle bg-surface-soft p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass/10 text-xs font-semibold text-brass">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">
                 3
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate">{t("mfa.verifyAuthenticator")}</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                <p className="text-sm font-semibold text-content-primary">{t("mfa.verifyAuthenticator")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-content-secondary">
                   {t("mfa.verifyDescription")}
                 </p>
               </div>
@@ -234,8 +234,8 @@ export default function MfaSetupPage() {
             </form>
           </div>
 
-          <div className="flex gap-2.5 rounded-xl border border-ink-300/70 bg-ink-500/20 px-3.5 py-3 text-[11px] leading-relaxed text-slate-400">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
+          <div className="flex gap-2.5 rounded-xl border border-border-subtle bg-surface-soft px-3.5 py-3 text-[11px] leading-relaxed text-content-muted">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
             <p>{t("mfa.afterActivation")}</p>
           </div>
         </div>
@@ -246,14 +246,14 @@ export default function MfaSetupPage() {
 
 function SetupStep({ number, title, description }) {
   return (
-    <div className="rounded-2xl border border-ink-300 bg-ink-500/30 p-4">
+    <div className="rounded-2xl border border-border-subtle bg-surface-soft p-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brass/10 text-xs font-semibold text-brass">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">
           {number}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate">{title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
+          <p className="text-sm font-semibold text-content-primary">{title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-content-secondary">{description}</p>
         </div>
       </div>
     </div>

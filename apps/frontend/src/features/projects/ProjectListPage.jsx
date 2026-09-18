@@ -36,15 +36,15 @@ const SORT_OPTIONS = [
 ];
 
 const selectClasses =
-  "h-10 shrink-0 rounded-control border border-ink-300 bg-ink-50 px-3 text-sm text-slate transition-colors focus:border-brass/50 focus:outline-none";
+  "h-10 shrink-0 rounded-control border border-border-subtle bg-surface-soft px-3 text-sm text-content-primary transition-colors focus:border-brand/60 focus:outline-none";
 
 function CardSkeleton() {
   return (
-    <div className="rounded-card border border-ink-300 bg-ink-50 p-5">
-      <div className="h-3 w-32 rounded bg-ink-300" />
-      <div className="mt-3 h-4 w-2/3 rounded bg-ink-300" />
-      <div className="mt-3 h-3 w-full rounded bg-ink-300" />
-      <div className="mt-2 h-3 w-4/5 rounded bg-ink-300" />
+    <div className="rounded-card border border-border-subtle bg-surface-soft p-5">
+      <div className="h-3 w-32 rounded bg-border-subtle" />
+      <div className="mt-3 h-4 w-2/3 rounded bg-border-subtle" />
+      <div className="mt-3 h-3 w-full rounded bg-border-subtle" />
+      <div className="mt-2 h-3 w-4/5 rounded bg-border-subtle" />
     </div>
   );
 }
@@ -105,16 +105,16 @@ export default function ProjectListPage() {
   const projects = data?.data ?? [];
 
   return (
-    <div className="w-full">
-      <header className="lm-dashboard-header flex flex-col items-start justify-between gap-4 rounded-2xl border border-ink-300 bg-ink-50 px-7 py-7 shadow-card sm:flex-row sm:items-center">
+    <div className="w-full space-y-6">
+      <header className="lm-dashboard-header flex flex-col items-start justify-between gap-4 rounded-[22px] border border-border-subtle bg-surface/95 px-7 py-7 shadow-card sm:flex-row sm:items-center">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
             {t("projects.marketplace", { defaultValue: "Marketplace Briefs" })}
           </p>
-          <h1 className="mt-1 font-display font-extrabold text-2xl leading-tight tracking-tight text-slate sm:text-3xl">
+          <h1 className="mt-1 font-display font-extrabold text-2xl leading-tight tracking-tight text-content-primary sm:text-3xl">
             {t("projects.title", { defaultValue: "Explore Open Projects" })}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          <p className="mt-2 text-sm leading-relaxed text-content-secondary">
             {isLoading
               ? t("common.loading")
               : t("projects.showing", { count: projects.length, defaultValue: `Showing ${projects.length} brief${projects.length === 1 ? "" : "s"} matching your criteria` })}
@@ -129,7 +129,7 @@ export default function ProjectListPage() {
         )}
       </header>
 
-      <div className="mt-7 flex flex-wrap items-center gap-3 rounded-card border border-ink-300 bg-ink-50 p-4 shadow-card">
+      <div className="flex flex-wrap items-center gap-3 rounded-[18px] border border-border-subtle bg-surface/90 p-4 shadow-card">
         <label htmlFor="project-search" className="sr-only">
           {t("projects.search", { defaultValue: "Search projects" })}
         </label>
@@ -139,7 +139,7 @@ export default function ProjectListPage() {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t("projects.searchPlaceholder", { defaultValue: "Search by title, skill or keyword..." })}
-          className="h-10 min-w-[240px] flex-1 rounded-control border border-ink-300 bg-ink-100 px-4 text-sm text-slate transition-colors placeholder:text-slate-400 focus:border-brass/60 focus:bg-ink-50 focus:outline-none"
+          className="h-10 min-w-[240px] flex-1 rounded-control border border-border-subtle bg-surface-soft px-4 text-sm text-content-primary transition-colors placeholder:text-content-muted focus:border-brand/60 focus:bg-surface focus:outline-none"
         />
 
         <label htmlFor="project-category" className="sr-only">
@@ -195,7 +195,7 @@ export default function ProjectListPage() {
           <button
             type="button"
             onClick={clearFilters}
-            className="shrink-0 text-sm font-bold text-brass transition-colors hover:text-brass-300"
+            className="shrink-0 text-sm font-bold text-brand transition-colors hover:text-brand-hover"
           >
             {t("projects.clearFilters", { defaultValue: "Clear filters" })}
           </button>
@@ -212,15 +212,15 @@ export default function ProjectListPage() {
         )}
 
         {error && (
-          <p className="rounded-card border border-brick/30 bg-brick-100 px-4 py-3 text-sm text-brick">
+          <p className="rounded-card border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
             {error.message}
           </p>
         )}
 
         {!isLoading && !error && projects.length === 0 && (
-          <div className="rounded-card border border-ink-300 bg-ink-50 px-6 py-16 text-center shadow-card">
-            <p className="font-display text-lg font-bold tracking-tight text-slate">{t("projects.noMatches", { defaultValue: "No projects match your filters" })}</p>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-300">
+          <div className="rounded-[20px] border border-border-subtle bg-surface/90 px-6 py-16 text-center shadow-card">
+            <p className="font-display text-lg font-bold tracking-tight text-content-primary">{t("projects.noMatches", { defaultValue: "No projects match your filters" })}</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-content-secondary">
               {t("projects.noMatchesHint", { defaultValue: "Try a broader category or clear the filters to see every open brief." })}
             </p>
             {hasFilters && (
@@ -241,16 +241,16 @@ export default function ProjectListPage() {
       </div>
 
       {/* ── Mid-page CTA Banner ── */}
-      <section className="mt-14 rounded-3xl border border-ink-300 bg-ink-50 p-8 shadow-elevated sm:p-10">
+      <section className="rounded-[24px] border border-border-subtle bg-surface/95 p-8 shadow-elevated sm:p-10">
         <div className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
           <div className="max-w-xl">
-            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-brass">
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
               {t("projects.hiring", { defaultValue: "Hiring for a project?" })}
             </span>
-            <h2 className="mt-1.5 font-display text-2xl font-extrabold text-slate sm:text-3xl">
+            <h2 className="mt-1.5 font-display text-2xl font-extrabold text-content-primary sm:text-3xl">
               {t("projects.ctaTitle", { defaultValue: "Post a brief & connect with verified student talent" })}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+            <p className="mt-2 text-sm leading-relaxed text-content-secondary">
               {t("projects.ctaDescription", { defaultValue: "Posting is free. Escrow keeps your funds safe until deliverables are approved." })}
             </p>
           </div>

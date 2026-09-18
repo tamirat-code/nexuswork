@@ -20,10 +20,10 @@ export default function ThemeToggle({ className = "" }) {
       title={isDark ? t("common.switchToLight") : t("common.switchToDark")}
       className={cn(
         "relative grid h-10 w-10 place-items-center rounded-control",
-        "text-slate-300 transition-colors duration-150",
-        "hover:bg-ink-50 hover:text-slate",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass",
-        "focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
+        "text-content-muted transition-colors duration-150",
+        "hover:bg-surface-soft hover:text-content-primary",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
         className
       )}
     >

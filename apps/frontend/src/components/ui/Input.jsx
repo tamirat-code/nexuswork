@@ -40,7 +40,7 @@ const Input = forwardRef(function Input(
     >
       <div className="relative">
         {leadingIcon && (
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300" aria-hidden="true">
+          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted" aria-hidden="true">
             {leadingIcon}
           </span>
         )}

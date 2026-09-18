@@ -30,15 +30,15 @@ export default function EmailVerificationBanner() {
   return (
     <section
       role="status"
-      className="mb-6 flex flex-col gap-4 rounded-2xl border border-brass/30 bg-brass/10 px-4 py-4 text-slate sm:flex-row sm:items-center sm:justify-between sm:px-5"
+      className="mb-6 flex flex-col gap-4 rounded-2xl border border-brand/30 bg-brand-soft px-4 py-4 text-content-primary sm:flex-row sm:items-center sm:justify-between sm:px-5"
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brass/15 text-brass">
+        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-soft text-brand">
           <MailCheck className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
           <p className="font-semibold">{t("emailVerification.title")}</p>
-          <p className="mt-0.5 text-sm text-slate-300">
+          <p className="mt-0.5 text-sm text-content-secondary">
             {t("emailVerification.description", { email: user.email })}
           </p>
         </div>

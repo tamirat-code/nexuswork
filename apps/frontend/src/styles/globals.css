@@ -12,145 +12,172 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 /* ═══════════════════════════════════════════════════════
    DARK MODE (Default / :root)
-   Deep navy-ink identity — focused, technical, sophisticated
+   Premium blue-gray SaaS shell — calm, technical, and polished
    ═══════════════════════════════════════════════════════ */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
 
   /* Surfaces */
-  --canvas:           #020f18;
-  --canvas-subtle:    #041522;
-  --surface:          #051e2e;
-  --surface-soft:     #071520;
-  --surface-muted:    #0a1e2e;
-  --surface-elevated: #092437;
-  --sidebar-bg:       #020f18;
+  --canvas:           #0a1724;
+  --canvas-subtle:    #0d1d2d;
+  --surface:          #112536;
+  --surface-soft:     #132d3f;
+  --surface-muted:    #18334a;
+  --surface-elevated: #17354c;
+  --sidebar-bg:       #0d1d2d;
 
   /* Borders */
-  --border-subtle:    #0e3347;
-  --border-strong:    #15445e;
+  --border-subtle:    #223d52;
+  --border-strong:    #2d4d67;
 
   /* Typography */
-  --text-primary:     #e0f5f2;
-  --text-secondary:   #a0cdd8;
-  --text-muted:       #5c8a97;
-  --text-faint:       #3a7080;
+  --text-primary:     #ebf4ff;
+  --text-secondary:   #c4d6eb;
+  --text-muted:       #8fa8c1;
+  --text-faint:       #6a8198;
 
   /* Brand Accent */
-  --brand:            #00c8b4;
-  --brand-hover:      #00e5d1;
-  --brand-dark:       #006e62;
-  --brand-soft:       rgba(0, 200, 180, 0.12);
-  --brand-foreground: #020f18;
+  --brand:            #7aa8d8;
+  --brand-hover:      #a7c7ef;
+  --brand-dark:       #4d7ab1;
+  --brand-soft:       rgba(122, 168, 216, 0.14);
+  --brand-foreground: #081821;
 
   /* Semantics */
-  --success:          #22c55e;
-  --success-soft:     #052e1a;
-  --warning:          #f59e0b;
-  --warning-soft:     rgba(245, 158, 11, 0.12);
+  --success:          #4ade80;
+  --success-soft:     rgba(74, 222, 128, 0.12);
+  --warning:          #fbbf24;
+  --warning-soft:     rgba(251, 191, 36, 0.12);
   --danger:           #f87171;
-  --danger-soft:      #2d0a0a;
+  --danger-soft:      rgba(248, 113, 113, 0.12);
   --info:             #60a5fa;
   --info-soft:        rgba(96, 165, 250, 0.12);
 
   /* Shadcn HSL compatibility */
-  --background:       192 100% 5%;
-  --foreground:       180 40% 88%;
-  --card:             198 100% 8%;
-  --card-foreground:  180 40% 88%;
-  --popover:          198 100% 6%;
-  --popover-foreground: 180 40% 88%;
-  --primary:          174 100% 39%;
-  --primary-foreground: 192 100% 5%;
-  --secondary:        198 100% 10%;
-  --secondary-foreground: 180 40% 85%;
-  --muted:            198 100% 10%;
-  --muted-foreground: 180 30% 55%;
-  --accent:           174 100% 39%;
-  --accent-foreground: 192 100% 5%;
-  --destructive:      0 90% 71%;
-  --destructive-foreground: 0 90% 10%;
-  --border:           198 67% 17%;
-  --input:            198 67% 17%;
-  --ring:             174 100% 45%;
+  --background:       215 38% 10%;
+  --foreground:       214 40% 93%;
+  --card:             214 36% 13%;
+  --card-foreground:  214 40% 93%;
+  --popover:          214 36% 11%;
+  --popover-foreground: 214 40% 93%;
+  --primary:          212 57% 70%;
+  --primary-foreground: 215 40% 10%;
+  --secondary:        214 30% 15%;
+  --secondary-foreground: 214 40% 93%;
+  --muted:            214 30% 15%;
+  --muted-foreground: 214 25% 70%;
+  --accent:           212 57% 70%;
+  --accent-foreground: 215 40% 10%;
+  --destructive:      0 72% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border:           214 22% 25%;
+  --input:            214 22% 25%;
+  --ring:             212 57% 70%;
   --radius:           0.5rem;
 }
 
 /* ═══════════════════════════════════════════════════════
    LIGHT MODE
-   Flagship SaaS — calm, bright, trustworthy, premium
+   Soft blue-gray workspace with an airy premium finish
    ═══════════════════════════════════════════════════════ */
 [data-theme="light"] {
   color-scheme: light;
 
-  /* Surfaces: Fresh mint-tinted ultra-clean canvas & crisp white surfaces */
-  --canvas:           #f7faf9;
-  --canvas-subtle:    #f0f6f4;
-  --surface:          #ffffff;
-  --surface-soft:     #f1f6f4;
-  --surface-muted:    #e6f0ec;
+  --canvas:           #edf4ff;
+  --canvas-subtle:    #e5eefc;
+  --surface:          #f9fbff;
+  --surface-soft:     #edf4ff;
+  --surface-muted:    #e6eefb;
   --surface-elevated: #ffffff;
-  --sidebar-bg:       #ffffff;
+  --sidebar-bg:       #f8fbff;
 
-  /* Borders: Delicate teal-gray hairlines */
-  --border-subtle:    #e1ece8;
-  --border-strong:    #c6d8d2;
+  --border-subtle:    #dfeaf8;
+  --border-strong:    #c8d8ee;
 
-  /* Typography: High contrast, non-generic deep charcoal-mint */
-  --text-primary:     #0f2625;
-  --text-secondary:   #364e4c;
-  --text-muted:       #637876;
-  --text-faint:       #95a7a4;
+  --text-primary:     #1b2b3f;
+  --text-secondary:   #526781;
+  --text-muted:       #7086a3;
+  --text-faint:       #90a4bc;
 
-  /* Brand Accent: NexusWork Signature Teal */
-  --brand:            #009e8f;
-  --brand-hover:      #008579;
-  --brand-dark:       #00635a;
-  --brand-soft:       #e5f5f2;
+  --brand:            #6b8fe5;
+  --brand-hover:      #7fa2f1;
+  --brand-dark:       #4f73d2;
+  --brand-soft:       #edf3ff;
   --brand-foreground: #ffffff;
 
-  /* Semantics */
-  --success:          #10b981;
+  --success:          #22c55e;
   --success-soft:     #ecfdf5;
   --warning:          #f59e0b;
-  --warning-soft:     #fef3c7;
+  --warning-soft:     #fff7ed;
   --danger:           #ef4444;
   --danger-soft:      #fef2f2;
   --info:             #3b82f6;
   --info-soft:        #eff6ff;
 
-  /* Shadcn HSL compatibility */
-  --background:       165 20% 97%;
-  --foreground:       172 43% 10%;
+  --background:       214 40% 96%;
+  --foreground:       216 22% 20%;
   --card:             0 0% 100%;
-  --card-foreground:  172 43% 10%;
+  --card-foreground:  216 22% 20%;
   --popover:          0 0% 100%;
-  --popover-foreground: 172 43% 10%;
-  --primary:          174 100% 31%;
+  --popover-foreground: 216 22% 20%;
+  --primary:          220 68% 64%;
   --primary-foreground: 0 0% 100%;
-  --secondary:        165 15% 94%;
-  --secondary-foreground: 172 43% 10%;
-  --muted:            165 15% 94%;
-  --muted-foreground: 170 12% 43%;
-  --accent:           174 100% 31%;
+  --secondary:        214 40% 95%;
+  --secondary-foreground: 216 22% 20%;
+  --muted:            214 40% 95%;
+  --muted-foreground: 214 20% 42%;
+  --accent:           220 68% 64%;
   --accent-foreground: 0 0% 100%;
   --destructive:      0 72% 45%;
   --destructive-foreground: 0 0% 100%;
-  --border:           165 18% 88%;
+  --border:           214 35% 88%;
   --input:            0 0% 100%;
-  --ring:             174 100% 31%;
+  --ring:             220 68% 64%;
   --radius:           0.5rem;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(107, 143, 229, 0.10), transparent 22rem),
+    linear-gradient(180deg, #edf4ff 0%, #eef5ff 100%);
+  color: var(--text-secondary);
+  font-family: "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.surface-featured {
+  background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface-soft) 100%);
+  border-color: var(--border-subtle);
+  box-shadow: 0 18px 36px rgba(43, 69, 116, 0.08), 0 2px 10px rgba(107, 143, 229, 0.08);
+}
+
+main#main > .w-full {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
+@media (min-width: 1280px) {
+  main#main > .w-full { max-width: 1360px; }
 }
 
 /* ═══════════════════════════════════════════════════════
    GLOBAL BASE
    ═══════════════════════════════════════════════════════ */
 body {
-  background: var(--canvas);
+  background:
+    radial-gradient(circle at top left, rgba(122, 168, 216, 0.10), transparent 26rem),
+    var(--canvas);
   color: var(--text-secondary);
   font-family: "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.surface-featured {
+  background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface-soft) 100%);
+  border-color: var(--border-subtle);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06), 0 3px 10px rgba(90, 130, 190, 0.08);
 }
 
 /* Keep page content readable on wide screens while allowing intentional

@@ -169,7 +169,7 @@ try {
       footer={
         <>
           {t("auth.noAccount")}{" "}
-          <Link to="/register" className="font-semibold text-brass hover:underline">
+          <Link to="/register" className="font-semibold text-brand hover:underline">
             {t("auth.signUp")}
           </Link>
         </>
@@ -178,10 +178,10 @@ try {
       <div className="space-y-5">
         <GoogleAuthButton onCredential={handleGoogleCredential} disabled={googleLoading} />
 
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          <div className="h-px flex-1 bg-ink-300" />
+        <div className="flex items-center gap-3 text-xs text-content-secondary">
+          <div className="h-px flex-1 bg-border-subtle" />
           {t("auth.orEmail")}
-          <div className="h-px flex-1 bg-ink-300" />
+          <div className="h-px flex-1 bg-border-subtle" />
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -201,7 +201,7 @@ try {
               error={error}
               autoComplete="current-password"
             />
-            <Link to="/forgot-password" className="mt-1.5 inline-block text-xs text-slate-300 hover:underline">
+            <Link to="/forgot-password" className="mt-1.5 inline-block text-xs text-content-secondary hover:underline">
               {t("auth.forgotPassword")}
             </Link>
           </div>

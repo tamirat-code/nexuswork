@@ -33,16 +33,16 @@ export default function ProjectOversightPage() {
 
   const latestCheckIns = useMemo(() => (data?.check_ins || []).slice(0, 5), [data?.check_ins]);
 
-  if (oversightQuery.isLoading) return <div className="p-8 text-sm text-slate-300">{t("oversight.loading")}</div>;
+  if (oversightQuery.isLoading) return <div className="p-8 text-sm text-content-secondary">{t("oversight.loading")}</div>;
   if (oversightQuery.error) return <Alert variant="danger" title={t("oversight.loadFailed")}>{oversightQuery.error.message}</Alert>;
   if (!data) return null;
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-brass">{t("oversight.eyebrow")}</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-brand">{t("oversight.eyebrow")}</p>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-          <div><h1 className="font-display text-3xl font-black text-slate">{data.project.title}</h1><p className="mt-1 text-sm text-slate-300">{t("oversight.subtitle")}</p></div>
+          <div><h1 className="font-display text-3xl font-black text-content-primary">{data.project.title}</h1><p className="mt-1 text-sm text-content-secondary">{t("oversight.subtitle")}</p></div>
           <Badge>{data.contract.status}</Badge>
         </div>
       </div>
@@ -59,16 +59,16 @@ export default function ProjectOversightPage() {
         <Card>
           <CardHeader title={t("oversight.boardTitle")} description={t("oversight.boardDescription")} />
           <div className="space-y-4 p-5 pt-0">
-            {milestones.length === 0 && <p className="text-sm text-slate-300">{t("oversight.noMilestones")}</p>}
+            {milestones.length === 0 && <p className="text-sm text-content-secondary">{t("oversight.noMilestones")}</p>}
             {milestones.map((milestone) => (
-              <div key={milestone._id} className="rounded-card border border-ink-300 bg-ink-50 p-4">
+              <div key={milestone._id} className="rounded-card border border-border-subtle bg-surface-soft p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div><p className="font-semibold text-slate">{milestone.title}</p><p className="mt-1 text-xs text-slate-300">{t("oversight.due")}: {dateLabel(milestone.due_date)}</p></div>
+                  <div><p className="font-semibold text-content-primary">{milestone.title}</p><p className="mt-1 text-xs text-content-secondary">{t("oversight.due")}: {dateLabel(milestone.due_date)}</p></div>
                   <div className="flex items-center gap-2"><Badge>{milestone.status}</Badge>{milestone.risk?.status === "at_risk" && <Badge tone="danger">{t("oversight.risk")}</Badge>}</div>
                 </div>
                 {milestone.risk?.status === "at_risk" && <p className="mt-3 text-xs text-amber-200">{milestone.risk.factors.map((factor) => factor.code).join(" · ")}</p>}
                 <div className="mt-4 space-y-2">
-                  {(milestone.tasks || []).map((task) => <div key={task._id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-ink-300 p-3"><span className="text-sm text-slate">{task.title}</span>{isStudent ? <Select aria-label={task.title} value={task.status} onChange={(event) => statusMutation.mutate({ taskId: task._id, status: event.target.value })} options={[{ value: "todo", label: t("oversight.status.todo") }, { value: "in_progress", label: t("oversight.status.inProgress") }, { value: "completed", label: t("oversight.status.completed") }, { value: "blocked", label: t("oversight.status.blocked") }]} /> : <Badge>{t(`oversight.status.${task.status === "in_progress" ? "inProgress" : task.status}`)}</Badge>}</div>)}
+                  {(milestone.tasks || []).map((task) => <div key={task._id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border-subtle p-3"><span className="text-sm text-content-primary">{task.title}</span>{isStudent ? <Select aria-label={task.title} value={task.status} onChange={(event) => statusMutation.mutate({ taskId: task._id, status: event.target.value })} options={[{ value: "todo", label: t("oversight.status.todo") }, { value: "in_progress", label: t("oversight.status.inProgress") }, { value: "completed", label: t("oversight.status.completed") }, { value: "blocked", label: t("oversight.status.blocked") }]} /> : <Badge>{t(`oversight.status.${task.status === "in_progress" ? "inProgress" : task.status}`)}</Badge>}</div>)}
                   {(milestone.tasks || []).length === 0 && <p className="text-xs text-slate-400">{t("oversight.noTasks")}</p>}
                 </div>
               </div>

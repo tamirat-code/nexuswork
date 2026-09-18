@@ -5,11 +5,11 @@ import { cn } from "../../lib/cn.js";
  * The CSS in globals.css provides light-mode overrides for the escrow/brick/amber/info classes.
  */
 const tones = {
-  neutral: "border-ink-300 bg-ink text-slate-300",
-  brand:   "border-brass/30 bg-brass/10 text-brass",
-  success: "border-escrow/30 bg-escrow-100 text-escrow",
-  warning: "border-amber/30 bg-amber-100 text-amber",
-  danger:  "border-brick/30 bg-brick-100 text-brick",
+  neutral: "border-border-subtle bg-surface-soft text-content-secondary",
+  brand:   "border-brand/30 bg-brand-soft text-brand",
+  success: "border-success/30 bg-success-soft text-success",
+  warning: "border-warning/30 bg-warning-soft text-warning",
+  danger:  "border-danger/30 bg-danger-soft text-danger",
   info:    "border-info/30 bg-info-100 text-info",
   purple:  "border-purple/30 bg-purple/10 text-purple",
 };

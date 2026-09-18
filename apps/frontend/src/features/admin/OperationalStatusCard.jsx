@@ -13,7 +13,7 @@ async function readHealth() {
 }
 
 function StatusRow({ label, value, healthy = true }) {
-  return <div className="flex items-center justify-between gap-4 border-t border-ink-300/70 py-3 text-sm"><span className="text-slate-300">{label}</span><span className={`inline-flex items-center gap-1.5 font-semibold ${healthy ? "text-escrow" : "text-brick"}`}><span className={`h-2 w-2 rounded-full ${healthy ? "bg-escrow" : "bg-brick"}`} aria-hidden="true" />{value}</span></div>;
+  return <div className="flex items-center justify-between gap-4 border-t border-border-subtle py-3 text-sm"><span className="text-content-secondary">{label}</span><span className={`inline-flex items-center gap-1.5 font-semibold ${healthy ? "text-success" : "text-danger"}`}><span className={`h-2 w-2 rounded-full ${healthy ? "bg-success" : "bg-danger"}`} aria-hidden="true" />{value}</span></div>;
 }
 
 export default function OperationalStatusCard() {

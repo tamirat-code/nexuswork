@@ -23,7 +23,7 @@ export default function Drawer({ open, onClose, title, side = "right", children,
       {open && (
         <div className="fixed inset-0 z-50">
           <motion.div
-            className="absolute inset-0 bg-ink-900/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -43,7 +43,7 @@ export default function Drawer({ open, onClose, title, side = "right", children,
             exit={offscreen}
             transition={{ type: "spring", stiffness: 400, damping: 36 }}
             className={cn(
-              "absolute flex flex-col border-ink-300 bg-ink-700 shadow-elevated",
+              "absolute flex flex-col border border-border-subtle bg-surface-elevated shadow-elevated",
               isBottom
                 ? "inset-x-0 bottom-0 max-h-[85vh] rounded-t-card border-t"
                 : cn(
@@ -52,8 +52,8 @@ export default function Drawer({ open, onClose, title, side = "right", children,
                   )
             )}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-ink-300 px-5 py-4">
-              <h2 id={titleId} className="font-display text-lg text-slate">
+            <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-4">
+              <h2 id={titleId} className="font-display text-lg text-content-primary">
                 {title}
               </h2>
               <Button variant="ghost" size="sm" iconOnly aria-label="Close panel" onClick={onClose}>
@@ -65,7 +65,7 @@ export default function Drawer({ open, onClose, title, side = "right", children,
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
 
-            {footer && <div className="flex gap-2 border-t border-ink-300 px-5 py-4">{footer}</div>}
+            {footer && <div className="flex gap-2 border-t border-border-subtle px-5 py-4">{footer}</div>}
           </motion.div>
         </div>
       )}

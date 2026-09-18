@@ -80,6 +80,15 @@ export default {
         info: {
           DEFAULT: "var(--info)",
           100: "var(--info-soft)",
+          soft: "var(--info-soft)",
+        },
+        warning: {
+          DEFAULT: "var(--warning)",
+          soft: "var(--warning-soft)",
+        },
+        danger: {
+          DEFAULT: "var(--danger)",
+          soft: "var(--danger-soft)",
         },
 
         // Brand-mapped shadcn aliases
@@ -109,9 +118,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        subtle: "0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02)",
-        card: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03)",
-        elevated: "0 4px 16px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.08)",
+        subtle: "0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 14px rgba(15, 23, 42, 0.03)",
+        card: "0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 25px rgba(15, 23, 42, 0.04)",
+        elevated: "0 10px 30px rgba(15, 23, 42, 0.08), 0 2px 12px rgba(82, 115, 164, 0.08)",
         focus: "0 0 0 3px var(--brand-soft)",
       },
       spacing: {

@@ -70,14 +70,14 @@ export default function VerifyEmailPendingPage() {
       })}
     >
       <div className="space-y-6">
-        <div className="rounded-2xl border border-brass/30 bg-brass/10 p-5 text-center sm:p-6">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brass/20 text-brass">
+        <div className="rounded-2xl border border-brand/30 bg-brand-soft p-5 text-center sm:p-6">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
             <MailCheck className="h-7 w-7" aria-hidden="true" />
           </div>
-          <p className="mt-4 font-display text-lg font-bold text-slate">
+          <p className="mt-4 font-display text-lg font-bold text-content-primary">
             {user?.email || t("emailVerification.yourEmail", { defaultValue: "your email address" })}
           </p>
-          <p className="mt-1 text-xs text-slate-300">
+          <p className="mt-1 text-xs text-content-secondary">
             {t("emailVerification.pendingNote", { defaultValue: "Check your spam or junk folder if you don't see it in your inbox." })}
           </p>
         </div>
@@ -109,11 +109,11 @@ export default function VerifyEmailPendingPage() {
           </Button>
         </div>
 
-        <div className="border-t border-ink-300 pt-4 text-center">
+        <div className="border-t border-border-subtle pt-4 text-center">
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-content-muted hover:text-content-secondary"
           >
             <LogOut className="h-3.5 w-3.5" />
             {t("auth.logOut", { defaultValue: "Log out or use a different account" })}

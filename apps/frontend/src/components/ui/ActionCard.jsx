@@ -27,7 +27,7 @@ export default function ActionCard({
   const content = (
     <div
       className={cn(
-        "group relative flex items-start gap-4 rounded-card border border-border bg-surface p-4 sm:p-5 shadow-card transition-all duration-200",
+        "group relative flex items-start gap-4 rounded-[18px] border border-border bg-surface p-4 sm:p-5 shadow-card transition-all duration-200",
         "hover:border-brand/40 hover:shadow-elevated hover:-translate-y-0.5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
         className

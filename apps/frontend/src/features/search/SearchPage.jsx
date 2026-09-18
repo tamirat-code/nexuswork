@@ -23,21 +23,21 @@ function StudentResultCard({ result }) {
   return (
     <Link
       to={userId ? `/profile/${userId}` : "#"}
-      className="flex flex-col gap-3 rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card transition-colors hover:border-brass/40 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-3 rounded-card border border-border-subtle bg-surface-soft p-5 shadow-card transition-colors hover:border-brand/40 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate font-semibold text-slate">{result.user_id?.name || "Student"}</p>
+          <p className="truncate font-semibold text-content-primary">{result.user_id?.name || "Student"}</p>
           {result.verification_status === "verified" && (
             <Badge variant="success"><BadgeCheck className="h-3 w-3" /> {t("search.verified")}</Badge>
           )}
         </div>
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-300">
-          <GraduationCap className="h-3.5 w-3.5 text-brass" />
+        <p className="mt-1 flex items-center gap-1.5 text-xs text-content-secondary">
+          <GraduationCap className="h-3.5 w-3.5 text-brand" />
           {result.university_id?.name || t("search.universityStudent")}
           {result.program ? ` · ${result.program}` : ""}
         </p>
-        {result.bio && <p className="mt-2 line-clamp-2 text-sm text-slate-300">{result.bio}</p>}
+        {result.bio && <p className="mt-2 line-clamp-2 text-sm text-content-secondary">{result.bio}</p>}
       </div>
       {result.skills?.length > 0 && (
         <div className="flex shrink-0 flex-wrap gap-1.5 sm:max-w-[220px] sm:justify-end">
@@ -54,15 +54,15 @@ function UniversityResultCard({ result }) {
   const { t } = useTranslation();
   const count = result.contact_staff?.length || 0;
   return (
-    <div className="flex items-center justify-between rounded-card border border-ink-300 bg-ink-50 p-5 shadow-card">
+    <div className="flex items-center justify-between rounded-card border border-border-subtle bg-surface-soft p-5 shadow-card">
       <div className="flex items-center gap-3">
-        <GraduationCap className="h-5 w-5 text-brass" />
+        <GraduationCap className="h-5 w-5 text-brand" />
         <div>
-          <p className="font-semibold text-slate">{result.name}</p>
-          <p className="font-mono text-xs text-slate-300">{result.domain}</p>
+          <p className="font-semibold text-content-primary">{result.name}</p>
+          <p className="font-mono text-xs text-content-secondary">{result.domain}</p>
         </div>
       </div>
-      <p className="text-xs text-slate-300">
+      <p className="text-xs text-content-secondary">
         {count === 1 ? t("search.staffContacts", { count }) : t("search.staffContacts_plural", { count })}
       </p>
     </div>
@@ -112,9 +112,9 @@ export default function SearchPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12 sm:px-8 lg:py-16">
-      <header className="border-b border-ink-300 pb-6">
-        <h1 className="font-display text-2xl leading-tight tracking-tight text-slate sm:text-3xl">{t("search.title")}</h1>
-        <p className="mt-1.5 text-sm text-slate-300">
+      <header className="border-b border-border-subtle pb-6">
+        <h1 className="font-display text-2xl leading-tight tracking-tight text-content-primary sm:text-3xl">{t("search.title")}</h1>
+        <p className="mt-1.5 text-sm text-content-secondary">
           {t("search.subtitle")}
         </p>
       </header>
@@ -135,11 +135,11 @@ export default function SearchPage() {
                 ? t("search.inputPlaceholderUniversities")
                 : t("search.inputPlaceholderProjects")
           }
-          className="h-11 flex-1 rounded-control border border-ink-300 bg-ink-50 px-4 text-sm text-slate transition-colors placeholder:text-slate-300 focus:border-brass/50 focus:outline-none"
+          className="h-11 flex-1 rounded-control border border-border-subtle bg-surface-soft px-4 text-sm text-content-primary transition-colors placeholder:text-content-muted focus:border-brand/50 focus:outline-none"
         />
         <button
           type="submit"
-          className="inline-flex h-11 items-center justify-center rounded-control bg-brass px-6 text-sm font-semibold tracking-tight text-ink transition-colors hover:bg-brass-300"
+          className="inline-flex h-11 items-center justify-center rounded-control bg-brand px-6 text-sm font-semibold tracking-tight text-brand-foreground transition-colors hover:bg-brand-hover"
         >
           {t("search.searchBtn")}
         </button>
@@ -153,8 +153,8 @@ export default function SearchPage() {
             onClick={() => setType(tabItem.value)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               type === tabItem.value
-                ? "border-brass bg-brass/10 text-brass"
-                : "border-ink-300 bg-ink-50 text-slate-300 hover:border-brass/40 hover:text-brass"
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-subtle bg-surface-soft text-content-secondary hover:border-brand/40 hover:text-brand"
             }`}
           >
             <tabItem.icon className="h-3.5 w-3.5" /> {t(tabItem.key)}
@@ -164,7 +164,7 @@ export default function SearchPage() {
 
       {type === "projects" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-300">{t("search.tryLabel")}</span>
+          <span className="text-xs text-content-secondary">{t("search.tryLabel")}</span>
           {SUGGESTIONS.map((term) => (
             <button
               key={term}

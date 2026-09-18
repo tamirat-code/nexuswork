@@ -233,7 +233,7 @@ export default function RegisterPage() {
       footer={
         <>
           {t("registration.haveAccount")}{" "}
-          <Link to="/login" className="font-medium text-cyan-400 hover:text-cyan-300">
+          <Link to="/login" className="font-medium text-brand hover:text-brand-hover">
             {t("auth.logIn")}
           </Link>
         </>
@@ -250,16 +250,16 @@ export default function RegisterPage() {
             <ReCAPTCHA ref={googleRecaptchaRef} sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setGoogleRecaptchaToken} onExpired={() => setGoogleRecaptchaToken(null)} />
           </div>
           <Button onClick={continueGoogleRegistration} loading={googleLoading} disabled={!googleRecaptchaToken} className="w-full" size="lg">{t("auth.continueGoogle")}</Button>
-          <button type="button" onClick={() => { setPendingGoogleCredential(null); setGoogleRecaptchaToken(null); }} className="w-full text-sm text-slate-300 hover:underline">{t("auth.differentSignIn")}</button>
+          <button type="button" onClick={() => { setPendingGoogleCredential(null); setGoogleRecaptchaToken(null); }} className="w-full text-sm text-content-secondary hover:underline">{t("auth.differentSignIn")}</button>
         </>}
-        <p className="text-center text-xs text-slate-400">
+        <p className="text-center text-xs text-content-muted">
           {t("registration.googleHint")}
         </p>
 
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          <div className="h-px flex-1 bg-ink-300" />
+        <div className="flex items-center gap-3 text-xs text-content-secondary">
+          <div className="h-px flex-1 bg-border-subtle" />
           {t("auth.orEmail")}
-          <div className="h-px flex-1 bg-ink-300" />
+          <div className="h-px flex-1 bg-border-subtle" />
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -336,16 +336,16 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowOptionalDetails((v) => !v)}
-                className="text-xs font-medium text-cyan-400 hover:text-cyan-300"
+                className="text-xs font-medium text-brand hover:text-brand-hover"
               >
                 {showOptionalDetails ? t("registration.hide") : t("registration.add")} {role === "student" ? t("registration.student") : t("registration.client")} {t("registration.detailsOptional")}
               </button>
 
               {showOptionalDetails && role === "student" && (
-                <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
+                <div className="space-y-4 rounded-card border border-border-subtle bg-surface-soft p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate">{t("registration.studentInformation")}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                    <p className="text-sm font-semibold text-content-primary">{t("registration.studentInformation")}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-content-secondary">
                       {t("registration.studentInfoHint")}
                     </p>
                   </div>
@@ -403,10 +403,10 @@ export default function RegisterPage() {
               )}
 
               {showOptionalDetails && role === "client" && (
-                <div className="space-y-4 rounded-card border border-ink-300 bg-ink-100/50 p-4">
+                <div className="space-y-4 rounded-card border border-border-subtle bg-surface-soft p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate">{t("registration.clientInformation")}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                    <p className="text-sm font-semibold text-content-primary">{t("registration.clientInformation")}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-content-secondary">
                       {t("registration.clientInfoHint")}
                     </p>
                   </div>

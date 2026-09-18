@@ -35,7 +35,7 @@ function SecretNotice({ value, onDismiss, t }) {
         </div>
         <button type="button" onClick={onDismiss} className="text-slate-300 hover:text-slate" aria-label={t("admin.closeSecret")}><XCircle className="h-4 w-4" /></button>
       </div>
-      <code className="mt-3 block overflow-x-auto rounded-lg bg-ink-950 px-3 py-2 text-xs text-brass">{value}</code>
+      <code className="mt-3 block overflow-x-auto rounded-lg border border-border-subtle bg-surface-soft px-3 py-2 text-xs text-brand">{value}</code>
       <Button className="mt-3" size="sm" variant="secondary" onClick={() => navigator.clipboard?.writeText(value)}><Copy className="h-3.5 w-3.5" />{t("admin.copySecret")}</Button>
     </div>
   );

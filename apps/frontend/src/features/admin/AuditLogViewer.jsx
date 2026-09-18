@@ -125,20 +125,20 @@ export default function AuditLogViewer() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-5">
-            <p className="font-mono text-2xl font-semibold text-slate">{summary.total?.[0]?.total ?? 0}</p>
-            <p className="text-xs text-slate-300">Actions in last 30 days</p>
+            <p className="font-mono text-2xl font-semibold text-content-primary">{summary.total?.[0]?.total ?? 0}</p>
+            <p className="text-xs text-content-secondary">Actions in last 30 days</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="font-mono text-2xl font-semibold text-brick">{summary.flagged_count?.[0]?.total ?? 0}</p>
-            <p className="text-xs text-slate-300">Flagged for review</p>
+            <p className="font-mono text-2xl font-semibold text-danger">{summary.flagged_count?.[0]?.total ?? 0}</p>
+            <p className="text-xs text-content-secondary">Flagged for review</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="font-mono text-2xl font-semibold text-slate">{summary.by_entity?.length ?? 0}</p>
-            <p className="text-xs text-slate-300">Entity types with activity</p>
+            <p className="font-mono text-2xl font-semibold text-content-primary">{summary.by_entity?.length ?? 0}</p>
+            <p className="text-xs text-content-secondary">Entity types with activity</p>
           </CardContent>
         </Card>
       </div>
@@ -197,26 +197,26 @@ export default function AuditLogViewer() {
               )}
               {!isLoading && entries.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-slate-300">
+                  <TableCell colSpan={7} className="py-8 text-center text-content-secondary">
                     No audit entries match these filters.
                   </TableCell>
                 </TableRow>
               )}
               {entries.map((e) => (
                 <TableRow key={e._id}>
-                  <TableCell className="whitespace-nowrap font-mono text-xs text-slate-300">
+                  <TableCell className="whitespace-nowrap font-mono text-xs text-content-secondary">
                     {formatDate(e.createdAt)}
                   </TableCell>
-                  <TableCell className="text-xs font-medium capitalize text-slate">
+                  <TableCell className="text-xs font-medium capitalize text-content-primary">
                     {e.action_type.replace(/_/g, " ")}
                   </TableCell>
                   <TableCell className="text-xs text-slate-300">
                     {e.actor_id?.name || e.actor_id?.email || (
-                      <span className="italic text-slate-400">system ({e.actor_role})</span>
+                      <span className="italic text-content-muted">system ({e.actor_role})</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs capitalize text-slate-300">{e.entity_type}</TableCell>
-                  <TableCell className="max-w-[220px] truncate text-xs text-slate-300" title={e.reason}>
+                  <TableCell className="text-xs capitalize text-content-secondary">{e.entity_type}</TableCell>
+                  <TableCell className="max-w-[220px] truncate text-xs text-content-secondary" title={e.reason}>
                     {e.reason || "—"}
                   </TableCell>
                   <TableCell>
@@ -234,8 +234,8 @@ export default function AuditLogViewer() {
             </TableBody>
           </Table>
         </CardContent>
-        <div className="flex items-center justify-between border-t border-ink-300 px-5 py-3">
-          <p className="text-xs text-slate-300">
+        <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
+          <p className="text-xs text-content-secondary">
             {total === 0 ? "No entries" : `Page ${page + 1} of ${totalPages} · ${total} total`}
           </p>
           <div className="flex gap-2">

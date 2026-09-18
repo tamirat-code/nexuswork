@@ -37,7 +37,7 @@ export default function Stat({
   return (
     <div
       className={cn(
-        "group relative flex flex-col justify-between rounded-card border border-border bg-surface p-5 shadow-card transition-all duration-150 hover:border-brand/30 hover:shadow-elevated",
+        "group relative flex flex-col justify-between rounded-[18px] border border-border bg-surface p-5 shadow-card transition-all duration-150 hover:border-brand/35 hover:shadow-elevated",
         className
       )}
     >

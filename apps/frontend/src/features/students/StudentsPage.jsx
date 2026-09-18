@@ -25,17 +25,17 @@ export default function StudentsPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("students.marketplace")}</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("students.title")}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+      <header className="border-b border-border-subtle pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("students.marketplace")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("students.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-content-secondary">
           {t("students.description")}
         </p>
       </header>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -46,7 +46,7 @@ export default function StudentsPage() {
         <select
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
-          className="h-11 rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate outline-none focus:ring-2 focus:ring-ring"
+          className="h-11 rounded-control border border-border-subtle bg-surface-soft px-3 text-sm text-content-primary outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="all">{t("students.departments.all")}</option>
           <option value="cs">{t("students.departments.cs")}</option>
@@ -61,14 +61,14 @@ export default function StudentsPage() {
 
         {error && (
           <Card className="col-span-full p-8 text-center">
-            <p className="text-sm text-brick">{error.message}</p>
+            <p className="text-sm text-danger">{error.message}</p>
           </Card>
         )}
 
         {!isLoading && !error && students.length === 0 && (
           <Card className="col-span-full p-12 text-center">
-            <p className="font-display text-lg text-slate">{t("students.noResults")}</p>
-            <p className="mt-2 text-sm text-slate-300">{t("students.noResultsHint")}</p>
+            <p className="font-display text-lg text-content-primary">{t("students.noResults")}</p>
+            <p className="mt-2 text-sm text-content-secondary">{t("students.noResultsHint")}</p>
           </Card>
         )}
 
@@ -82,8 +82,8 @@ export default function StudentsPage() {
                     <AvatarFallback>{(s.name || "S").slice(0, 2)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate">{s.name}</p>
-                    <p className="truncate text-xs text-slate-300">{s.department}</p>
+                    <p className="truncate font-semibold text-content-primary">{s.name}</p>
+                    <p className="truncate text-xs text-content-secondary">{s.department}</p>
                   </div>
                 </div>
                 {s.verification_status === "verified" ? (
@@ -93,9 +93,9 @@ export default function StudentsPage() {
                 )}
               </div>
 
-              <div className="mt-4 space-y-1.5 text-xs text-slate-300">
-                <p className="flex items-center gap-2"><GraduationCap className="h-3.5 w-3.5 text-brass" /> {s.university || t("students.universityStudent")}</p>
-                <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-brass" /> {s.location || t("students.remote")}</p>
+              <div className="mt-4 space-y-1.5 text-xs text-content-secondary">
+                <p className="flex items-center gap-2"><GraduationCap className="h-3.5 w-3.5 text-brand" /> {s.university || t("students.universityStudent")}</p>
+                <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-brand" /> {s.location || t("students.remote")}</p>
               </div>
 
               {s.skills?.length > 0 && (
@@ -103,7 +103,7 @@ export default function StudentsPage() {
                   {s.skills.slice(0, 4).map((sk) => (
                     <Badge key={sk.name || sk} variant="secondary">
                       {sk.name || sk}
-                      {sk.level && <span className="text-slate-300">· {sk.level}</span>}
+                      {sk.level && <span className="text-content-secondary">· {sk.level}</span>}
                     </Badge>
                   ))}
                 </div>

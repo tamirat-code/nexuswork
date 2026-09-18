@@ -41,7 +41,7 @@ export default function Modal({
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
           <motion.div
-            className="absolute inset-0 bg-ink-900/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -62,21 +62,21 @@ export default function Modal({
             exit={{ opacity: 0, y: 8, scale: 0.99, transition: { duration: 0.12 } }}
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
             className={cn(
-              "relative flex max-h-[92vh] w-full flex-col overflow-hidden border border-ink-300 bg-ink-700 shadow-elevated",
+              "relative flex max-h-[92vh] w-full flex-col overflow-hidden border border-border-subtle bg-surface-elevated shadow-elevated",
               "rounded-t-card sm:rounded-card",
               widths[size]
             )}
           >
             {(title || dismissible) && (
-              <div className="flex items-start justify-between gap-4 border-b border-ink-300 px-5 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
                 <div className="min-w-0">
                   {title && (
-                    <h2 id={titleId} className="font-display text-lg leading-tight text-slate">
+                    <h2 id={titleId} className="font-display text-lg leading-tight text-content-primary">
                       {title}
                     </h2>
                   )}
                   {description && (
-                    <p id={descId} className="mt-1 text-sm leading-relaxed text-slate-300">
+                    <p id={descId} className="mt-1 text-sm leading-relaxed text-content-secondary">
                       {description}
                     </p>
                   )}
@@ -94,7 +94,7 @@ export default function Modal({
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
 
             {footer && (
-              <div className="flex flex-col-reverse gap-2 border-t border-ink-300 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+              <div className="flex flex-col-reverse gap-2 border-t border-border-subtle px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
                 {footer}
               </div>
             )}

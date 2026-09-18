@@ -17,7 +17,7 @@ export default function NotificationBell({
     <Link
       to={to}
       aria-label={label}
-      className="relative grid h-10 w-10 place-items-center rounded-control text-slate-300 transition-colors hover:bg-ink-50 hover:text-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+      className="relative grid h-10 w-10 place-items-center rounded-control text-content-muted transition-colors hover:bg-surface-soft hover:text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
     >
       <NavIcon
         name="bell"
@@ -25,7 +25,7 @@ export default function NotificationBell({
       />
 
       {unreadCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 min-w-[16px] rounded-full bg-brick px-1 text-[10px] font-bold leading-4 text-ink-900">
+        <span className="absolute right-1.5 top-1.5 min-w-[16px] rounded-full bg-brand px-1 text-[10px] font-bold leading-4 text-brand-foreground">
           {unreadCount > 9
             ? "9+"
             : unreadCount}

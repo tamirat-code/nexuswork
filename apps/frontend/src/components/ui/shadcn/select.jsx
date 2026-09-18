@@ -12,7 +12,7 @@ const SelectTrigger = React.forwardRef(function SelectTrigger({ className, child
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex h-11 w-full items-center justify-between rounded-control border border-ink-300 bg-ink-100 px-3 py-2 text-sm text-slate placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-45 [&>span]:line-clamp-1",
+        "flex h-11 w-full items-center justify-between rounded-control border border-border-subtle bg-surface-soft px-3 py-2 text-sm text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-canvas disabled:cursor-not-allowed disabled:opacity-45 [&>span]:line-clamp-1",
         className
       )}
       {...props}
@@ -31,7 +31,7 @@ const SelectContent = React.forwardRef(function SelectContent({ className, child
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         ref={ref}
-        className={cn("relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-control border border-ink-300 bg-ink-700 text-slate shadow-elevated", position === "popper" && "translate-y-1", className)}
+        className={cn("relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-control border border-border-subtle bg-surface/95 text-content-primary shadow-elevated backdrop-blur-xl", position === "popper" && "translate-y-1", className)}
         position={position}
         {...props}
       >
@@ -53,7 +53,7 @@ const SelectItem = React.forwardRef(function SelectItem({ className, children, .
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-[8px] py-1.5 pl-8 pr-2 text-sm text-slate focus:bg-brass/10 focus:text-brass focus:outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
+        "relative flex w-full cursor-default select-none items-center rounded-[8px] py-1.5 pl-8 pr-2 text-sm text-content-primary focus:bg-brand-soft focus:text-brand focus:outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
         className
       )}
       {...props}

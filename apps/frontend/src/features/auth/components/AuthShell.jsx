@@ -6,7 +6,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
   const { t } = useTranslation();
   const highlights = ["auth.highlightEscrow", "auth.highlightVerified", "auth.highlightFees"];
   return (
-    <div className="grid min-h-screen bg-ink lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+    <div className="grid min-h-screen bg-canvas lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <motion.div
         initial={{ opacity: 0, x: -18 }}
         animate={{ opacity: 1, x: 0 }}
@@ -15,7 +15,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
       >
         <Link to="/" className="inline-flex w-fit items-center gap-2.5">
           <img src="/logo.svg" alt="NexusWork" className="h-10 w-10 object-contain" />
-          <span className="font-display text-xl font-extrabold tracking-tight text-slate">NexusWork</span>
+          <span className="font-display text-xl font-extrabold tracking-tight text-content-primary">NexusWork</span>
         </Link>
 
         <div className="flex flex-1 items-center py-10">
@@ -26,27 +26,27 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
             className="mx-auto w-full max-w-sm"
           >
             {eyebrow && (
-              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-brass">{eyebrow}</p>
+              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">{eyebrow}</p>
             )}
-            <h1 className="font-display text-[28px] leading-tight tracking-tight text-slate sm:text-3xl">{title}</h1>
-            {subtitle && <p className="mt-2.5 text-sm leading-relaxed text-slate-300">{subtitle}</p>}
+            <h1 className="font-display text-[28px] leading-tight tracking-tight text-content-primary sm:text-3xl">{title}</h1>
+            {subtitle && <p className="mt-2.5 text-sm leading-relaxed text-content-secondary">{subtitle}</p>}
 
             <div className="mt-7">{children}</div>
 
             {footer && (
-              <div className="mt-7 border-t border-ink-300 pt-5 text-sm text-slate-300">{footer}</div>
+              <div className="mt-7 border-t border-border-subtle pt-5 text-sm text-content-secondary">{footer}</div>
             )}
           </motion.div>
         </div>
 
-        <p className="text-xs text-slate-300">{t("auth.copyright", { year: new Date().getFullYear() })}</p>
+        <p className="text-xs text-content-secondary">{t("auth.copyright", { year: new Date().getFullYear() })}</p>
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, x: 120 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.7, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-        className="relative hidden overflow-hidden border-l border-ink-300 bg-ink-100 lg:flex lg:items-start"
+        className="relative hidden overflow-hidden border-l border-border-subtle bg-surface-soft lg:flex lg:items-start"
       >
         <div
           className="absolute inset-0 opacity-[0.06]"
@@ -56,18 +56,18 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
           }}
         />
         <motion.div
-          className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brass/10 blur-3xl"
+          className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-soft blur-3xl"
           animate={{ scale: [1, 1.08, 1], opacity: [0.45, 0.75, 0.45] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-brand/10 blur-3xl"
+          className="absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-brand-soft blur-3xl"
           animate={{ scale: [1, 1.12, 1], opacity: [0.3, 0.55, 0.3] }}
           transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
         />
         <div className="relative mt-[18vh] w-full max-w-xl px-12 xl:mt-[22vh] xl:px-16">
           <motion.div
-            className="mb-8 h-1 rounded-full bg-gradient-to-r from-brass via-brand to-transparent"
+            className="mb-8 h-1 rounded-full bg-gradient-to-r from-brand via-brand to-transparent"
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 88, opacity: 1 }}
             transition={{ duration: 0.7, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
@@ -77,18 +77,18 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ duration: 0.55, delay: 0.52, ease: [0.16, 1, 0.3, 1] }}
           >
-            <SealMark className="mb-7 h-14 w-14 text-brass" />
+            <SealMark className="mb-7 h-14 w-14 text-brand" />
           </motion.div>
-          <p className="max-w-md font-display text-[26px] font-semibold leading-snug tracking-tight text-slate xl:text-3xl">
+          <p className="max-w-md font-display text-[26px] font-semibold leading-snug tracking-tight text-content-primary xl:text-3xl">
             {t("auth.heroTitle")}
           </p>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-300">
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-content-secondary">
             {t("auth.heroSubtitle")}
           </p>
           <ul className="mt-9 space-y-3.5">
             {highlights.map((key) => (
-              <li key={key} className="flex gap-3 text-sm leading-relaxed text-slate-300 transition-transform hover:translate-x-1">
-                <SealMark className="mt-0.5 h-4 w-4 shrink-0 text-brass" />
+              <li key={key} className="flex gap-3 text-sm leading-relaxed text-content-secondary transition-transform hover:translate-x-1">
+                <SealMark className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 <span>{t(key)}</span>
               </li>
             ))}

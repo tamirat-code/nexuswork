@@ -1,10 +1,10 @@
 import { cn } from "../../lib/cn.js";
 
 const variants = {
-  info: { wrap: "border-info/30 bg-info-100", icon: "text-info", path: "M8 5v4m0 3h.01" },
-  success: { wrap: "border-escrow/30 bg-escrow-100", icon: "text-escrow", path: "m4.5 8.4 2.4 2.4 4.6-5.2" },
-  warning: { wrap: "border-amber/30 bg-amber-100", icon: "text-amber", path: "M8 5v4m0 3h.01" },
-  danger: { wrap: "border-brick/30 bg-brick-100", icon: "text-brick", path: "M8 5v4m0 3h.01" },
+  info: { wrap: "border-info/30 bg-info-soft", icon: "text-info", path: "M8 5v4m0 3h.01" },
+  success: { wrap: "border-success/30 bg-success-soft", icon: "text-success", path: "m4.5 8.4 2.4 2.4 4.6-5.2" },
+  warning: { wrap: "border-warning/30 bg-warning-soft", icon: "text-warning", path: "M8 5v4m0 3h.01" },
+  danger: { wrap: "border-danger/30 bg-danger-soft", icon: "text-danger", path: "M8 5v4m0 3h.01" },
 };
 
 
@@ -36,9 +36,9 @@ export default function Alert({ variant = "info", title, children, actions, live
       </svg>
 
       <div className="min-w-0 flex-1">
-        {title && <p className="text-sm font-semibold text-slate">{title}</p>}
+        {title && <p className="text-sm font-semibold text-content-primary">{title}</p>}
         {children && (
-          <div className={cn("text-sm leading-relaxed text-slate-300", title && "mt-1")}>{children}</div>
+          <div className={cn("text-sm leading-relaxed text-content-secondary", title && "mt-1")}>{children}</div>
         )}
         {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
       </div>

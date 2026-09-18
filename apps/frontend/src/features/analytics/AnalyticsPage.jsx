@@ -80,30 +80,30 @@ export default function AnalyticsPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("analytics.eyebrow")}</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("analytics.title")}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+      <header className="border-b border-border-subtle pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("analytics.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("analytics.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-content-secondary">
           {isAdmin ? t("analytics.subtitlePlatform") : t("analytics.subtitleUniversity")}
         </p>
       </header>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
-          <Card key={c.label}>
+          <Card key={c.label} className="border-border-subtle bg-surface-soft">
             <CardContent className="p-5">
-              <c.icon className="h-5 w-5 text-brass" />
-              <p className="mt-3 font-mono text-2xl font-semibold text-slate">{isLoading ? "…" : c.value}</p>
-              <p className="text-xs text-slate-300">{c.label}</p>
+              <c.icon className="h-5 w-5 text-brand" />
+              <p className="mt-3 font-mono text-2xl font-semibold text-content-primary">{isLoading ? "…" : c.value}</p>
+              <p className="text-xs text-content-secondary">{c.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {!isAdmin && a.privacy_suppressed && (
-        <Card className="mt-6 border-brass/40">
-          <CardContent className="p-5 text-sm text-slate-300">
-            <p className="font-semibold text-slate">{t("analytics.privacyTitle")}</p>
+        <Card className="mt-6 border-brand/30 bg-brand-soft">
+          <CardContent className="p-5 text-sm text-content-secondary">
+            <p className="font-semibold text-content-primary">{t("analytics.privacyTitle")}</p>
             <p className="mt-1">{a.message || `University outcomes require at least ${a.minimum_cohort_size || 5} verified students.`}</p>
           </CardContent>
         </Card>
@@ -119,12 +119,12 @@ export default function AnalyticsPage() {
                 <ul className="space-y-2">
                   {skills.map((s) => (
                     <li key={s.name} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-300">{s.name}</span>
-                      <span className="font-mono text-brass">{s.count}</span>
+                      <span className="text-content-secondary">{s.name}</span>
+                      <span className="font-mono text-brand">{s.count}</span>
                     </li>
                   ))}
                 </ul>
-              ) : <p className="text-sm text-slate-300">{t("analytics.noData")}</p>;
+              ) : <p className="text-sm text-content-secondary">{t("analytics.noData")}</p>;
             })()}
           </CardContent>
         </Card>
@@ -136,12 +136,12 @@ export default function AnalyticsPage() {
                 <ul className="space-y-2">
                   {a.demand_by_category.map((c) => (
                     <li key={c.category} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-300">{c.category}</span>
-                      <span className="font-mono text-brass">{c.projects}</span>
+                      <span className="text-content-secondary">{c.category}</span>
+                      <span className="font-mono text-brand">{c.projects}</span>
                     </li>
                   ))}
                 </ul>
-              ) : <p className="text-sm text-slate-300">{t("analytics.noData")}</p>)}
+              ) : <p className="text-sm text-content-secondary">{t("analytics.noData")}</p>)}
             </CardContent>
           </Card>
         ) : (
@@ -149,18 +149,18 @@ export default function AnalyticsPage() {
             <CardHeader><CardTitle className="text-lg">{t("analytics.outcomes")}</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">{t("analytics.employmentRate")}</span>
-                <span className="font-mono text-brass">
+                <span className="text-content-secondary">{t("analytics.employmentRate")}</span>
+                <span className="font-mono text-brand">
                   {universitySuppressed ? "—" : a.employment_rate != null ? `${Math.round(a.employment_rate * 100)}%` : "—"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">{t("analytics.aggregateEarnings")}</span>
-                <span className="font-mono text-brass">{universitySuppressed ? "—" : formatCurrency(a.aggregate_earnings ?? 0)}</span>
+                <span className="text-content-secondary">{t("analytics.aggregateEarnings")}</span>
+                <span className="font-mono text-brand">{universitySuppressed ? "—" : formatCurrency(a.aggregate_earnings ?? 0)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">{t("analytics.releasedMilestones")}</span>
-                <span className="font-mono text-brass">{universitySuppressed ? "—" : a.released_milestone_count ?? 0}</span>
+                <span className="text-content-secondary">{t("analytics.releasedMilestones")}</span>
+                <span className="font-mono text-brand">{universitySuppressed ? "—" : a.released_milestone_count ?? 0}</span>
               </div>
             </CardContent>
           </Card>

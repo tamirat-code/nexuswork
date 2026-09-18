@@ -113,16 +113,16 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("settings.eyebrow")}</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("settings.title")}</h1>
-        <p className="mt-2 text-sm text-slate-300">{t("settings.subtitle")}</p>
+      <header className="border-b border-border-subtle pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("settings.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("settings.title")}</h1>
+        <p className="mt-2 text-sm text-content-secondary">{t("settings.subtitle")}</p>
       </header>
 
       <div className="mt-6 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><User className="h-4 w-4 text-brass" /> {t("settings.profileCardTitle")}</CardTitle>
+            <CardTitle className="flex items-center gap-2"><User className="h-4 w-4 text-brand" /> {t("settings.profileCardTitle")}</CardTitle>
             <CardDescription>{t("settings.profileCardDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -130,7 +130,7 @@ export default function SettingsPage() {
               <Label htmlFor="settings-name">{t("settings.fullName")}</Label>
               <Input id="settings-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            {profileError && <p className="text-xs text-brick" role="alert">{profileError}</p>}
+            {profileError && <p className="text-xs text-danger" role="alert">{profileError}</p>}
             <Button size="sm" loading={profileMutation.isPending} onClick={() => { const value = name.trim(); if (!value || value.length > 120) { const message = "Name is required and must be 120 characters or fewer."; setProfileError(message); reportValidation(message, { form: "settings-profile", field: "name" }); return; } setProfileError(""); profileMutation.mutate(); }}>{t("settings.saveProfile")}</Button>
           </CardContent>
         </Card>
@@ -138,24 +138,24 @@ export default function SettingsPage() {
         {isStudent && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brass" /> {t("settings.talentConsentTitle")}</CardTitle>
+              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand" /> {t("settings.talentConsentTitle")}</CardTitle>
               <CardDescription>{t("settings.talentConsentDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-ink-300 bg-ink-100/50 p-4">
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface-soft p-4">
                 <div>
-                  <p className="font-semibold text-slate">{t("settings.talentConsentToggle")}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-300">{t("settings.talentConsentToggleHint")}</p>
+                  <p className="font-semibold text-content-primary">{t("settings.talentConsentToggle")}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-content-secondary">{t("settings.talentConsentToggleHint")}</p>
                 </div>
                 <Switch checked={talentApiEnabled} onCheckedChange={setTalentApiEnabled} disabled={talentConsentQuery.isLoading} />
               </div>
 
               <div>
-                <p className="font-semibold text-slate">{t("settings.talentConsentFieldsTitle")}</p>
-                <p className="mt-1 text-xs text-slate-300">{t("settings.talentConsentFieldsHint")}</p>
+                <p className="font-semibold text-content-primary">{t("settings.talentConsentFieldsTitle")}</p>
+                <p className="mt-1 text-xs text-content-secondary">{t("settings.talentConsentFieldsHint")}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {["name", "skills", "verification", "institution", "program", "bio"].map((field) => (
-                    <label key={field} className="flex cursor-pointer items-center gap-3 rounded-lg border border-ink-300 bg-ink-100/40 px-3 py-2.5 text-sm text-slate transition hover:border-brass/50">
+                    <label key={field} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border-subtle bg-surface-soft/70 px-3 py-2.5 text-sm text-content-primary transition hover:border-brand/50">
                       <input
                         type="checkbox"
                         checked={talentApiFields.includes(field)}
@@ -169,7 +169,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex items-center justify-between gap-4 border-t border-ink-300 pt-4">
-                <p className="max-w-xl text-xs leading-relaxed text-slate-300">{t("settings.talentConsentPrivacy")}</p>
+                <p className="max-w-xl text-xs leading-relaxed text-content-secondary">{t("settings.talentConsentPrivacy")}</p>
                 <Button size="sm" loading={talentConsentMutation.isPending} onClick={() => talentConsentMutation.mutate()}>
                   {t("settings.saveTalentConsent")}
                 </Button>
@@ -180,11 +180,11 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4 text-brass" /> {t("settings.securityCardTitle")}</CardTitle>
+            <CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4 text-brand" /> {t("settings.securityCardTitle")}</CardTitle>
             <CardDescription>{t("settings.securityCardDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isGoogleAccount && <p className="rounded-lg border border-brass/30 bg-brass/10 p-3 text-xs leading-relaxed text-slate-300">{t("settings.googlePasswordHint", "You signed in with Google. Create a password here so you can also sign in with your email.")}</p>}
+            {isGoogleAccount && <p className="rounded-lg border border-brand/30 bg-brand-soft p-3 text-xs leading-relaxed text-content-secondary">{t("settings.googlePasswordHint", "You signed in with Google. Create a password here so you can also sign in with your email.")}</p>}
             {!isGoogleAccount && <div className="space-y-1.5">
               <Label htmlFor="settings-current">{t("settings.currentPassword")}</Label>
               <PasswordInput id="settings-current" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
@@ -193,22 +193,22 @@ export default function SettingsPage() {
               <Label htmlFor="settings-new">{t("settings.newPassword")}</Label>
               <PasswordInput id="settings-new" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
-            {passwordError && <p className="text-xs text-brick" role="alert">{passwordError}</p>}
+            {passwordError && <p className="text-xs text-danger" role="alert">{passwordError}</p>}
             <Button size="sm" variant="secondary" loading={passwordMutation.isPending} onClick={() => { const issue = (!isGoogleAccount && !currentPassword.trim()) ? "Enter your current password." : passwordIssue(newPassword); if (issue) { setPasswordError(issue); reportValidation(issue, { form: "settings-password" }); return; } setPasswordError(""); passwordMutation.mutate(); }}>{isGoogleAccount ? t("settings.setPassword", "Set password") : t("settings.changePassword")}</Button>
 
             <Separator />
 
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="font-semibold text-slate">{t("settings.mfaTitle")}</p>
-                <p className="text-xs text-slate-300">
+                <p className="font-semibold text-content-primary">{t("settings.mfaTitle")}</p>
+                <p className="text-xs text-content-secondary">
                   {user?.mfa_enabled
                     ? t("settings.mfaEnabledDesc")
                     : t("settings.mfaDisabledDesc")}
                 </p>
               </div>
               {user?.mfa_enabled ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-brass/30 bg-brass/10 px-3 py-1 text-xs font-semibold text-brass">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
                   <ShieldCheck className="h-3.5 w-3.5" /> {t("settings.mfaEnabledBadge")}
                 </span>
               ) : (
@@ -222,7 +222,7 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brass" /> {t("settings.notificationsTitle")}</CardTitle>
+            <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand" /> {t("settings.notificationsTitle")}</CardTitle>
             <CardDescription>{t("settings.notificationsDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -21,15 +21,15 @@ export default function ClientsPage() {
 
   return (
     <div className="w-full animate-fade-up">
-      <header className="border-b border-ink-300 pb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">{t("clients.eyebrow")}</p>
-        <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">{t("clients.title")}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">{t("clients.subtitle")}</p>
+      <header className="border-b border-border-subtle pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("clients.eyebrow")}</p>
+        <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("clients.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-content-secondary">{t("clients.subtitle")}</p>
       </header>
       <div className="mt-6 max-w-md">
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("clients.searchPlaceholder")} />
       </div>
-      <Card className="mt-6 overflow-hidden">
+      <Card className="mt-6 overflow-hidden border-border-subtle bg-surface">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -45,9 +45,9 @@ export default function ClientsPage() {
               {isLoading && [...Array(4)].map((_, i) => (
                 <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
               ))}
-              {error && <TableRow><TableCell colSpan={5} className="text-center text-brick">{error.message}</TableCell></TableRow>}
+              {error && <TableRow><TableCell colSpan={5} className="text-center text-danger">{error.message}</TableCell></TableRow>}
               {!isLoading && !error && clients.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="py-12 text-center text-slate-300">{t("clients.noClients")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-12 text-center text-content-secondary">{t("clients.noClients")}</TableCell></TableRow>
               )}
               {clients.map((c) => {
                 const orgName = c.name || c.client_profile?.organization_name || t("clients.tableClient");
@@ -57,17 +57,17 @@ export default function ClientsPage() {
                       <div className="flex min-w-0 items-center gap-3">
                         <Avatar><AvatarImage src={c.avatar} alt="" /><AvatarFallback>{orgName.slice(0, 2)}</AvatarFallback></Avatar>
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-slate">{orgName}</p>
-                          <p className="flex items-center gap-1 truncate text-xs text-slate-300"><Mail className="h-3 w-3" /> {c.email}</p>
+                          <p className="truncate font-semibold text-content-primary">{orgName}</p>
+                          <p className="flex items-center gap-1 truncate text-xs text-content-secondary"><Mail className="h-3 w-3" /> {c.email}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       {c.client_profile?.is_organization ? <Badge variant="secondary"><Building2 className="h-3 w-3" /> {t("clients.organization")}</Badge> : <Badge variant="outline">{t("clients.individual")}</Badge>}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-300">{c.client_profile?.sector || "—"}</TableCell>
-                    <TableCell className="text-right font-mono text-slate-300">{c.projects_count ?? 0}</TableCell>
-                    <TableCell className="text-right font-mono text-brass">{c.total_spent ? `$${c.total_spent.toLocaleString()}` : "—"}</TableCell>
+                    <TableCell className="text-sm text-content-secondary">{c.client_profile?.sector || "—"}</TableCell>
+                    <TableCell className="text-right font-mono text-content-secondary">{c.projects_count ?? 0}</TableCell>
+                    <TableCell className="text-right font-mono text-brand">{c.total_spent ? `$${c.total_spent.toLocaleString()}` : "—"}</TableCell>
                   </TableRow>
                 );
               })}

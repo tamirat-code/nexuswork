@@ -347,13 +347,13 @@ export default function NotificationsPage() {
 
     return (
 
-      <Card className="p-8 text-center">
+      <Card className="border-border-subtle bg-surface-soft p-8 text-center">
 
-        <h2 className="font-display text-lg text-slate">
+        <h2 className="font-display text-lg text-content-primary">
           Couldn't load notifications
         </h2>
 
-        <p className="mt-2 text-sm text-slate-300">
+        <p className="mt-2 text-sm text-content-secondary">
           {error.message}
         </p>
 
@@ -370,19 +370,19 @@ export default function NotificationsPage() {
 
       {/* Header */}
 
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-300 pb-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border-subtle pb-6">
 
         <div>
 
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-brass">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand">
             {t("notifications.eyebrow")}
           </p>
 
-          <h1 className="mt-2 font-display text-3xl tracking-tight text-slate">
+          <h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">
             {t("notifications.title")}
           </h1>
 
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-2 text-sm text-content-secondary">
 
             {unread > 0
               ? t("notifications.unread", { count: unread })
@@ -423,13 +423,13 @@ export default function NotificationsPage() {
 
         <Card className="mt-8 p-14 text-center">
 
-          <Bell className="mx-auto h-10 w-10 text-slate-300" />
+          <Bell className="mx-auto h-10 w-10 text-content-muted" />
 
-          <h3 className="mt-4 font-display text-lg text-slate">
+          <h3 className="mt-4 font-display text-lg text-content-primary">
             {t("notifications.emptyTitle")}
           </h3>
 
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-2 text-sm text-content-secondary">
             {t("notifications.emptyDesc")}
           </p>
 
@@ -493,10 +493,10 @@ export default function NotificationsPage() {
                   )
                 }
 
-                className={`group w-full cursor-pointer rounded-card border p-4 text-left transition-all hover:border-brass/40 hover:bg-ink-50 ${
+                className={`group w-full cursor-pointer rounded-card border p-4 text-left transition-all hover:border-brand/40 hover:bg-surface-soft ${
                   isRead
-                    ? "border-ink-300 bg-ink-50"
-                    : "border-brass/30 bg-brass/5"
+                    ? "border-border-subtle bg-surface-soft"
+                    : "border-brand/30 bg-brand-soft"
                 }`}
 
               >
@@ -505,9 +505,9 @@ export default function NotificationsPage() {
 
                   {/* Icon */}
 
-                  <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-ink-300">
+                  <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border-subtle">
 
-                    <Bell className="h-4 w-4 text-brass" />
+                    <Bell className="h-4 w-4 text-brand" />
 
                   </div>
 
@@ -520,11 +520,11 @@ export default function NotificationsPage() {
 
                       <div>
 
-                        <p className="font-semibold text-slate">
+                        <p className="font-semibold text-content-primary">
                           {notification.title}
                         </p>
 
-                        <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                        <p className="mt-1 text-sm leading-relaxed text-content-secondary">
 
                           {notification.message ||
                             notification.body ||
@@ -551,7 +551,7 @@ export default function NotificationsPage() {
 
                     <div className="mt-2 flex items-center justify-between">
 
-                      <p className="text-xs text-slate-300">
+                      <p className="text-xs text-content-secondary">
                         {formatTimeAgo(
                           notification.createdAt
                         )}
@@ -560,7 +560,7 @@ export default function NotificationsPage() {
 
                       {isProposalNotification && (
 
-                        <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-brand opacity-0 transition-opacity group-hover:opacity-100">
 
                           {t("notifications.reviewProposal")}
 
@@ -573,7 +573,7 @@ export default function NotificationsPage() {
 
                       {isStaffVerificationAdminAction && (
 
-                        <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-brand opacity-0 transition-opacity group-hover:opacity-100">
 
                           {t("notifications.reviewRequest")}
 
@@ -586,7 +586,7 @@ export default function NotificationsPage() {
 
                       {isStaffVerificationStatusUpdate && (
 
-                        <span className="flex items-center gap-1 text-xs font-semibold text-brass opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-brand opacity-0 transition-opacity group-hover:opacity-100">
 
                           {t("notifications.viewStatus")}
 

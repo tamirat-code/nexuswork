@@ -96,7 +96,7 @@ function SkillPicker({ value, onChange, catalog = [], t }) {
     <div>
       <div className="flex gap-2">
         <select value={input} onChange={(e) => setInput(e.target.value)} aria-label={t("projectsForm.chooseSkill")}
-          className="h-11 min-w-0 flex-1 rounded-control border border-ink-300 bg-ink-100 px-3 text-sm text-slate">
+          className="h-11 min-w-0 flex-1 rounded-control border border-border-subtle bg-surface-soft px-3 text-sm text-content-primary">
           <option value="">{t("projectsForm.chooseSkill")}</option>
           {catalog.filter((skill) => !skills.some((selected) => selected._id === skill._id)).map((skill) => (
             <option key={skill._id} value={skill._id}>{skill.name}</option>
@@ -135,7 +135,7 @@ function PriceSuggestion({ skills, category, currency = "USD", token, onApply })
   const suggestion = data?.data;
   if (!isFetching && suggestion?.suggested_price == null) {
     return (
-      <p className="mt-2 text-xs text-slate-300">
+      <p className="mt-2 text-xs text-content-secondary">
         {t("projectsForm.priceUnavailable")}
       </p>
     );
@@ -143,15 +143,15 @@ function PriceSuggestion({ skills, category, currency = "USD", token, onApply })
 
   return (
     <div className="mt-2 flex items-center gap-2 text-xs">
-      <Sparkles className="h-3.5 w-3.5 shrink-0 text-brass" />
+      <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand" />
       {isFetching ? (
-        <span className="text-slate-300">{t("projectsForm.checkingPrice")}</span>
+        <span className="text-content-secondary">{t("projectsForm.checkingPrice")}</span>
       ) : (
-        <span className="text-slate-300">
+        <span className="text-content-secondary">
           {t("projectsForm.similarPrice")} {" "}
-          <span className="font-mono font-semibold text-brass">{formatCurrency(suggestion.suggested_price, currency)}</span>
+          <span className="font-mono font-semibold text-brand">{formatCurrency(suggestion.suggested_price, currency)}</span>
           {" "}({suggestion.sample_size} {t("projectsForm.sample")}{suggestion.sample_size === 1 ? "" : "s"}).{" "}
-          <button type="button" onClick={() => onApply(suggestion.suggested_price)} className="font-semibold text-brass hover:underline">
+          <button type="button" onClick={() => onApply(suggestion.suggested_price)} className="font-semibold text-brand hover:underline">
             {t("projectsForm.usePrice")}
           </button>
         </span>

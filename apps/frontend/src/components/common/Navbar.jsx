@@ -56,16 +56,16 @@ export default function Navbar() {
 
   const linkClass = (active) =>
     cn(
-      "flex min-h-10 max-w-[150px] shrink rounded-control px-2 py-2 text-center text-sm font-semibold leading-tight transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:ring-offset-ink xl:px-2.5 xl:text-[0.9375rem]",
-      active ? "font-bold text-brass bg-brass/10 shadow-sm" : "text-slate-300 hover:text-brass hover:bg-ink-50/70"
+      "flex min-h-10 max-w-[150px] shrink rounded-control px-2 py-2 text-center text-sm font-semibold leading-tight transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-canvas xl:px-2.5 xl:text-[0.9375rem]",
+      active ? "font-bold text-brand bg-brand-soft shadow-sm" : "text-content-secondary hover:text-brand hover:bg-surface-soft"
     );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-ink-300 bg-ink/95">
+    <header className="sticky top-0 z-40 border-b border-border-subtle bg-surface/95">
       <div className="flex min-h-[84px] w-full items-center justify-between gap-3 overflow-x-clip px-4 sm:gap-4 sm:px-8 lg:px-10">
         <Link to="/" className="group flex shrink-0 items-center gap-3">
           <img src="/logo.svg" alt="NexusWork" className="h-12 w-12 object-contain transition-transform duration-200 group-hover:scale-105" />
-          <span className="font-display text-2xl font-extrabold tracking-[-0.02em] text-slate sm:text-[1.7rem]">
+          <span className="font-display text-2xl font-extrabold tracking-[-0.02em] text-content-primary sm:text-[1.7rem]">
             NexusWork
           </span>
         </Link>
@@ -155,7 +155,7 @@ export default function Navbar() {
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "flex min-w-0 flex-1 items-center gap-2.5 rounded-control px-3.5 py-2.5 text-sm font-semibold",
-                      active ? "bg-brass/15 font-bold text-brass" : "text-slate-300 hover:bg-ink-50"
+                      active ? "bg-brand-soft font-bold text-brand" : "text-content-secondary hover:bg-surface-soft"
                     )}
                   >
                     {t(`navigation.${l.translationKey || l.to.split("/")[1] || "home"}`, { defaultValue: l.label })}
@@ -166,20 +166,20 @@ export default function Navbar() {
                       aria-label={`${isExpanded ? "Collapse" : "Expand"} ${l.label} menu`}
                       aria-expanded={isExpanded}
                       onClick={() => setMobileExpanded(isExpanded ? null : l.to)}
-                      className="rounded-control p-2 text-slate-300 hover:bg-ink-50 hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+                      className="rounded-control p-2 text-content-secondary hover:bg-surface-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                       <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} aria-hidden="true" />
                     </button>
                   )}
                 </div>
                 {hasMegaMenu && isExpanded && (
-                  <div className="ml-3 border-l border-ink-300 pl-3">
+                  <div className="ml-3 border-l border-border-subtle pl-3">
                     {l.megaMenu.flatMap((column) => column.items).map((item) => (
                       <Link
                         key={item.to}
                         to={item.to}
                         onClick={() => setMenuOpen(false)}
-                        className="block rounded-control px-3 py-2 text-sm text-slate-400 hover:bg-ink-50 hover:text-brass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass"
+                        className="block rounded-control px-3 py-2 text-sm text-content-muted hover:bg-surface-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
                         {item.label}
                       </Link>
@@ -191,7 +191,7 @@ export default function Navbar() {
           })}
         </nav>
 
-        <div className="mt-6 space-y-2.5 border-t border-ink-300 pt-6">
+        <div className="mt-6 space-y-2.5 border-t border-border-subtle pt-6">
           {user ? (
             <>
               <Link to="/dashboard" onClick={() => setMenuOpen(false)}>
@@ -216,7 +216,7 @@ export default function Navbar() {
             </>
           )}
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xs font-semibold text-slate-300">{t("common.theme", "Theme")}</span>
+            <span className="text-xs font-semibold text-content-secondary">{t("common.theme", "Theme")}</span>
             <ThemeToggle />
           </div>
         </div>

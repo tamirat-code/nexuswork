@@ -31,15 +31,15 @@ export default function RolePicker({ value, onChange }) {
             className={`relative rounded-card border p-4 text-left transition-colors duration-150
               ${
                 selected
-                  ? "border-brass bg-brass/[0.07]"
-                  : "border-ink-300 bg-ink-100 hover:border-slate-300"
+                  ? "border-brand bg-brand-soft"
+                  : "border-border-subtle bg-surface-soft hover:border-brand/35"
               }`}
           >
-            {selected && <Check className="absolute right-3 top-3 h-4 w-4 text-brass" />}
-            <p className={`text-sm font-semibold tracking-tight ${selected ? "text-brass" : "text-slate"}`}>
+            {selected && <Check className="absolute right-3 top-3 h-4 w-4 text-brand" />}
+            <p className={`text-sm font-semibold tracking-tight ${selected ? "text-brand" : "text-content-primary"}`}>
               {t(opt.label)}
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-300">{t(opt.hint)}</p>
+            <p className="mt-1 text-xs leading-relaxed text-content-secondary">{t(opt.hint)}</p>
           </button>
         );
       })}
