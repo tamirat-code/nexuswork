@@ -22,7 +22,7 @@ const AUDIT_ACTION_TYPES = [
   "WITHDRAWAL_REQUESTED", "WITHDRAWAL_SUCCEEDED", "WITHDRAWAL_FAILED",
   "organization_created", "organization_settings_updated", "organization_member_invited", "organization_member_role_changed", "organization_member_removed",
   "institution_onboarding_requested", "institution_onboarding_approved", "institution_onboarding_rejected",
-  "api_partner_created", "api_partner_active", "api_partner_suspended", "api_partner_revoked",
+  "api_partner_created", "api_partner_application_submitted", "api_partner_approved", "api_partner_active", "api_partner_suspended", "api_partner_revoked", "api_partner_rejected", "api_billing_status_updated",
   "api_key_created", "api_key_revoked", "partner_api_read",
 ];
 

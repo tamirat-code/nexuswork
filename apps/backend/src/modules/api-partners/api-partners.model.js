@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export const API_PARTNER_TIERS = ["sandbox", "growth", "enterprise"];
-export const API_PARTNER_STATUSES = ["active", "suspended", "revoked"];
+export const API_PARTNER_STATUSES = ["pending", "active", "suspended", "revoked", "rejected"];
 export const API_PARTNER_SCOPES = ["talent:read", "talent:export", "webhooks:manage", "usage:read"];
 
 const apiPartnerSchema = new mongoose.Schema(

@@ -2,11 +2,12 @@ import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { ForbiddenError } from "../../shared/exceptions/AppError.js";
 import {
   createPartner, listPartners, getPartner, listPartnerKeys, createPartnerKey, revokePartnerKey, updatePartnerStatus,
+    submitPartnerApplication, approvePartnerApplication,
   listOwnPartnerKeys, createOwnPartnerKey, revokeOwnPartnerKey,
 } from "./api-partners.service.js";
 import { getCurrentPartnerUsage } from "./api-usage.service.js";
 import { searchTalent } from "./talent-api.service.js";
-import { getPartnerBilling, listPartnerBilling } from "./api-billing.service.js";
+import { getPartnerBilling, listPartnerBilling, updatePartnerBillingStatus } from "./api-billing.service.js";
 import {
   createWebhookSubscription, listWebhookSubscriptions, updateWebhookSubscription, rotateWebhookSecret,
   disableWebhookSubscription, listWebhookDeliveries,
@@ -19,6 +20,15 @@ function requireAdmin(req) {
 export const create = asyncHandler(async (req, res) => {
   requireAdmin(req);
   res.status(201).json({ success: true, data: await createPartner({ actor: req.user, payload: req.body, req }) });
+});
+
+export const apply = asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await submitPartnerApplication({ actor: req.user, payload: req.body, req }) });
+});
+
+export const approve = asyncHandler(async (req, res) => {
+  requireAdmin(req);
+  res.json({ success: true, data: await approvePartnerApplication({ partnerId: req.params.partnerId, actor: req.user, req }) });
 });
 
 export const list = asyncHandler(async (req, res) => {
@@ -88,6 +98,11 @@ export const billingHistory = asyncHandler(async (req, res) => {
 export const adminBilling = asyncHandler(async (req, res) => {
   requireAdmin(req);
   res.json({ success: true, data: await listPartnerBilling(req.params.partnerId, req.validatedQuery.limit) });
+});
+
+export const updateBillingStatus = asyncHandler(async (req, res) => {
+  requireAdmin(req);
+  res.json({ success: true, data: await updatePartnerBillingStatus({ partnerId: req.params.partnerId, ledgerId: req.params.ledgerId, ...req.body, actor: req.user, req }) });
 });
 
 export const webhooks = asyncHandler(async (req, res) => {

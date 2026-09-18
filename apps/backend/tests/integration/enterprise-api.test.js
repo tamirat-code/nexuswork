@@ -23,6 +23,55 @@ async function provisionPartner(scopes = ["talent:read", "webhooks:manage", "usa
 }
 
 describe("Enterprise partner API", () => {
+  it("supports authenticated partner application and admin approval before key issuance", async () => {
+    const applicant = await createUser("client");
+    const student = await createUser("student");
+    const admin = await createUser("admin");
+
+    const forbiddenApplication = await request(app)
+      .post("/v1/api-partner-applications")
+      .set("Authorization", `Bearer ${student.token}`)
+      .send({ name: "Student Integration", contact_email: "student-partner@example.com", scopes: ["talent:read"] });
+    expect(forbiddenApplication.status).toBe(403);
+
+    const application = await request(app)
+      .post("/v1/api-partner-applications")
+      .set("Authorization", `Bearer ${applicant.token}`)
+      .send({ name: "Pending Talent Integration", contact_email: "pending@example.com", scopes: ["talent:read"] });
+    expect(application.status).toBe(201);
+    expect(application.body.data.status).toBe("pending");
+
+    const bypass = await request(app)
+      .patch(`/v1/admin/api-partners/${application.body.data._id}/status`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ status: "active" });
+    expect(bypass.status).toBe(409);
+
+    const rejectedWithoutReason = await request(app)
+      .patch(`/v1/admin/api-partners/${application.body.data._id}/status`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ status: "rejected" });
+    expect(rejectedWithoutReason.status).toBe(400);
+
+    const beforeApproval = await request(app)
+      .get("/partner/v1/me")
+      .set("X-NexusWork-API-Key", "nw_000000000000000000_fake_pending_key");
+    expect(beforeApproval.status).toBe(401);
+
+    const approved = await request(app)
+      .post(`/v1/admin/api-partners/${application.body.data._id}/approve`)
+      .set("Authorization", `Bearer ${admin.token}`);
+    expect(approved.status).toBe(200);
+    expect(approved.body.data.partner.status).toBe("active");
+    expect(approved.body.data.api_key).toMatch(/^nw_/);
+
+    const profile = await request(app)
+      .get("/partner/v1/me")
+      .set("X-NexusWork-API-Key", approved.body.data.api_key);
+    expect(profile.status).toBe(200);
+    expect(String(profile.body.data._id)).toBe(String(application.body.data._id));
+  });
+
   it("keeps the partner boundary separate from browser authentication", async () => {
     const { admin, partner, apiKey } = await provisionPartner();
 
@@ -50,6 +99,33 @@ describe("Enterprise partner API", () => {
       .set("Authorization", `Bearer ${admin.token}`);
     expect(adminBilling.status).toBe(200);
     expect(adminBilling.body.data[0].request_count).toBeGreaterThan(0);
+
+    const ledgerId = adminBilling.body.data[0]._id;
+    const issued = await request(app)
+      .patch(`/v1/admin/api-partners/${partner._id}/billing/${ledgerId}/status`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ status: "issued" });
+    expect(issued.status).toBe(200);
+    expect(issued.body.data.status).toBe("issued");
+
+    const paidWithoutReference = await request(app)
+      .patch(`/v1/admin/api-partners/${partner._id}/billing/${ledgerId}/status`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ status: "paid" });
+    expect(paidWithoutReference.status).toBe(400);
+
+    const paid = await request(app)
+      .patch(`/v1/admin/api-partners/${partner._id}/billing/${ledgerId}/status`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ status: "paid", settlement_reference: "manual-test-settlement" });
+    expect(paid.status).toBe(200);
+    expect(paid.body.data.status).toBe("paid");
+
+    const invalidTransition = await request(app)
+      .patch(`/v1/admin/api-partners/${partner._id}/billing/${ledgerId}/status`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({ status: "failed", settlement_error: "too late" });
+    expect(invalidTransition.status).toBe(409);
   });
 
   it("supports partner self-service key lifecycle with one-time issuance", async () => {

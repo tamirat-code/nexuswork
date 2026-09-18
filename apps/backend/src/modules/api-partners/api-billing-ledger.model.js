@@ -6,7 +6,7 @@ const apiBillingLedgerSchema = new mongoose.Schema(
     period_start: { type: Date, required: true },
     period_end: { type: Date, required: true },
     currency: { type: String, default: "usd", lowercase: true, immutable: true },
-    status: { type: String, enum: ["open", "issued", "paid", "void"], default: "open" },
+    status: { type: String, enum: ["open", "issued", "paid", "failed", "overdue", "void"], default: "open" },
     invoice_number: { type: String, unique: true, sparse: true },
     request_count: { type: Number, default: 0, min: 0 },
     data_read_count: { type: Number, default: 0, min: 0 },
@@ -15,6 +15,9 @@ const apiBillingLedgerSchema = new mongoose.Schema(
     amount_minor: { type: Number, default: 0, min: 0 },
     issued_at: { type: Date },
     paid_at: { type: Date },
+    failed_at: { type: Date },
+    settlement_reference: { type: String, trim: true, maxlength: 200 },
+    settlement_error: { type: String, trim: true, maxlength: 500 },
   },
   { timestamps: true }
 );

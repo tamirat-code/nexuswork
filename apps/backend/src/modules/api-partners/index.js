@@ -5,4 +5,4 @@ export { default as ApiRateLimitBucket } from "./api-rate-limit.model.js";
 export { default as ApiBillingLedger } from "./api-billing-ledger.model.js";
 export { default as ApiWebhookSubscription } from "./api-webhook-subscription.model.js";
 export { default as ApiWebhookDelivery } from "./api-webhook-delivery.model.js";
-export { default as ApiPartnerRoutes, ApiPartnerAdminRoutes } from "./api-partners.routes.js";
+export { default as ApiPartnerRoutes, ApiPartnerAdminRoutes, ApiPartnerApplicationRoutes } from "./api-partners.routes.js";

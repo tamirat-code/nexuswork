@@ -12,6 +12,14 @@ export const createPartnerSchema = z.object({
   scopes: z.array(scope).min(1).default(["talent:read", "usage:read"]),
 });
 
+export const submitPartnerApplicationSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  organization_name: z.string().trim().max(200).optional(),
+  contact_email: email,
+  tier: z.enum(API_PARTNER_TIERS).default("sandbox"),
+  scopes: z.array(scope).min(1).default(["talent:read", "usage:read"]),
+});
+
 export const createApiKeySchema = z.object({
   name: z.string().trim().min(2).max(120),
   scopes: z.array(scope).min(1).optional(),
@@ -19,7 +27,7 @@ export const createApiKeySchema = z.object({
 });
 
 export const updatePartnerStatusSchema = z.object({
-  status: z.enum(["active", "suspended", "revoked"]),
+  status: z.enum(["active", "suspended", "revoked", "rejected"]),
   reason: z.string().trim().max(500).optional(),
 });
 
@@ -49,3 +57,16 @@ export const updateWebhookSubscriptionSchema = z.object({
 
 export const webhookParamsSchema = z.object({ subscriptionId: objectId });
 export const partnerLimitQuerySchema = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) });
+export const apiBillingStatusParamsSchema = z.object({ partnerId: objectId, ledgerId: objectId });
+export const updateApiBillingStatusSchema = z.object({
+  status: z.enum(["issued", "paid", "failed", "overdue", "void"]),
+  settlement_reference: z.string().trim().max(200).optional(),
+  settlement_error: z.string().trim().max(500).optional(),
+}).superRefine((payload, context) => {
+  if (payload.status === "paid" && !payload.settlement_reference) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["settlement_reference"], message: "Settlement reference is required when marking an invoice paid" });
+  }
+  if (payload.status === "failed" && !payload.settlement_error) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["settlement_error"], message: "Settlement error is required when marking an invoice failed" });
+  }
+});

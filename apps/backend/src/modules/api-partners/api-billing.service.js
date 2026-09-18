@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import ApiBillingLedger from "./api-billing-ledger.model.js";
 import { monthWindow } from "./api-windows.js";
 import { tierPricing } from "./api-partners.service.js";
+import { ConflictError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
 
 function invoiceNumber(partnerId, periodStart) {
   const digest = crypto.createHash("sha256").update(`${partnerId}:${periodStart.toISOString()}`).digest("hex").slice(0, 12).toUpperCase();
@@ -90,4 +92,53 @@ export async function getPartnerBilling(partner, now = new Date()) {
 export async function listPartnerBilling(partnerId, limit = 12) {
   const statements = await ApiBillingLedger.find({ partner_id: partnerId }).sort({ period_start: -1 }).limit(Math.min(24, Math.max(1, limit))).lean();
   return statements.map(present);
+}
+
+const BILLING_TRANSITIONS = {
+  open: new Set(["issued", "void"]),
+  issued: new Set(["paid", "failed", "overdue", "void"]),
+  overdue: new Set(["paid", "failed", "void"]),
+  failed: new Set(["issued", "void"]),
+  paid: new Set(),
+  void: new Set(),
+};
+
+export async function updatePartnerBillingStatus({ partnerId, ledgerId, status, settlement_reference, settlement_error, actor, req }) {
+  const ledger = await ApiBillingLedger.findOne({ _id: ledgerId, partner_id: partnerId });
+  if (!ledger) throw new NotFoundError("API billing statement not found");
+  if (!BILLING_TRANSITIONS[ledger.status]?.has(status)) {
+    throw new ConflictError(`Cannot move API billing statement from ${ledger.status} to ${status}`);
+  }
+  if (status === "failed" && !settlement_error) throw new ValidationError("A settlement error is required for failed invoices");
+  const previousStatus = ledger.status;
+  if (status === "paid" && !settlement_reference) throw new ValidationError("A settlement reference is required for paid invoices");
+  const now = new Date();
+  const update = {
+    $set: {
+      status,
+      ...(status === "issued" ? { issued_at: ledger.issued_at || now } : {}),
+      ...(status === "paid" ? { paid_at: now, settlement_reference } : {}),
+      ...(status === "failed" ? { failed_at: now, settlement_error } : {}),
+      ...(settlement_reference ? { settlement_reference } : {}),
+    },
+  };
+  const updated = await ApiBillingLedger.findOneAndUpdate(
+    { _id: ledger._id, partner_id: partnerId, status: previousStatus },
+    update,
+    { new: true }
+  );
+  if (!updated) throw new ConflictError("Billing statement changed before the status update completed");
+  await recordEvent({
+    actor,
+    eventType: "api_billing_status_updated",
+    action: "api_billing.status_updated",
+    entityType: "api_billing_ledger",
+    entityId: ledger._id,
+    previousState: { status: previousStatus },
+    newState: { status, settlement_reference: updated.settlement_reference },
+    metadata: { partner_id: String(partnerId), invoice_number: updated.invoice_number, settlement_error: updated.settlement_error },
+    correlationId: req?.correlationId || req?.requestId || crypto.randomUUID(),
+    requestId: req?.requestId,
+  });
+  return updated.toObject();
 }

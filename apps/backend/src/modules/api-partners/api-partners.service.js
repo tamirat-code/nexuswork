@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import ApiPartner, { API_PARTNER_SCOPES } from "./api-partners.model.js";
 import ApiKey from "./api-keys.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
-import { ConflictError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { env } from "../../config/env.js";
 import { sendPartnerApiKeyEmail } from "../../shared/mailer/mailer.service.js";
 import { logger } from "../../shared/logger/logger.js";
@@ -110,7 +110,12 @@ export async function issueApiKey({ partner, name, scopes, expires_at, createdBy
     created_by: createdBy,
     expires_at: expires_at || undefined,
   });
-  await audit(createdBy ? { id: createdBy, role: "admin" } : { role: "system" }, "api_key_created", "api_key.created", "api_key", keyRecord._id, { partner_id: partner._id, key_prefix: keyPrefix }, req);
+  try {
+    await audit(createdBy ? { id: createdBy, role: "admin" } : { role: "system" }, "api_key_created", "api_key.created", "api_key", keyRecord._id, { partner_id: partner._id, key_prefix: keyPrefix }, req);
+  } catch (error) {
+    await ApiKey.deleteOne({ _id: keyRecord._id });
+    throw error;
+  }
   return { key, keyRecord: sanitizeKey(keyRecord.toObject()) };
 }
 
@@ -145,6 +150,49 @@ export async function createPartner({ actor, payload, req }) {
     await ApiPartner.findByIdAndDelete(partner._id);
     throw error;
   }
+}
+
+export async function submitPartnerApplication({ actor, payload, req }) {
+  if (!actor || !["client", "admin"].includes(actor.role)) {
+    throw new ForbiddenError("Only client organization administrators can apply for partner access");
+  }
+  const scopes = normalizedScopes(payload.scopes);
+  const existing = await ApiPartner.findOne({ contact_email: payload.contact_email });
+  if (existing) throw new ConflictError("An API partner application already exists for this contact email", "API_PARTNER_APPLICATION_EXISTS");
+  const partner = await ApiPartner.create({ ...payload, scopes, status: "pending", created_by: actor._id });
+  await audit(actor, "api_partner_application_submitted", "api_partner.application_submitted", "api_partner", partner._id, { tier: partner.tier, scopes }, req);
+  return { ...partner.toObject(), ...tierLimits(partner.tier) };
+}
+
+export async function approvePartnerApplication({ partnerId, actor, req }) {
+  const partner = await ApiPartner.findById(partnerId);
+  if (!partner) throw new NotFoundError("API partner not found");
+  if (partner.status !== "pending") throw new ConflictError("Only pending partner applications can be approved");
+  const issued = await issueApiKey({ partner, name: "Initial key", scopes: partner.scopes, createdBy: actor._id, req });
+  const activated = await ApiPartner.findOneAndUpdate(
+    { _id: partner._id, status: "pending" },
+    { $set: { status: "active" }, $unset: { suspended_at: 1, suspended_reason: 1 } },
+    { new: true }
+  );
+  if (!activated) {
+    await ApiKey.deleteOne({ _id: issued.keyRecord._id, partner_id: partner._id, revoked_at: { $exists: false } });
+    throw new ConflictError("Partner application changed before approval could complete");
+  }
+  let emailSent = false;
+  try {
+    await sendPartnerApiKeyEmail({
+      to: activated.contact_email,
+      partnerName: activated.name,
+      apiKey: issued.key,
+      tier: activated.tier,
+      scopes: activated.scopes,
+    });
+    emailSent = true;
+  } catch (error) {
+    logger.error(`[api-partners] approved key email failed for partner ${activated._id}:`, error.message);
+  }
+  await audit(actor, "api_partner_approved", "api_partner.approved", "api_partner", partner._id, { scopes: partner.scopes }, req);
+  return { partner: { ...activated.toObject(), ...tierLimits(activated.tier) }, api_key: issued.key, key: issued.keyRecord, email_sent: emailSent };
 }
 
 export async function listPartners() {
@@ -224,6 +272,12 @@ export async function revokePartnerKey({ partnerId, keyId, actor, req }) {
 export async function updatePartnerStatus({ partnerId, status, reason, actor, req }) {
   const partner = await ApiPartner.findById(partnerId);
   if (!partner) throw new NotFoundError("API partner not found");
+  if (partner.status === "pending" && status === "active") {
+    throw new ConflictError("Pending partner applications must be approved through the approval workflow");
+  }
+  if (partner.status === "pending" && status === "rejected" && !reason) {
+    throw new ValidationError("A rejection reason is required for a pending partner application");
+  }
   const previousStatus = partner.status;
   partner.status = status;
   partner.suspended_at = status === "suspended" ? new Date() : undefined;
