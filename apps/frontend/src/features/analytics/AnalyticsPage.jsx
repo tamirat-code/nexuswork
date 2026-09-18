@@ -21,7 +21,7 @@ function PersonalAnalytics({ t, analytics, proposals, contracts, loading }) {
     .map((status) => ({ name: status, value: contracts.filter((contract) => contract.status === status).length }))
     .filter((item) => item.value > 0);
   const cards = [
-    { label: t("analyticsPersonal.earnings"), value: formatCurrency(analytics?.earnings ?? 0), icon: TrendingUp },
+    { label: t("analyticsPersonal.earnings"), value: formatMultiCurrency(analytics?.earnings_by_currency, analytics?.earnings ?? 0, analytics?.currency || "USD"), icon: TrendingUp },
     { label: t("analyticsPersonal.payments"), value: analytics?.payments_count ?? 0, icon: Wallet },
     { label: t("analyticsPersonal.proposals"), value: proposals.length, icon: FileText },
     { label: t("analyticsPersonal.activeContracts"), value: contracts.filter((contract) => ["active", "pending_signature", "pending_review"].includes(contract.status)).length, icon: Briefcase },
