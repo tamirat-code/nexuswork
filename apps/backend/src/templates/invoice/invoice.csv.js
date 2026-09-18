@@ -16,6 +16,9 @@ export function renderInvoiceCsv(invoice) {
 
   rows.push(["Invoice Number", invoice.invoice_number]);
   rows.push(["Status", invoice.status]);
+  rows.push(["Organization", invoice.organization_id?.name || ""]);
+  rows.push(["Provider Reference", invoice.provider_reference || ""]);
+  rows.push(["Ledger Reconciliation", invoice.reconciliation_status || ""]);
   rows.push(["Currency", (invoice.currency || "usd").toUpperCase()]);
   rows.push(["Issued", invoice.createdAt ? new Date(invoice.createdAt).toISOString().slice(0, 10) : ""]);
   rows.push(["Due", invoice.due_date ? new Date(invoice.due_date).toISOString().slice(0, 10) : ""]);
@@ -32,6 +35,9 @@ export function renderInvoiceCsv(invoice) {
 
   rows.push([]);
   rows.push(["Total", "", "", formatMoney(invoice.amount)]);
+  rows.push(["Commission", "", "", formatMoney((invoice.commission_minor || 0) / 100)]);
+  rows.push(["Taxes", "", "", formatMoney((invoice.tax_minor || 0) / 100)]);
+  rows.push(["Fees", "", "", formatMoney((invoice.fee_minor || 0) / 100)]);
 
   return rows.map((row) => row.map(csvEscape).join(",")).join("\r\n") + "\r\n";
 }

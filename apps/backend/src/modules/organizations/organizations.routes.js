@@ -5,9 +5,11 @@ import { validateBody, validateParams } from "../../shared/validators/ZodValidat
 import { objectIdParamsSchema } from "../../shared/validators/schemas.js";
 import {
   createOrganizationSchema, updateOrganizationSchema, inviteMemberSchema, updateMemberSchema, onboardingRequestSchema, onboardingDecisionSchema, organizationMemberParamsSchema,
+  organizationNet30Schema, organizationBillingStateSchema, organizationCollectionSchema,
 } from "./organizations.validators.js";
 import {
   create, updateOrganization, mine, getOne, members, invite, update, remove, requestInstitution, onboardingRequests, decideOnboarding, institutions, myInstitutionRequests, myInstitutions,
+  approveNet30, billingState, collectInvoice,
 } from "./organizations.controller.js";
 
 const router = Router();
@@ -28,5 +30,8 @@ router.get("/:organizationId/members", validateParams(objectIdParamsSchema("orga
 router.post("/:organizationId/members", validateParams(objectIdParamsSchema("organizationId")), validateBody(inviteMemberSchema), invite);
 router.patch("/:organizationId/members/:userId", validateParams(organizationMemberParamsSchema), validateBody(updateMemberSchema), update);
 router.delete("/:organizationId/members/:userId", validateParams(organizationMemberParamsSchema), remove);
+router.post("/:organizationId/net30/approve", requireRole("admin"), validateParams(objectIdParamsSchema("organizationId")), validateBody(organizationNet30Schema), approveNet30);
+router.patch("/:organizationId/billing-state", requireRole("admin"), validateParams(objectIdParamsSchema("organizationId")), validateBody(organizationBillingStateSchema), billingState);
+router.post("/invoices/:invoiceId/collect", requireRole("admin"), validateParams(objectIdParamsSchema("invoiceId")), validateBody(organizationCollectionSchema), collectInvoice);
 
 export default router;

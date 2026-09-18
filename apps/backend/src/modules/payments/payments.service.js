@@ -8,7 +8,8 @@ import { ValidationError } from "../../shared/exceptions/AppError.js";
 import { logAction } from "../audit-logs/audit-logs.service.js";
 import { money, moneyFromLegacyMajorUnits, moneyFromRecord } from "../../shared/money/money.js";
 import { getPaymentProvider, paymentProvider } from "./providers/index.js";
-import { getAccountBalance, postJournal } from "../financial-ledger/financial-ledger.service.js";
+import { getAccountBalance, postJournal, reverseJournal } from "../financial-ledger/financial-ledger.service.js";
+import FinancialJournal from "../financial-ledger/financial-journals.model.js";
 import { PAYMENT_STATUSES, transitionPaymentStatus } from "./payment-state.js";
 import { logger } from "../../shared/logger/logger.js";
 
@@ -86,9 +87,9 @@ export async function createDepositIntent(milestone, requestedProvider) {
     currency: milestoneMoney.currency,
     metadata: { milestone_id: String(milestone._id) },
    
-    idempotencyKey: providerName === "chapa"
-      ? `m-${String(milestone._id).slice(-16)}-${crypto.randomBytes(6).toString("hex")}`
-      : `milestone-funding-${milestone._id}`,
+    // Chapa retries must address the same business operation. A random
+    // reference here could create a second charge after a timeout.
+    idempotencyKey: `milestone-funding-${milestone._id}`,
   });
 
   try {
@@ -270,6 +271,34 @@ export async function markDepositFailed(paymentIntentId, lastPaymentError = null
     });
   }
 
+  return payment;
+}
+
+export async function handleDepositReversal(paymentIntentId, auditContext = {}) {
+  const payment = await Payment.findOne({
+    $or: [{ provider_payment_id: paymentIntentId }, { provider_reference: paymentIntentId }],
+    direction: "deposit",
+  });
+  if (!payment || payment.status === "failed") return payment;
+  if (payment.ledger_journal_id) {
+    const journal = await FinancialJournal.findById(payment.ledger_journal_id).lean();
+    if (journal) {
+      await reverseJournal(journal.transaction_id, {
+        idempotencyKey: `payment-reversed:${payment._id}`,
+        requestId: auditContext.requestId || auditContext.correlationId || "system",
+        actorId: auditContext.actor?._id || auditContext.actor?.id,
+        actorRole: auditContext.actor?.role || "system",
+      });
+    }
+  }
+  payment.status = "failed";
+  payment.failure_code = "provider_reversed";
+  payment.failure_message = "The payment provider reversed this deposit";
+  await payment.save();
+  await Milestone.updateOne({ _id: payment.milestone_id, status: "funded" }, {
+    $set: { status: "not_funded" },
+    $unset: { funded_at: 1 },
+  });
   return payment;
 }
 
@@ -679,6 +708,7 @@ export async function reconcilePendingRefunds({ limit = 100, auditContext = {} }
   const results = { checked: pending.length, succeeded: 0, failed: 0 };
   for (const payment of pending) {
     try {
+      let releasePayment = payment;
       const provider = getPaymentProvider(payment.provider || (payment.currency === "etb" ? "chapa" : "stripe"));
       const refund = await provider.getRefund(payment.provider_refund_id);
 
@@ -776,7 +806,7 @@ export async function reconcilePendingReleases({ limit = 100, auditContext = {} 
         payment.processing_at = undefined;
         await payment.save();
       } else {
-        await releaseToStudent({
+        releasePayment = await releaseToStudent({
           milestoneId: payment.milestone_id,
           amount: payment.amount,
           amountMinor: payment.amount_minor,
@@ -785,18 +815,13 @@ export async function reconcilePendingReleases({ limit = 100, auditContext = {} 
           auditContext,
         });
       }
-
-      await Milestone.updateOne(
-        { _id: payment.milestone_id, status: { $in: ["release_pending", "release_failed"] } },
-        {
-          $set: {
-            status: "released",
-            payout_status: "paid",
-            payout_failure_reason: "",
-            released_at: new Date(),
-          },
-        }
-      );
+      // Provider success is necessary but not sufficient: finalize the
+      // milestone and post the escrow/payout/commission journal exactly once.
+      // Dynamic import avoids a payments <-> milestones module cycle.
+      const { finalizeReleasedMilestoneAccounting } = await import("../milestones/milestones.service.js");
+      const milestone = await Milestone.findById(payment.milestone_id).populate("contract_id");
+      if (!milestone?.contract_id) throw new ValidationError("Release milestone contract was not found");
+      await finalizeReleasedMilestoneAccounting(milestone, milestone.contract_id, releasePayment, auditContext);
       await logAction({
         action_type: "RELEASE_SUCCEEDED",
         eventType: "RELEASE_SUCCEEDED",

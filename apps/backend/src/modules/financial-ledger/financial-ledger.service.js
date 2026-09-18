@@ -12,6 +12,7 @@ const ACCOUNT_DEFINITIONS = Object.freeze({
   payout_clearing: ["liability", "Payout clearing"],
   payment_processing_fee: ["expense", "Payment processing fee"],
   refund_clearing: ["asset", "Refund clearing"],
+  partner_receivable: ["asset", "API partner receivable"],
   adjustments: ["equity", "Financial adjustments"],
 });
 

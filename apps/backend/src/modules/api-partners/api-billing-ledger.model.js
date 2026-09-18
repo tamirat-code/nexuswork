@@ -18,6 +18,9 @@ const apiBillingLedgerSchema = new mongoose.Schema(
     failed_at: { type: Date },
     settlement_reference: { type: String, trim: true, maxlength: 200 },
     settlement_error: { type: String, trim: true, maxlength: 500 },
+    settlement_status: { type: String, enum: ["pending", "submitted", "confirmed", "failed"], default: "pending" },
+    ledger_journal_ids: [{ type: String }],
+    reconciliation_status: { type: String, enum: ["pending", "reconciled", "exception"], default: "pending" },
   },
   { timestamps: true }
 );

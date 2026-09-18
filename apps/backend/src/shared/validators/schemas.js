@@ -275,6 +275,7 @@ const projectFieldsSchema = z.object({
   // this attributes the project to the org owner's account instead of
   // their own. Ignored (and unnecessary) when posting for yourself.
   on_behalf_of_client_id: optionalObjectId,
+  organization_id: optionalObjectId,
 });
 
 function validateProjectBudget(value, context) {
@@ -347,6 +348,7 @@ export const createContractSchema = z.object({
 export const createMilestoneSchema = z.object({
   title: z.string().trim().min(1, "Milestone title is required").max(200),
   amount: positiveNumber,
+  currency: z.string().trim().length(3).optional(),
   due_date: z.coerce.date("Invalid due date"),
   description: z.string().trim().max(2000).optional().default(""),
   max_revisions: z.coerce.number().int().min(0).max(20).optional().default(3),
@@ -481,6 +483,11 @@ export const createInvoiceSchema = z.object({
     )
     .min(1, "At least one line item is required")
     .max(100),
+});
+
+export const createOrganizationInvoiceSchema = z.object({
+  milestone_ids: z.array(objectId).min(1).max(100),
+  due_date: z.coerce.date().optional(),
 });
 
 export const updateInvoiceStatusSchema = z.object({

@@ -4,6 +4,7 @@ import { monthWindow } from "./api-windows.js";
 import { tierPricing } from "./api-partners.service.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import { postJournal } from "../financial-ledger/financial-ledger.service.js";
 
 function invoiceNumber(partnerId, periodStart) {
   const digest = crypto.createHash("sha256").update(`${partnerId}:${periodStart.toISOString()}`).digest("hex").slice(0, 12).toUpperCase();
@@ -118,6 +119,8 @@ export async function updatePartnerBillingStatus({ partnerId, ledgerId, status, 
       status,
       ...(status === "issued" ? { issued_at: ledger.issued_at || now } : {}),
       ...(status === "paid" ? { paid_at: now, settlement_reference } : {}),
+      ...(status === "paid" ? { settlement_status: "confirmed" } : {}),
+      ...(status === "failed" ? { settlement_status: "failed" } : {}),
       ...(status === "failed" ? { failed_at: now, settlement_error } : {}),
       ...(settlement_reference ? { settlement_reference } : {}),
     },
@@ -128,6 +131,49 @@ export async function updatePartnerBillingStatus({ partnerId, ledgerId, status, 
     { new: true }
   );
   if (!updated) throw new ConflictError("Billing statement changed before the status update completed");
+  const currency = String(updated.currency || "usd").toLowerCase();
+  const amountMinor = calculateUsageAmountMinor(updated.request_count, updated.price_per_1000_minor);
+  const journalIds = Array.isArray(updated.ledger_journal_ids) ? [...updated.ledger_journal_ids] : [];
+  if (status === "issued" && !journalIds.length) {
+    const posted = await postJournal({
+      eventType: "api.invoice.issued",
+      idempotencyKey: `api-invoice-issued:${updated._id}`,
+      sourceType: "api_billing_ledger",
+      sourceId: updated._id,
+      requestId: req?.requestId || req?.correlationId || "system",
+      actorId: actor?._id || actor?.id,
+      actorRole: actor?.role || "admin",
+      entries: [
+        { accountBase: "partner_receivable", debitMinor: amountMinor, creditMinor: 0, currency },
+        { accountBase: "platform_revenue", debitMinor: 0, creditMinor: amountMinor, currency },
+      ],
+      metadata: { partnerId: String(partnerId), invoiceNumber: updated.invoice_number },
+    });
+    journalIds.push(String(posted.journal._id));
+  }
+  if (status === "paid") {
+    const posted = await postJournal({
+      eventType: "api.invoice.settled",
+      idempotencyKey: `api-invoice-settled:${updated._id}`,
+      sourceType: "api_billing_ledger",
+      sourceId: updated._id,
+      providerEventId: settlement_reference,
+      requestId: req?.requestId || req?.correlationId || "system",
+      actorId: actor?._id || actor?.id,
+      actorRole: actor?.role || "admin",
+      entries: [
+        { accountBase: "provider_clearing", debitMinor: amountMinor, creditMinor: 0, currency },
+        { accountBase: "partner_receivable", debitMinor: 0, creditMinor: amountMinor, currency },
+      ],
+      metadata: { partnerId: String(partnerId), invoiceNumber: updated.invoice_number, settlementReference: settlement_reference },
+    });
+    journalIds.push(String(posted.journal._id));
+  }
+  if (journalIds.length) {
+    updated.ledger_journal_ids = [...new Set(journalIds)];
+    updated.reconciliation_status = "reconciled";
+    await updated.save();
+  }
   await recordEvent({
     actor,
     eventType: "api_billing_status_updated",

@@ -80,6 +80,9 @@ export function buildEnv(source = process.env) {
     mailFrom: source.MAIL_FROM || "NexusWork <no-reply@yourdomain.com>",
     mailLogoUrl: optional(source.MAIL_LOGO_URL),
     termsVersion: source.TERMS_VERSION || "1.0",
+    // NET-30 is deliberately disabled unless legal/compliance enables it.
+    net30BillingEnabled: boolean(source.NET30_BILLING_ENABLED, false),
+    net30PolicyVersion: source.NET30_POLICY_VERSION || "",
     recaptchaSecretKey: optional(source.RECAPTCHA_SECRET_KEY),
     recaptchaMinScore: number(source.RECAPTCHA_MIN_SCORE, 0.5),
     webrtcStunUrl: optional(source.WEBRTC_STUN_URL),

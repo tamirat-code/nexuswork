@@ -521,6 +521,7 @@ export async function acceptProposal(
       proposal_id: proposal._id,
       project_id: project._id,
       client_id: project.client_id,
+      organization_id: project.organization_id || null,
       student_id: proposal.student_id._id,
       status: "pending_review",
       version: 1,

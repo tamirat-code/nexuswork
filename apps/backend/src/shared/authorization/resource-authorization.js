@@ -6,6 +6,7 @@ import Invoice from "../../modules/invoices/invoices.model.js";
 import File from "../../modules/files/files.model.js";
 import Message from "../../modules/messaging/messaging.model.js";
 import Project from "../../modules/projects/projects.model.js";
+import OrgMembership from "../../modules/organizations/org-membership.model.js";
 import { isOrgMember } from "../../modules/clients/clients.service.js";
 import { ForbiddenError, NotFoundError } from "../exceptions/AppError.js";
 import { ROLES } from "../enums/roles.enum.js";
@@ -123,8 +124,12 @@ export async function assertDisputeAccess({ disputeId, user, req, role, allowAdm
 
 export async function assertInvoiceAccess({ invoiceId, user, req, role } = {}) {
   const authenticated = authenticatedUser(user, req);
-  const invoice = await Invoice.findById(invoiceId).select("contract_id client_id student_id");
+  const invoice = await Invoice.findById(invoiceId).select("contract_id organization_id client_id student_id");
   if (!invoice) throw new NotFoundError("Invoice not found");
+  if (!invoice.contract_id && invoice.organization_id) {
+    if (authenticated.role === ROLES.CLIENT && await OrgMembership.exists({ organization_id: invoice.organization_id, user_id: authenticated._id, status: "active" })) return { invoice, contract: null };
+    throw new ForbiddenError("You do not have organization access to this invoice");
+  }
   const contract = await loadContract(invoice.contract_id);
   if (!sameId(invoice.client_id, contract.client_id) || !sameId(invoice.student_id, contract.student_id)) {
     throw new ForbiddenError("Invoice relationship is invalid");

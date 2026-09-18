@@ -34,6 +34,9 @@ export function renderInvoicePdf(invoice) {
     doc.fontSize(14).fillColor("#1a1a1a").text(`Invoice ${invoice.invoice_number}`);
     doc.fontSize(10).fillColor("#666666");
     doc.text(`Status: ${invoice.status}`);
+    if (invoice.organization_id?.name) doc.text(`Organization: ${invoice.organization_id.name}`);
+    if (invoice.provider_reference) doc.text(`Provider reference: ${invoice.provider_reference}`);
+    if (invoice.reconciliation_status) doc.text(`Ledger reconciliation: ${invoice.reconciliation_status}`);
     doc.text(`Issued: ${formatDate(invoice.createdAt)}`);
     if (invoice.due_date) doc.text(`Due: ${formatDate(invoice.due_date)}`);
     if (invoice.paid_at) doc.text(`Paid: ${formatDate(invoice.paid_at)}`);
@@ -94,6 +97,11 @@ export function renderInvoicePdf(invoice) {
       .fillColor("#1a1a1a")
       .text("Total", cols.price, y + 14)
       .text(formatMoney(invoice.amount, currency), cols.total, y + 14);
+    if (invoice.commission_minor || invoice.tax_minor || invoice.fee_minor) {
+      y += 32;
+      doc.fontSize(9).fillColor("#666666")
+        .text(`Commission: ${formatMoney((invoice.commission_minor || 0) / 100, currency)}   Taxes: ${formatMoney((invoice.tax_minor || 0) / 100, currency)}   Fees: ${formatMoney((invoice.fee_minor || 0) / 100, currency)}`, colStart, y);
+    }
 
     doc
       .fontSize(8)

@@ -59,6 +59,11 @@ const contractSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    organization_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      default: null,
+    },
 
     student_id: {
       type: mongoose.Schema.Types.ObjectId,

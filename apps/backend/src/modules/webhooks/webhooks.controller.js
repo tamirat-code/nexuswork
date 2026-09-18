@@ -1,6 +1,6 @@
 import { getPaymentProvider } from "../payments/providers/index.js";
 import { confirmFunding } from "../milestones/milestones.service.js";
-import { markDepositFailed } from "../payments/payments.service.js";
+import { markDepositFailed, handleDepositReversal } from "../payments/payments.service.js";
 import { markOnboardingStatus, updateWithdrawalFromPayoutEvent } from "../wallets/wallets.service.js";
 import { logger } from "../../shared/logger/logger.js";
 import WebhookEvent from "./webhookEvent.model.js";
@@ -89,6 +89,9 @@ export async function handleChapaWebhook(req, res) {
     if (event.status === "success" || event.event === "charge.success") {
       const payment = await confirmChapaReference(reference, req, eventId);
       if (!payment) throw new Error("Chapa event references an unknown payment");
+    }
+    if (["reversed", "refunded", "cancelled", "canceled", "failed"].includes(String(event.status || "").toLowerCase())) {
+      await handleDepositReversal(reference, { providerEventId: eventId, correlationId: req.correlationId, requestId: req.requestId });
     }
     await WebhookEvent.updateOne({ event_id: eventId }, { $set: { status: "succeeded", processed_at: new Date() }, $unset: { processing_at: 1, error_message: 1 } });
     return res.json({ received: true });

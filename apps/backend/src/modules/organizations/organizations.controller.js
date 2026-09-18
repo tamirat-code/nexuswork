@@ -19,3 +19,4 @@ export const myInstitutionRequests = asyncHandler(async (req, res) => res.json({
 export const myInstitutions = asyncHandler(async (req, res) => res.json({ success: true, data: await listMyInstitutions(req.user._id, req.user.role) }));
 export const onboardingRequests = asyncHandler(async (req, res) => res.json({ success: true, data: await listOnboardingRequests(req.query.status || "pending") }));
 export const decideOnboarding = asyncHandler(async (req, res) => res.json({ success: true, data: await decideOnboardingRequest(req.user, req.params.requestId, req.body, req) }));
+export { approveNet30, billingState, collectInvoice } from "./organization-billing.controller.js";

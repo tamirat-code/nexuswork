@@ -5,9 +5,11 @@ import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exc
 import File from "../files/files.model.js";
 import Skill from "../skills/skills.model.js";
 import { getCategoryMatchValues, normalizeCategory } from "../milestones/deliverable-templates.js";
+import Organization from "../organizations/organizations.model.js";
+import OrgMembership from "../organizations/org-membership.model.js";
 
 export async function createProject(actingUserId, data) {
-  const { on_behalf_of_client_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
+  const { on_behalf_of_client_id, organization_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
 
   if (projectData.category) projectData.category = normalizeCategory(projectData.category);
   if (!(projectData.deadline instanceof Date) || projectData.deadline <= new Date()) {
@@ -21,6 +23,15 @@ export async function createProject(actingUserId, data) {
       throw new ForbiddenError("Not authorized to post projects on behalf of this client account");
     }
     ownerId = on_behalf_of_client_id;
+  }
+  if (organization_id) {
+    const organization = await Organization.findOne({ _id: organization_id, status: "active" });
+    const membership = await OrgMembership.findOne({ organization_id, user_id: actingUserId, status: "active" });
+    if (!organization || !membership) throw new ForbiddenError("You are not authorized to post for this organization");
+    if (String(organization.owner_id) !== String(ownerId)) {
+      throw new ForbiddenError("The organization owner must own the project client account");
+    }
+    projectData.organization_id = organization._id;
   }
 
   const attachmentIds = [...new Set((projectData.attachments || []).map(String))];

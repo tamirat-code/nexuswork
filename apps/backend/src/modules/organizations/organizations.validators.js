@@ -7,13 +7,13 @@ const email = z.string().trim().toLowerCase().email("Invalid email address");
 export const createOrganizationSchema = z.object({
   name: z.string().trim().min(2).max(200),
   institution_id: objectId.optional().nullable(),
-  billing_mode: z.enum(["escrow", "consolidated_invoice"]).optional().default("escrow"),
+  billing_mode: z.enum(["individual", "consolidated", "net_30", "escrow", "consolidated_invoice"]).optional().default("individual"),
 });
 
 export const updateOrganizationSchema = z.object({
   name: z.string().trim().min(2).max(200).optional(),
   institution_id: objectId.optional().nullable(),
-  billing_mode: z.enum(["escrow", "consolidated_invoice"]).optional(),
+  billing_mode: z.enum(["individual", "consolidated", "net_30", "escrow", "consolidated_invoice"]).optional(),
 }).refine((payload) => Object.keys(payload).length > 0, "Provide at least one organization setting to update");
 
 export const inviteMemberSchema = z.object({
@@ -42,4 +42,17 @@ export const onboardingDecisionSchema = z.object({
 export const organizationMemberParamsSchema = z.object({
   organizationId: objectId,
   userId: objectId,
+});
+
+export const organizationNet30Schema = z.object({
+  credit_limit_minor: z.coerce.number().int().positive(),
+});
+
+export const organizationBillingStateSchema = z.object({
+  state: z.enum(["active", "overdue", "suspended"]),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const organizationCollectionSchema = z.object({
+  provider_reference: z.string().trim().min(4).max(200),
 });

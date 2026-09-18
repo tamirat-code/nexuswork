@@ -7,6 +7,7 @@ import File from "../files/files.model.js";
 import University from "../universities/universities.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { legalConfig } from "../../config/legal.config.js";
 
 const ORG_ROLES = ["admin", "recruiter", "billing_viewer"];
 
@@ -46,7 +47,10 @@ export async function createOrganization({ actor, name, institution_id, billing_
     const institution = await Institution.findOne({ _id: institution_id, status: "active" });
     if (!institution) throw new NotFoundError("Institution not found");
   }
-  const organization = await Organization.create({ name, institution_id: institution_id || null, owner_id: actor._id, billing_mode });
+  if (billing_mode === "net_30" && !legalConfig.net30Enabled) {
+    throw new ValidationError("NET-30 billing is unavailable until legal approval is enabled");
+  }
+  const organization = await Organization.create({ name, institution_id: institution_id || null, owner_id: actor._id, billing_mode: billing_mode || "individual" });
   await OrgMembership.create({ organization_id: organization._id, user_id: actor._id, role: "admin", invited_by: actor._id });
   await audit(actor, "organization_created", "organization_created", "organization", organization._id, { organization_name: name }, req);
   return Organization.findById(organization._id).populate("institution_id", "name domain").lean();
@@ -63,6 +67,9 @@ export async function updateOrganizationSettings(organizationId, actor, { name, 
     organization.name = name;
   }
   if (billing_mode !== undefined && billing_mode !== organization.billing_mode) {
+    if (billing_mode === "net_30" && !legalConfig.net30Enabled) {
+      throw new ValidationError("NET-30 billing is unavailable until legal approval is enabled");
+    }
     changes.billing_mode = { from: organization.billing_mode, to: billing_mode };
     organization.billing_mode = billing_mode;
   }

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const projectSchema = new mongoose.Schema(
   {
     client_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    organization_id: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     title: { type: String, required: true, trim: true },
