@@ -399,6 +399,11 @@ export const createReviewSchema = z.object({
   text: z.string().trim().max(2000).optional().default(""),
 });
 
+export const updateReputationCredentialStatusSchema = z.object({
+  status: z.enum(["active", "revoked", "superseded"]),
+  reason: z.string().trim().max(500).optional(),
+});
+
 // --- Disputes ---
 export const openDisputeSchema = z.object({
   reason: z.string().trim().min(10, "Reason must be at least 10 characters").max(2000),

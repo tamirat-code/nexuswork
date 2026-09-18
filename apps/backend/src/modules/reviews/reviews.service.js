@@ -6,6 +6,7 @@ import Dispute from "../disputes/disputes.model.js";
 import Verification from "../verifications/verifications.model.js";
 import StudentProfile from "../students/students.model.js";
 import User from "../users/users.model.js";
+import ReputationCredentialStatus from "./reputation-credential-status.model.js";
 import { env } from "../../config/env.js";
 import { signCredential, verifyCredentialProof } from "../verifications/credential-signing.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
@@ -141,6 +142,7 @@ export function buildReputationExport({
   verifications = [],
   profile,
   issuedAt = new Date(),
+  credentialStatus = { status: "active" },
 }) {
   const firstSubmissionByMilestone = new Map();
   for (const submission of submissions) {
@@ -219,7 +221,7 @@ export function buildReputationExport({
     privacy: {
       excluded: ["contact information", "client identities", "private review text", "dispute reasons", "audit records"],
     },
-    credentialStatus: { status: "active" },
+    credentialStatus,
   };
 
   return signCredential(unsigned);
@@ -259,12 +261,50 @@ export async function exportReputation(userId, requestingUserId) {
     ])
     : [[], []];
 
-  return buildReputationExport({ user, reviews, milestones, submissions, disputes, verifications, profile });
+  const credentialId = `${env.credentialIssuerUrl}/v1/reviews/user/${userId}/reputation/export`;
+  const status = await ReputationCredentialStatus.findOne({ credential_id: credentialId }).lean();
+  return buildReputationExport({
+    user,
+    reviews,
+    milestones,
+    submissions,
+    disputes,
+    verifications,
+    profile,
+    credentialStatus: status?.status
+      ? { status: status.status, reason: status.reason || null, changedAt: isoDate(status.changed_at) }
+      : { status: "active" },
+  });
 }
 
 export function verifyReputationExport(document) {
   if (!document?.version || !document?.credentialSubject?.id || !document?.type?.includes("NexusWorkReputationCredential")) {
     return { valid: false, reason: "Document is not a supported NexusWork reputation export" };
   }
-  return verifyCredentialProof(document);
+  const proofResult = verifyCredentialProof(document);
+  if (!proofResult.valid) return proofResult;
+  const status = document.credentialStatus?.status || "active";
+  if (status !== "active") {
+    return { valid: false, reason: `Reputation credential is ${status}${document.credentialStatus?.reason ? `: ${document.credentialStatus.reason}` : ""}` };
+  }
+  return proofResult;
+}
+
+export async function getReputationCredentialStatus(document) {
+  if (ReputationCredentialStatus.db.readyState !== 1) {
+    return { credential_id: document?.id, status: document?.credentialStatus?.status || "active" };
+  }
+  const status = await ReputationCredentialStatus.findOne({ credential_id: document?.id }).lean();
+  return status || { credential_id: document?.id, status: document?.credentialStatus?.status || "active" };
+}
+
+export async function updateReputationCredentialStatus({ credentialId, subjectId, status, reason, changedBy }) {
+  if (!["active", "revoked", "superseded"].includes(status)) {
+    throw new ValidationError("Reputation credential status is invalid");
+  }
+  return ReputationCredentialStatus.findOneAndUpdate(
+    { credential_id: credentialId },
+    { credential_id: credentialId, subject_id: subjectId, status, reason: reason || undefined, changed_by: changedBy, changed_at: new Date() },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  ).lean();
 }

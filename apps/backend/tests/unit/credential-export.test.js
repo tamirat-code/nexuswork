@@ -154,4 +154,16 @@ describe("credential export", () => {
     });
   });
 
+  it("rejects a signed reputation export that is revoked or superseded", () => {
+    const document = buildReputationExport({
+      user: { _id: "student-123", name: "Hanna Beyene" },
+      credentialStatus: { status: "revoked", reason: "Source evidence was corrected" },
+    });
+
+    expect(verifyReputationExport(document)).toEqual({
+      valid: false,
+      reason: "Reputation credential is revoked: Source evidence was corrected",
+    });
+  });
+
 });
