@@ -118,7 +118,7 @@ export default function AppRouter() {
       <Route path="/learning" element={protect(<LearningPage />)} />
       <Route path="/recommendations" element={protect(<RecommendationPage />)} />
       <Route path="/clients" element={protect(<ClientsPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
-      <Route path="/analytics" element={protect(<AnalyticsPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
+      <Route path="/analytics" element={protect(<AnalyticsPage />, [ROLES.STUDENT, ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
       <Route path="/admin" element={protect(<AdminPage />, [ROLES.ADMIN])} />
       <Route path="/admin/users" element={protect(<AdminPage />, [ROLES.ADMIN])} />
       <Route path="/admin/disputes" element={protect(<AdminPage />, [ROLES.ADMIN])} />

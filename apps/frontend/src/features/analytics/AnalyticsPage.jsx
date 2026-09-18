@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BarChart3, TrendingUp, Users, Briefcase } from "lucide-react";
+import { BarChart3, TrendingUp, Users, Briefcase, Wallet, FileText } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { getPlatformAnalytics, getMyUniversityAnalytics } from "../../services/api/analytics.api.js";
+import { getPlatformAnalytics, getMyUniversityAnalytics, getMyAnalytics } from "../../services/api/analytics.api.js";
+import { listMyProposals } from "../../services/api/proposals.api.js";
+import { listMyContracts } from "../../services/api/contracts.api.js";
 import { listAdminStats } from "../../services/api/admin.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
@@ -10,6 +12,40 @@ import { chartColors, chartTooltipStyle } from "../../lib/chartStyles.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 import { ROLES } from "../../constants/roles.constants.js";
+
+function PersonalAnalytics({ t, analytics, proposals, contracts, loading }) {
+  const proposalData = ["pending", "accepted", "rejected", "withdrawn"]
+    .map((status) => ({ name: status, value: proposals.filter((proposal) => proposal.status === status).length }))
+    .filter((item) => item.value > 0);
+  const contractData = ["active", "completed", "cancelled"]
+    .map((status) => ({ name: status, value: contracts.filter((contract) => contract.status === status).length }))
+    .filter((item) => item.value > 0);
+  const cards = [
+    { label: t("analyticsPersonal.earnings"), value: formatCurrency(analytics?.earnings ?? 0), icon: TrendingUp },
+    { label: t("analyticsPersonal.payments"), value: analytics?.payments_count ?? 0, icon: Wallet },
+    { label: t("analyticsPersonal.proposals"), value: proposals.length, icon: FileText },
+    { label: t("analyticsPersonal.activeContracts"), value: contracts.filter((contract) => ["active", "pending_signature", "pending_review"].includes(contract.status)).length, icon: Briefcase },
+  ];
+  const chart = (data, title) => (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">{title}</CardTitle></CardHeader>
+      <CardContent>
+        {loading ? <Skeleton className="h-56 w-full" /> : data.length ? (
+          <div className="h-56"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>{data.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}</Pie><Tooltip contentStyle={chartTooltipStyle} /><Legend /></PieChart></ResponsiveContainer></div>
+        ) : <p className="py-16 text-center text-sm text-content-secondary">{t("analyticsPersonal.noData")}</p>}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="w-full animate-fade-up">
+      <header className="border-b border-border-subtle pb-6"><p className="text-[11px] font-semibold uppercase tracking-wider text-brand">{t("analyticsPersonal.eyebrow")}</p><h1 className="mt-2 font-display text-3xl tracking-tight text-content-primary">{t("analyticsPersonal.title")}</h1><p className="mt-2 max-w-2xl text-sm text-content-secondary">{t("analyticsPersonal.subtitle")}</p></header>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{cards.map((card) => <Card key={card.label} className="border-border-subtle bg-surface-soft"><CardContent className="p-5"><card.icon className="h-5 w-5 text-brand" /><p className="mt-3 font-mono text-2xl font-semibold text-content-primary">{loading ? "…" : card.value}</p><p className="text-xs text-content-secondary">{card.label}</p></CardContent></Card>)}</div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">{chart(proposalData, t("analyticsPersonal.proposalPipeline"))}{chart(contractData, t("analyticsPersonal.contractStatus"))}</div>
+      <Card className="mt-6"><CardHeader><CardTitle className="text-lg">{t("analyticsPersonal.activity")}</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-32 w-full" /> : <div className="space-y-3">{[...proposals.slice(0, 4).map((item) => ({ title: item.project_id?.title || t("analyticsPersonal.project"), detail: `${t("analyticsPersonal.proposal")} · ${item.status || "pending"}` })), ...contracts.slice(0, 4).map((item) => ({ title: item.project_id?.title || item.terms?.title || t("analyticsPersonal.contract"), detail: `${t("analyticsPersonal.contract")} · ${item.status || "active"}` }))].slice(0, 6).map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center justify-between rounded-xl border border-border-subtle px-4 py-3 text-sm"><span className="truncate font-medium text-content-primary">{item.title}</span><span className="ml-4 shrink-0 text-xs capitalize text-content-muted">{item.detail}</span></div>) || <p className="text-sm text-content-secondary">{t("analyticsPersonal.noActivity")}</p>}</div>}</CardContent></Card>
+    </div>
+  );
+}
 
 function formatMultiCurrency(values, fallback, fallbackCurrency = "USD") {
   const entries = Object.entries(values || {}).filter(([, amount]) => amount != null);
@@ -24,11 +60,27 @@ export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { token, user } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
+  const isStudent = user?.role === ROLES.STUDENT;
 
   const { data, isLoading: analyticsLoading } = useQuery({
     queryKey: isAdmin ? ["analytics", "platform"] : ["analytics", "university", "mine"],
     queryFn: () => (isAdmin ? getPlatformAnalytics(token) : getMyUniversityAnalytics(token)),
-    enabled: !!token,
+    enabled: !!token && !isStudent,
+  });
+  const { data: personalRes, isLoading: personalLoading } = useQuery({
+    queryKey: ["analytics", "personal"],
+    queryFn: () => getMyAnalytics(token),
+    enabled: !!token && isStudent,
+  });
+  const { data: proposalsRes, isLoading: proposalsLoading } = useQuery({
+    queryKey: ["analytics", "personal", "proposals"],
+    queryFn: () => listMyProposals(token),
+    enabled: !!token && isStudent,
+  });
+  const { data: contractsRes, isLoading: contractsLoading } = useQuery({
+    queryKey: ["analytics", "personal", "contracts"],
+    queryFn: () => listMyContracts(token),
+    enabled: !!token && isStudent,
   });
   const { data: adminDashboardRes, isLoading: adminDashboardLoading } = useQuery({
     queryKey: ["analytics-admin-dashboard"],
@@ -38,6 +90,9 @@ export default function AnalyticsPage() {
   const isLoading = analyticsLoading || (isAdmin && adminDashboardLoading);
   const a = data?.data ?? {};
   const adminDashboard = adminDashboardRes?.data ?? {};
+  if (isStudent) {
+    return <PersonalAnalytics t={t} analytics={personalRes?.data ?? {}} proposals={proposalsRes?.data ?? []} contracts={contractsRes?.data ?? []} loading={personalLoading || proposalsLoading || contractsLoading} />;
+  }
   const universitySuppressed = !isAdmin && a.privacy_suppressed;
   const adminRoleData = (adminDashboard.users?.by_role || [])
     .map((item) => ({ name: String(item._id || "unknown").replaceAll("_", " "), value: item.count }))
