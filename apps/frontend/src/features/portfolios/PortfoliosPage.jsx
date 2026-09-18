@@ -23,6 +23,8 @@ export default function PortfoliosPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [errors, setErrors] = useState({});
   const [removeTarget, setRemoveTarget] = useState(null);
 
@@ -32,6 +34,8 @@ export default function PortfoliosPage() {
     else if (title.trim().length > 200) next.title = "Title must be 200 characters or fewer.";
     if (description.trim().length > 2000) next.description = "Description must be 2,000 characters or fewer.";
     if (url.trim() && (url.trim().length > 500 || !validHttpUrl(url))) next.url = "Enter a valid http:// or https:// URL.";
+    if (videoUrl.trim() && (videoUrl.trim().length > 500 || !validHttpUrl(videoUrl))) next.videoUrl = "Enter a valid video URL.";
+    if (imageUrl.trim() && (imageUrl.trim().length > 500 || !validHttpUrl(imageUrl))) next.imageUrl = "Enter a valid screenshot URL.";
     setErrors(next);
     if (Object.keys(next).length) { reportValidation("Portfolio form contains invalid fields", { form: "portfolio-entry", fields: Object.keys(next) }); return false; }
     return true;
@@ -41,8 +45,8 @@ export default function PortfoliosPage() {
   const entries = data?.data ?? [];
 
   const create = useMutation({
-    mutationFn: () => createPortfolioEntry({ title, description, url }, token),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["portfolio"] }); setTitle(""); setDescription(""); setUrl(""); setErrors({}); toast.success("Added to portfolio"); },
+    mutationFn: () => createPortfolioEntry({ title, description, url, video_url: videoUrl, image_url: imageUrl }, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["portfolio"] }); setTitle(""); setDescription(""); setUrl(""); setVideoUrl(""); setImageUrl(""); setErrors({}); toast.success("Added to portfolio"); },
     onError: (err) => toast.error(err.message || "Could not add entry"),
   });
   const remove = useMutation({
@@ -69,6 +73,8 @@ export default function PortfoliosPage() {
               <div className="space-y-1.5"><Label htmlFor="pf-title">{t("portfolios.entryTitle")}</Label><Input id="pf-title" maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="E.g. Campus club website" />{errors.title && <p className="text-xs text-brick" role="alert">{errors.title}</p>}</div>
               <div className="space-y-1.5"><Label htmlFor="pf-desc">{t("portfolios.entryDesc")}</Label><Input id="pf-desc" maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What you built and the impact" />{errors.description && <p className="text-xs text-brick" role="alert">{errors.description}</p>}</div>
               <div className="space-y-1.5"><Label htmlFor="pf-url">{t("portfolios.projectUrl")}</Label><Input id="pf-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />{errors.url && <p className="text-xs text-brick" role="alert">{errors.url}</p>}</div>
+              <div className="space-y-1.5"><Label htmlFor="pf-video">{t("portfolios.videoUrl", { defaultValue: "Video URL (optional)" })}</Label><Input id="pf-video" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="YouTube, Vimeo, or .mp4 URL" />{errors.videoUrl && <p className="text-xs text-brick" role="alert">{errors.videoUrl}</p>}</div>
+              <div className="space-y-1.5"><Label htmlFor="pf-image">{t("portfolios.screenshotUrl", { defaultValue: "Screenshot/image URL (optional)" })}</Label><Input id="pf-image" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…/screenshot.png" />{errors.imageUrl && <p className="text-xs text-brick" role="alert">{errors.imageUrl}</p>}</div>
             </div>
             <DialogFooter><Button size="sm" loading={create.isPending} onClick={() => validate() && create.mutate()}>{t("portfolios.addToPortfolio")}</Button></DialogFooter>
           </DialogContent>

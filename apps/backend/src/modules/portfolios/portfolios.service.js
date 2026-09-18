@@ -16,6 +16,7 @@ export async function createPortfolioItem(userId, data) {
     title: data.title,
     description: data.description || "",
     project_url: data.project_url,
+    video_url: data.video_url,
     image_url: data.image_url,
     file_id: data.file_id,
     tags: data.tags || [],

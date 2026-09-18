@@ -6,6 +6,7 @@ const portfolioItemSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     project_url: { type: String },
+    video_url: { type: String },
     image_url: { type: String },
     file_id: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
     tags: [{ type: String }],

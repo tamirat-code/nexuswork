@@ -11,6 +11,25 @@ import { Button } from "../../components/ui/shadcn/button.jsx";
 import { Card, CardContent } from "../../components/ui/shadcn/card.jsx";
 import { Skeleton } from "../../components/ui/shadcn/skeleton.jsx";
 
+function getVideoEmbedUrl(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.hostname.includes("youtu.be")) return `https://www.youtube.com/embed/${url.pathname.slice(1).split("/")[0]}`;
+    if (url.hostname.includes("youtube.com")) {
+      const id = url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (url.hostname.includes("vimeo.com")) {
+      const id = url.pathname.split("/").filter(Boolean).pop();
+      return id ? `https://player.vimeo.com/video/${id}` : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export default function PortfolioDetailPage() {
   const { id } = useParams();
   const { token } = useAuth();
@@ -21,6 +40,8 @@ export default function PortfolioDetailPage() {
     enabled: Boolean(id),
   });
   const item = data?.data;
+  const videoEmbedUrl = getVideoEmbedUrl(item?.video_url);
+  const isDirectVideo = /\.(mp4|webm|ogg)(?:$|\?)/i.test(item?.video_url || "");
 
   async function viewAttachedWork() {
     if (!item?.file_id) return;
@@ -39,6 +60,13 @@ export default function PortfolioDetailPage() {
       <Link to="/portfolios" className="inline-flex items-center gap-2 text-sm text-content-secondary hover:text-brand"><ArrowLeft className="h-4 w-4" /> {t("portfolios.backToPortfolio", { defaultValue: "Back to portfolio" })}</Link>
       <Card className="mt-5 overflow-hidden">
         {(item.image_url || item.thumbnail_url) && <img src={item.image_url || item.thumbnail_url} alt={item.title} className="max-h-[520px] w-full object-cover" />}
+        {item.video_url && (
+          <div className="aspect-video w-full bg-black">
+            {videoEmbedUrl ? <iframe src={videoEmbedUrl} title={`${item.title} video`} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              : isDirectVideo ? <video src={item.video_url} controls className="h-full w-full" />
+                : <div className="grid h-full place-items-center p-6 text-center text-white"><a href={item.video_url} target="_blank" rel="noreferrer" className="underline">{t("portfolios.openVideo", { defaultValue: "Open video" })}</a></div>}
+          </div>
+        )}
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -52,6 +80,7 @@ export default function PortfolioDetailPage() {
           {item.tags?.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{item.tags.map((tag) => <span key={tag} className="rounded-full border border-border-subtle px-3 py-1 text-xs text-content-secondary">{tag}</span>)}</div>}
           <div className="mt-8 flex flex-wrap gap-3">
             {item.project_url && <a href={item.project_url} target="_blank" rel="noreferrer"><Button><ExternalLink className="h-4 w-4" /> {t("portfolios.viewProject", { defaultValue: "View live project" })}</Button></a>}
+            {item.video_url && <a href={item.video_url} target="_blank" rel="noreferrer"><Button variant="secondary"><ExternalLink className="h-4 w-4" /> {t("portfolios.openVideo", { defaultValue: "Open video" })}</Button></a>}
             {item.file_id && <Button variant="secondary" onClick={viewAttachedWork}><FileText className="h-4 w-4" /> {t("portfolios.viewAttachedWork", { defaultValue: "View attached work" })}</Button>}
           </div>
         </CardContent>

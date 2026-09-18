@@ -11,7 +11,12 @@ export const respondToMilestonePortfolioConsent = (id, decision, token) =>
 export const createPortfolioEntry = (payload, token) =>
   apiRequest("/portfolios", {
     method: "POST",
-    body: { ...payload, project_url: payload.project_url ?? payload.url },
+    body: {
+      ...payload,
+      project_url: payload.project_url?.trim() || payload.url?.trim() || null,
+      video_url: payload.video_url?.trim() || null,
+      image_url: payload.image_url?.trim() || null,
+    },
     token,
   });
 export const deletePortfolioEntry = (id, token) =>
