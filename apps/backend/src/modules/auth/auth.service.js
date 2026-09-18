@@ -454,7 +454,9 @@ export async function resendVerificationEmail(userId) {
 }
 
 export async function verifyEmail(rawToken) {
-  const record = await EmailVerificationToken.findOne({
+  // Consume the token atomically so two concurrent requests cannot both
+  // verify the same link successfully.
+  const record = await EmailVerificationToken.findOneAndDelete({
     token_hash: hashToken(rawToken),
     expires_at: { $gt: new Date() },
   });
@@ -463,7 +465,6 @@ export async function verifyEmail(rawToken) {
   }
   const user = await User.findByIdAndUpdate(record.user_id, { email_verified: true }, { new: true });
   if (!user) throw new ValidationError("This verification link is invalid or has expired");
-  await EmailVerificationToken.deleteOne({ _id: record._id });
 
   try {
     await sendWelcomeEmail(user.email, user.name);

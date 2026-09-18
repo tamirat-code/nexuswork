@@ -53,7 +53,7 @@ const auditLogsSchema = new mongoose.Schema(
     },
       entity_type: {
       type: String,
-      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting", "organization", "institution", "org_membership", "institution_onboarding_request", "api_partner", "api_key", "partner_api_call"],
+      enum: ["user", "contract", "dispute", "payment", "verification", "project", "proposal", "milestone", "submission", "file", "message", "invoice", "meeting", "organization", "institution", "org_membership", "institution_onboarding_request", "api_partner", "api_key", "partner_api_call", "api_billing_ledger"],
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },
