@@ -93,7 +93,8 @@ export function registerJobs() {
   const oversightTimer = setInterval(async () => {
     await withJobLock("oversight-at-risk-evaluation", async () => {
       try {
-        await evaluateAtRiskMilestones({ limit: 100 });
+        const result = await evaluateAtRiskMilestones({ limit: 100 });
+        if (result.failed) console.error(`[jobs] at-risk evaluation completed with failures=${result.failed} evaluated=${result.evaluated}`);
       } catch (error) {
         console.error("[jobs] at-risk evaluation failed:", error.message);
       }

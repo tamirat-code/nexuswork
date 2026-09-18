@@ -37,6 +37,22 @@ describe("project oversight risk factors", () => {
     expect(factors.map((factor) => factor.code)).toEqual(expect.arrayContaining(["deadline_within_48_hours", "blocked_tasks", "stale_check_in"]));
   });
 
+  it("uses configured deadline and stale check-in thresholds", () => {
+    const factors = riskFactors({
+      milestone: milestone({ due_date: new Date("2026-09-17T12:00:00.000Z") }),
+      tasks: [],
+      latestCheckIn: { createdAt: new Date("2026-09-12T12:00:00.000Z") },
+      now,
+      deadlineWarningHours: 24,
+      staleCheckInDays: 3,
+    });
+
+    expect(factors).toEqual(expect.arrayContaining([
+      { code: "deadline_within_24_hours", severity: "medium" },
+      { code: "stale_check_in", severity: "medium" },
+    ]));
+  });
+
   it("does not count completed tasks as overdue", () => {
     const factors = riskFactors({
       milestone: milestone(),

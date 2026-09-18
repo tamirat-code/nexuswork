@@ -7,6 +7,7 @@ import AtRiskAssessment from "./at-risk-assessments.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { env } from "../../config/env.js";
 
 const TERMINAL_MILESTONE_STATUSES = new Set(["released"]);
 const ACTIVE_MILESTONE_STATUSES = new Set(["funded", "in_progress", "submitted", "delivered", "revision_requested", "approved"]);
@@ -85,17 +86,17 @@ export async function listCheckIns(projectId, user) {
   return CheckIn.find({ project_id: projectId }).populate("author_id", "name role").sort({ createdAt: -1 }).lean();
 }
 
-export function riskFactors({ milestone, tasks, latestCheckIn, now = new Date() }) {
+export function riskFactors({ milestone, tasks, latestCheckIn, now = new Date(), deadlineWarningHours = env.oversightDeadlineWarningHours, staleCheckInDays = env.oversightStaleCheckInDays }) {
   if (TERMINAL_MILESTONE_STATUSES.has(milestone.status)) return [];
   const factors = [];
   const dueDate = milestone.due_date ? new Date(milestone.due_date) : null;
   if (dueDate && dueDate < now) factors.push({ code: "overdue_milestone", severity: "high" });
-  else if (dueDate && dueDate.getTime() - now.getTime() <= 48 * 60 * 60 * 1000) factors.push({ code: "deadline_within_48_hours", severity: "medium" });
+  else if (dueDate && dueDate.getTime() - now.getTime() <= deadlineWarningHours * 60 * 60 * 1000) factors.push({ code: `deadline_within_${deadlineWarningHours}_hours`, severity: "medium" });
   const blocked = tasks.filter((task) => task.status === "blocked").length;
   const overdueTasks = tasks.filter((task) => task.due_date && new Date(task.due_date) < now && task.status !== "completed").length;
   if (blocked) factors.push({ code: "blocked_tasks", count: blocked, severity: "high" });
   if (overdueTasks) factors.push({ code: "overdue_tasks", count: overdueTasks, severity: "medium" });
-  if (ACTIVE_MILESTONE_STATUSES.has(milestone.status) && (!latestCheckIn || now.getTime() - new Date(latestCheckIn.createdAt).getTime() > 7 * 24 * 60 * 60 * 1000)) {
+  if (ACTIVE_MILESTONE_STATUSES.has(milestone.status) && (!latestCheckIn || now.getTime() - new Date(latestCheckIn.createdAt).getTime() > staleCheckInDays * 24 * 60 * 60 * 1000)) {
     factors.push({ code: "stale_check_in", severity: "medium" });
   }
   return factors;
@@ -156,8 +157,12 @@ export async function getOversight(projectId, user) {
 }
 
 export async function evaluateAtRiskMilestones({ limit = 100 } = {}) {
-  const soon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const milestones = await Milestone.find({ status: { $in: [...ACTIVE_MILESTONE_STATUSES] }, due_date: { $lte: soon } }).select("_id").limit(limit).lean();
-  for (const milestone of milestones) await evaluateMilestoneRisk(milestone._id);
-  return { evaluated: milestones.length };
+  const soon = new Date(Date.now() + env.oversightEvaluationHorizonDays * 24 * 60 * 60 * 1000);
+  const safeLimit = Math.min(1000, Math.max(1, Number(limit) || 100));
+  const milestones = await Milestone.find({ status: { $in: [...ACTIVE_MILESTONE_STATUSES] }, due_date: { $lte: soon } }).select("_id").limit(safeLimit).lean();
+  const results = await Promise.allSettled(milestones.map((milestone) => evaluateMilestoneRisk(milestone._id)));
+  return {
+    evaluated: results.filter((result) => result.status === "fulfilled").length,
+    failed: results.filter((result) => result.status === "rejected").length,
+  };
 }
