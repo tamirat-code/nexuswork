@@ -517,7 +517,7 @@ function PortfolioRow({ item }) {
     <div className="group rounded-xl border border-border-subtle bg-surface-soft p-5 transition hover:border-brand/30">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-semibold text-content-primary">{item.title}</h3>
+          <Link to={`/portfolios/${item._id}`} className="font-semibold text-content-primary hover:text-brand">{item.title}</Link>
           {item.description && (
             <p className="mt-2 text-sm leading-6 text-content-muted">{item.description}</p>
           )}
@@ -539,16 +539,16 @@ function PortfolioRow({ item }) {
 function PortfolioCard({ item }) {
   return (
     <article className="group overflow-hidden rounded-2xl border border-border-subtle bg-surface-soft transition hover:-translate-y-1 hover:border-brand/30">
-      <div className="flex h-40 items-center justify-center bg-gradient-to-br from-brand-soft via-surface to-surface-muted">
+      <Link to={`/portfolios/${item._id}`} className="flex h-40 items-center justify-center bg-gradient-to-br from-brand-soft via-surface to-surface-muted">
         {item.image_url ? (
           <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" />
         ) : (
           <BriefcaseBusiness className="h-10 w-10 text-brand/60" />
         )}
-      </div>
+      </Link>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-lg font-semibold text-content-primary">{item.title}</h3>
+          <Link to={`/portfolios/${item._id}`} className="font-display text-lg font-semibold text-content-primary hover:text-brand">{item.title}</Link>
           {item.project_url && (
             <a href={item.project_url} target="_blank" rel="noreferrer">
               <ExternalLink className="h-4 w-4 shrink-0 text-content-muted hover:text-brand" />

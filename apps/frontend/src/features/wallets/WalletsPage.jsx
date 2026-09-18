@@ -229,7 +229,7 @@ export default function WalletsPage() {
                   <Skeleton className="mt-2 h-9 w-36" />
                 ) : (
                   <p className="mt-1 font-mono text-3xl font-bold tracking-tight text-brand">
-                    {formatCurrency(wallet?.available ?? 0)}
+                    {formatCurrency(wallet?.available ?? 0, wallet?.currency?.toUpperCase() || "USD")}
                   </p>
                 )}
               </div>
@@ -237,7 +237,7 @@ export default function WalletsPage() {
               <div className="text-right">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-content-secondary">{t("wallets.pending")}</p>
                 <p className="mt-1 font-mono text-base font-medium text-content-secondary">
-                  {formatCurrency(wallet?.pending ?? 0)}
+                  {formatCurrency(wallet?.pending ?? 0, wallet?.currency?.toUpperCase() || "USD")}
                 </p>
               </div>
 

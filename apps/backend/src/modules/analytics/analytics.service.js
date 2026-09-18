@@ -139,12 +139,17 @@ export async function getUserMetrics(userId) {
 export async function getMyAnalytics(userId) {
  
   const payments = await paymentsService.listForUser(userId);
-  const earnings = payments
-    .filter((p) => p.direction === "release")
-    .reduce((sum, p) => sum + (p.amount || 0), 0);
+  const releasedPayments = payments.filter((p) => p.direction === "release" && p.status === "succeeded");
+  const earningsByCurrency = releasedPayments.reduce((totals, payment) => {
+    const currency = String(payment.currency || "usd").toLowerCase();
+    totals[currency] = (totals[currency] || 0) + Number(payment.amount || 0);
+    return totals;
+  }, {});
+  const earnings = Object.values(earningsByCurrency).reduce((sum, amount) => sum + amount, 0);
 
   return {
     earnings,
+    earnings_by_currency: earningsByCurrency,
     payments_count: payments.length,
   };
 }

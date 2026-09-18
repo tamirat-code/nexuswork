@@ -126,6 +126,7 @@ function StudentDashboard({ user, firstName, proposals, contracts, wallet, userM
   const initials = (user?.name || "Student").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const income = userMetrics?.earnings ?? userMetrics?.total_earnings ?? wallet?.released ?? 0;
   const incomeCurrency = wallet?.currency || userMetrics?.currency || "USD";
+  const incomeByCurrency = userMetrics?.earnings_by_currency;
 
   return (
     <div className="-mx-3 min-h-[calc(100vh-5rem)] bg-[#f7f5f2] px-3 py-4 text-[#2d2927] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
@@ -170,7 +171,7 @@ function StudentDashboard({ user, firstName, proposals, contracts, wallet, userM
 
           <Card className="min-h-[290px] border-0 bg-white shadow-sm">
             <div className="flex items-start justify-between gap-3">
-              <div><p className="text-sm font-semibold text-[#766c65]">{copy("income")}</p><p className="mt-2 font-display text-4xl font-bold">{formatCurrency(income, incomeCurrency)}</p></div>
+              <div><p className="text-sm font-semibold text-[#766c65]">{copy("income")}</p><p className="mt-2 font-display text-4xl font-bold">{formatMultiCurrency(incomeByCurrency, income, incomeCurrency)}</p></div>
               <span className="rounded-full bg-[#f1eee9] px-3 py-1 text-xs font-semibold text-[#766c65]">{copy("allTime")}</span>
             </div>
             <div className="mt-8 h-32 rounded-xl bg-gradient-to-t from-[#fff3ed] to-transparent p-2">
@@ -199,7 +200,7 @@ function StudentDashboard({ user, firstName, proposals, contracts, wallet, userM
 
           <Card className="border-0 bg-white shadow-sm"><div className="flex items-center justify-between"><h2 className="font-display text-xl font-semibold">{copy("todo")}</h2><Link to="/profile" className="grid h-8 w-8 place-items-center rounded-xl bg-[#f5f2ee] text-[#766c65]"><ArrowUpRight className="h-4 w-4" /></Link></div><div className="mt-4 space-y-3">{todoItems.map((item) => <Link key={item.title} to={item.to} className="flex items-center gap-3 rounded-2xl border border-[#f0ece8] p-3 transition hover:border-[#ef7651]/40"><span className={item.done ? "grid h-7 w-7 place-items-center rounded-lg bg-[#d8f4c0] text-[#4d8834]" : "grid h-7 w-7 place-items-center rounded-lg bg-[#fff0e9] text-[#ef7651]"}>{item.done ? <CircleCheck className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}</span><span className="min-w-0"><p className="truncate text-sm font-semibold">{item.title}</p><p className="mt-0.5 truncate text-xs text-[#9a8f87]">{item.detail}</p></span></Link>)}</div></Card>
 
-          <Card className="border-0 bg-white shadow-sm"><div className="flex items-center justify-between"><h2 className="font-display text-xl font-semibold">{copy("portfolio")}</h2><Link to="/portfolios" className="grid h-8 w-8 place-items-center rounded-xl bg-[#f5f2ee] text-[#766c65]"><PlusCircle className="h-4 w-4" /></Link></div><div className="mt-4 grid grid-cols-2 gap-2">{portfolioItems.length ? portfolioItems.map((item) => <Link key={item._id} to="/portfolios" className="group relative aspect-square overflow-hidden rounded-2xl bg-[#eeeae5]"><img src={item.image_url || item.thumbnail_url || item.project_url} alt={item.title || copy("portfolioItem")} className="h-full w-full object-cover transition group-hover:scale-105" onError={(event) => { event.currentTarget.style.display = "none"; }} /><div className="absolute inset-0 grid place-items-center text-[#b0a59e]"><ImageIcon className="h-6 w-6" /></div></Link>) : <Link to="/portfolios" className="col-span-2 grid min-h-32 place-items-center rounded-2xl border border-dashed border-[#ded7d0] text-center text-xs text-[#9a8f87]"><span><PlusCircle className="mx-auto mb-2 h-5 w-5" />{copy("addFirstWork")}</span></Link>}</div></Card>
+          <Card className="border-0 bg-white shadow-sm"><div className="flex items-center justify-between"><h2 className="font-display text-xl font-semibold">{copy("portfolio")}</h2><Link to="/portfolios" className="grid h-8 w-8 place-items-center rounded-xl bg-[#f5f2ee] text-[#766c65]"><PlusCircle className="h-4 w-4" /></Link></div><div className="mt-4 grid grid-cols-2 gap-2">{portfolioItems.length ? portfolioItems.map((item) => <Link key={item._id} to={`/portfolios/${item._id}`} className="group relative aspect-square overflow-hidden rounded-2xl bg-[#eeeae5]"><img src={item.image_url || item.thumbnail_url || item.project_url} alt={item.title || copy("portfolioItem")} className="h-full w-full object-cover transition group-hover:scale-105" onError={(event) => { event.currentTarget.style.display = "none"; }} /><div className="absolute inset-0 grid place-items-center text-[#b0a59e]"><ImageIcon className="h-6 w-6" /></div></Link>) : <Link to="/portfolios" className="col-span-2 grid min-h-32 place-items-center rounded-2xl border border-dashed border-[#ded7d0] text-center text-xs text-[#9a8f87]"><span><PlusCircle className="mx-auto mb-2 h-5 w-5" />{copy("addFirstWork")}</span></Link>}</div></Card>
         </section>
       </div>
     </div>

@@ -32,6 +32,7 @@ const PreContractPage = lazy(() => import("../../features/chat/PreContractPage.j
 const SettingsPage = lazy(() => import("../../features/settings/SettingsPage.jsx"));
 const ProfilePage = lazy(() => import("../../features/profile/ProfilePage.jsx"));
 const PortfoliosPage = lazy(() => import("../../features/portfolios/PortfoliosPage.jsx"));
+const PortfolioDetailPage = lazy(() => import("../../features/portfolios/PortfolioDetailPage.jsx"));
 const SkillsPage = lazy(() => import("../../features/skills/SkillsPage.jsx"));
 const LearningPage = lazy(() => import("../../features/learning/LearningPage.jsx"));
 const StudentsPage = lazy(() => import("../../features/students/StudentsPage.jsx"));
@@ -116,6 +117,7 @@ export default function AppRouter() {
       <Route path="/payments/complete" element={protect(<PaymentCompletePage />)} />
       <Route path="/invoices" element={protect(<InvoicesPage />)} />
       <Route path="/portfolios" element={protect(<PortfoliosPage />)} />
+      <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
       <Route path="/skills" element={protect(<SkillsPage />)} />
       <Route path="/learning" element={protect(<LearningPage />)} />
       <Route path="/recommendations" element={protect(<RecommendationPage />)} />

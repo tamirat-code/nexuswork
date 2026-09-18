@@ -176,7 +176,11 @@ export default function PostProjectPage() {
 
   const mutation = useMutation({
     mutationFn: (payload) => createProject(payload, token),
-    onSuccess: () => { toast.success(t("projectsForm.projectPosted")); navigate("/projects"); },
+    onSuccess: (response) => {
+      toast.success(t("projectsForm.projectPosted"));
+      const projectId = response?.data?._id;
+      navigate(projectId ? `/projects/${projectId}` : "/projects");
+    },
     onError: (err) => toast.error(err.message || t("projectsForm.postError")),
   });
 

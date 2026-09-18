@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -90,7 +91,7 @@ export default function PortfoliosPage() {
                 <FolderOpen className="h-8 w-8 text-brand" />
                 <Button variant="ghost" size="sm" className="h-8 w-8 text-brick opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setRemoveTarget(e)} aria-label="Remove entry"><Trash2 className="h-4 w-4" /></Button>
               </div>
-              <h3 className="mt-3 font-display text-base text-content-primary">{e.title}</h3>
+              <Link to={`/portfolios/${e._id}`} className="mt-3 block font-display text-base text-content-primary hover:text-brand">{e.title}</Link>
               <p className="mt-1 line-clamp-3 text-sm text-content-secondary">{e.description}</p>
               <div className="mt-3 flex flex-wrap gap-1">
                 {e.milestone_id && <Badge variant="secondary" className="text-xs">{t("portfolios.milestoneBadge")}</Badge>}
@@ -98,7 +99,7 @@ export default function PortfoliosPage() {
                 {e.consent_status === "denied" && <Badge variant="outline" className="text-xs">{t("portfolios.privateBadge")}</Badge>}
                 {e.consent_status === "approved" && <Badge variant="secondary" className="text-xs">{t("portfolios.publishedBadge")}</Badge>}
               </div>
-              {e.project_url && <a href={e.project_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">{t("portfolios.viewProject")}</a>}
+              <Link to={`/portfolios/${e._id}`} className="mt-3 inline-block text-sm font-semibold text-brand hover:underline">{t("portfolios.viewProject", { defaultValue: "View work" })}</Link>
             </CardContent>
           </Card>
         ))}
@@ -107,4 +108,3 @@ export default function PortfoliosPage() {
     </div>
   );
 }
-

@@ -44,7 +44,7 @@ export const getUserPortfolio = asyncHandler(async (req, res) => {
 });
 
 export const getPortfolioItem = asyncHandler(async (req, res) => {
-  const item = await getById(req.params.id);
+  const item = await getById(req.params.id, req.user);
   res.json({ success: true, data: item });
 });
 

@@ -3,6 +3,7 @@ import { apiRequest } from "../../lib/http.js";
 export const getMyPortfolio = (token) => apiRequest("/portfolios/mine", { token });
 export const listPortfolios = (query = "") => apiRequest(`/portfolios${query}`);
 export const getUserPortfolio = (userId) => apiRequest(`/portfolios/user/${userId}`);
+export const getPortfolioItem = (id) => apiRequest(`/portfolios/${id}`);
 export const getMilestonePortfolioConsent = (milestoneId, token) =>
   apiRequest(`/portfolios/milestone/${milestoneId}/consent`, { token });
 export const respondToMilestonePortfolioConsent = (id, decision, token) =>

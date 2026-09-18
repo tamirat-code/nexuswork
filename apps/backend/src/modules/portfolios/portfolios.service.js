@@ -34,9 +34,14 @@ export async function listForUser(userId, { publishedOnly = false } = {}) {
   return PortfolioItem.find(query).sort({ createdAt: -1 }).lean();
 }
 
-export async function getById(id) {
+export async function getById(id, requestingUser) {
   const item = await PortfolioItem.findById(id).lean();
   if (!item) throw new NotFoundError("Portfolio item not found");
+  const isOwner = requestingUser && String(item.user_id) === String(requestingUser._id);
+  const isAdmin = requestingUser?.role === "admin";
+  if ((!item.is_published || item.consent_status === "denied") && !isOwner && !isAdmin) {
+    throw new NotFoundError("Portfolio item not found");
+  }
   return item;
 }
 
