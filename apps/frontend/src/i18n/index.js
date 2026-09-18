@@ -4,6 +4,7 @@ import en from "./locales/en.json";
 import am from "./locales/am.json";
 import af from "./locales/af.json";
 import { translateLegacyDom } from "./legacy.js";
+import { visualResources } from "./visualResources.js";
 
 const supported = ["en", "am", "af"];
 const sharedResources = {
@@ -165,9 +166,9 @@ try {
 const browser = typeof navigator !== "undefined" ? navigator.language?.split("-")[0] : null;
 const initial = supported.includes(stored) ? stored : supported.includes(browser) ? browser : "en";
 
-const initialEn = mergeResources(en, sharedResources.en, mfaResources.en, registrationResources.en, dashboardResources.en, directoryResources.en, dashboardRoleResources.en, profileResources.en, profileOverviewResources.en, profileFieldResources.en, skillsResources.en, universityResources.en, organizationResources.en, projectResources.en, projectFormResources.en);
-const initialAm = mergeResources(am, sharedResources.am, mfaResources.am, registrationResources.am, dashboardResources.am, directoryResources.am, dashboardRoleResources.am, dashboardDetailsResources.am, profileResources.am, profileOverviewResources.am, profileFieldResources.am, skillsResources.am, universityResources.am, organizationResources.am, projectResources.am, projectFormResources.am);
-const initialAf = mergeResources(af, sharedResources.af, mfaResources.af, registrationResources.af, dashboardResources.af, directoryResources.af, dashboardRoleResources.af, dashboardDetailsResources.af, profileResources.af, profileOverviewResources.af, profileFieldResources.af, skillsResources.af, universityResources.af, organizationResources.af, projectResources.af, projectFormResources.af);
+const initialEn = mergeResources(en, sharedResources.en, mfaResources.en, registrationResources.en, dashboardResources.en, visualResources.en, directoryResources.en, dashboardRoleResources.en, profileResources.en, profileOverviewResources.en, profileFieldResources.en, skillsResources.en, universityResources.en, organizationResources.en, projectResources.en, projectFormResources.en);
+const initialAm = mergeResources(am, sharedResources.am, mfaResources.am, registrationResources.am, dashboardResources.am, visualResources.am, directoryResources.am, dashboardRoleResources.am, dashboardDetailsResources.am, profileResources.am, profileOverviewResources.am, profileFieldResources.am, skillsResources.am, universityResources.am, organizationResources.am, projectResources.am, projectFormResources.am);
+const initialAf = mergeResources(af, sharedResources.af, mfaResources.af, registrationResources.af, dashboardResources.af, visualResources.af, directoryResources.af, dashboardRoleResources.af, dashboardDetailsResources.af, profileResources.af, profileOverviewResources.af, profileFieldResources.af, skillsResources.af, universityResources.af, organizationResources.af, projectResources.af, projectFormResources.af);
 
 i18n.use(initReactI18next).init({
   resources: {

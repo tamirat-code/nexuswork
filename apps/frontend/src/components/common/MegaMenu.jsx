@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import NavIcon from "./NavIcon.jsx";
 import { cn } from "../../lib/cn.js";
+import { useTranslation } from "react-i18next";
 
 export default function MegaMenu({ menu, open }) {
+  const { t } = useTranslation();
   if (!menu?.length) return null;
 
   return (
@@ -20,7 +22,7 @@ export default function MegaMenu({ menu, open }) {
               id={`mega-menu-${column.title.replace(/\s+/g, "-").toLowerCase()}`}
               className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-content-muted"
             >
-              {column.title}
+              {t(`megaMenu.${column.translationKey || column.title}`, { defaultValue: column.title })}
             </h2>
             <div className="mt-2 space-y-1">
               {column.items.map((item) => (
@@ -35,10 +37,10 @@ export default function MegaMenu({ menu, open }) {
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-bold text-content-primary group-hover:text-brand group-focus-visible:text-brand">
-                      {item.label}
+                      {t(`megaMenu.${item.translationKey || item.label}`, { defaultValue: item.label })}
                     </span>
                     <span className="mt-1 block text-xs leading-relaxed text-content-muted">
-                      {item.description}
+                      {t(`megaMenu.${item.descriptionKey || item.description}`, { defaultValue: item.description })}
                     </span>
                   </span>
                 </Link>
@@ -53,7 +55,7 @@ export default function MegaMenu({ menu, open }) {
           tabIndex={open ? 0 : -1}
           className="text-sm font-bold text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          See all resources <span aria-hidden="true">→</span>
+          {t("megaMenu.seeResources", { defaultValue: "See all resources" })} <span aria-hidden="true">→</span>
         </Link>
       </div>
     </div>

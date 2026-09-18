@@ -163,7 +163,9 @@ export default function Navbar() {
                   {hasMegaMenu && (
                     <button
                       type="button"
-                      aria-label={`${isExpanded ? "Collapse" : "Expand"} ${l.label} menu`}
+                      aria-label={isExpanded
+                        ? t("megaMenu.collapse", { label: t(`navigation.${l.translationKey || l.to.split("/")[1] || "home"}`, { defaultValue: l.label }) })
+                        : t("megaMenu.expand", { label: t(`navigation.${l.translationKey || l.to.split("/")[1] || "home"}`, { defaultValue: l.label }) })}
                       aria-expanded={isExpanded}
                       onClick={() => setMobileExpanded(isExpanded ? null : l.to)}
                       className="rounded-control p-2 text-content-secondary hover:bg-surface-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -181,7 +183,7 @@ export default function Navbar() {
                         onClick={() => setMenuOpen(false)}
                         className="block rounded-control px-3 py-2 text-sm text-content-muted hover:bg-surface-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
-                        {item.label}
+                        {t(`megaMenu.${item.translationKey || item.label}`, { defaultValue: item.label })}
                       </Link>
                     ))}
                   </div>

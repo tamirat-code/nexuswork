@@ -9,17 +9,17 @@ export const marketingNav = [
     icon: "briefcase",
     megaMenu: [
       {
-        title: "Discover",
+        title: "Discover", translationKey: "discover",
         items: [
-          { to: "/projects", label: "Browse projects", description: "Explore active briefs and opportunities.", icon: "briefcase" },
-          { to: "/search", label: "Search NexusWork", description: "Find projects, talent, and trusted profiles.", icon: "search" },
+          { to: "/projects", label: "Browse projects", translationKey: "browseProjects", description: "Explore active briefs and opportunities.", descriptionKey: "browseProjectsDesc", icon: "briefcase" },
+          { to: "/search", label: "Search NexusWork", translationKey: "searchNexuswork", description: "Find projects, talent, and trusted profiles.", descriptionKey: "searchNexusworkDesc", icon: "search" },
         ],
       },
       {
-        title: "Work with talent",
+        title: "Work with talent", translationKey: "workWithTalent",
         items: [
-          { to: "/students", label: "Find talent", description: "Discover skilled students for your project.", icon: "users" },
-          { to: "/projects/new", label: "Post a project", description: "Share a brief and start building your team.", icon: "plus" },
+          { to: "/students", label: "Find talent", translationKey: "findTalent", description: "Discover skilled students for your project.", descriptionKey: "findTalentDesc", icon: "users" },
+          { to: "/projects/new", label: "Post a project", translationKey: "postProject", description: "Share a brief and start building your team.", descriptionKey: "postProjectDesc", icon: "plus" },
         ],
       },
     ],
@@ -31,17 +31,17 @@ export const marketingNav = [
     icon: "users",
     megaMenu: [
       {
-        title: "Find the right fit",
+        title: "Find the right fit", translationKey: "rightFit",
         items: [
-          { to: "/students", label: "Find talent", description: "Browse student skills and verified profiles.", icon: "users" },
-          { to: "/search", label: "Search profiles", description: "Use focused search to find a strong match.", icon: "search" },
+          { to: "/students", label: "Find talent", translationKey: "findTalent", description: "Browse student skills and verified profiles.", descriptionKey: "findTalentDesc", icon: "users" },
+          { to: "/search", label: "Search profiles", translationKey: "searchProfiles", description: "Use focused search to find a strong match.", descriptionKey: "searchProfilesDesc", icon: "search" },
         ],
       },
       {
-        title: "Build with confidence",
+        title: "Build with confidence", translationKey: "buildConfidence",
         items: [
-          { to: "/universities", label: "University verification", description: "Learn how NexusWork builds trust.", icon: "building" },
-          { to: "/#how-it-works", label: "How it works", description: "See the path from brief to delivery.", icon: "spark" },
+          { to: "/universities", label: "University verification", translationKey: "universityVerification", description: "Learn how NexusWork builds trust.", descriptionKey: "universityVerificationDesc", icon: "building" },
+          { to: "/#how-it-works", label: "How it works", translationKey: "howItWorks", description: "See the path from brief to delivery.", descriptionKey: "howItWorksDesc", icon: "spark" },
         ],
       },
     ],
@@ -54,17 +54,17 @@ export const marketingNav = [
     icon: "spark",
     megaMenu: [
       {
-        title: "NexusWork",
+        title: "NexusWork", translationKey: "nexuswork",
         items: [
-          { to: "/#how-it-works", label: "How it works", description: "Understand the journey from brief to delivery.", icon: "spark" },
-          { to: "/#faq", label: "Frequently asked questions", description: "Get answers to common platform questions.", icon: "help" },
+          { to: "/#how-it-works", label: "How it works", translationKey: "howItWorks", description: "Understand the journey from brief to delivery.", descriptionKey: "howItWorksDesc", icon: "spark" },
+          { to: "/#faq", label: "Frequently asked questions", translationKey: "faq", description: "Get answers to common platform questions.", descriptionKey: "faqDesc", icon: "help" },
         ],
       },
       {
-        title: "Resources",
+        title: "Resources", translationKey: "resources",
         items: [
-          { to: "/support", label: "Support and trust", description: "Get help when the work matters.", icon: "help" },
-          { to: "/policies", label: "Platform policies", description: "Review the rules for fair work.", icon: "document" },
+          { to: "/support", label: "Support and trust", translationKey: "support", description: "Get help when the work matters.", descriptionKey: "supportDesc", icon: "help" },
+          { to: "/policies", label: "Platform policies", translationKey: "policies", description: "Review the rules for fair work.", descriptionKey: "policiesDesc", icon: "document" },
         ],
       },
     ],

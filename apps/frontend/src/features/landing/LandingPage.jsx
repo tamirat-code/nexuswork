@@ -289,6 +289,7 @@ function HeroTestimonial() {
 }
 
 function HeroMarketplaceVisual() {
+  const { t } = useTranslation();
   const { data } = useQuery({
     queryKey: ["projects", "hero-preview"],
     queryFn: () => listProjects(),
@@ -297,17 +298,17 @@ function HeroMarketplaceVisual() {
   const skills = project?.required_skills?.slice(0, 3) || ["React", "UX research", "2–3 weeks"];
 
   return (
-    <div className="hero-marketplace-visual relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#286174] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.28)] sm:p-6" aria-label="NexusWork product preview">
+    <div className="hero-marketplace-visual relative w-full max-w-[570px] overflow-hidden rounded-[20px] border border-[#286174] bg-[#062333] p-4 shadow-[0_24px_70px_rgba(3,42,55,0.28)] sm:p-6" aria-label={t("landingVisual.previewAria")}>
       <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#65e6b4] shadow-[0_0_12px_#65e6b4]" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#72dacc]">NexusWork marketplace</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#72dacc]">{t("landingVisual.marketplace")}</p>
           </div>
-          <p className="mt-1 text-sm font-semibold text-white">A clearer path from brief to delivery</p>
+          <p className="mt-1 text-sm font-semibold text-white">{t("landingVisual.previewTitle")}</p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-[#b8f2e8]">
-          Product preview
+          {t("landingVisual.preview")}
         </span>
       </div>
 
@@ -315,8 +316,8 @@ function HeroMarketplaceVisual() {
         <Link to={project?._id ? `/projects/${project._id}` : "/projects"} className="group rounded-control border border-white/10 bg-[#0a3042]/90 p-4 transition-colors hover:border-[#62d9cc]/70 hover:bg-[#0d394b]">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Example brief</p>
-              <p className="mt-1.5 line-clamp-2 text-sm font-bold text-white">{project?.title || "Explore open student projects"}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">{t("landingVisual.exampleBrief")}</p>
+              <p className="mt-1.5 line-clamp-2 text-sm font-bold text-white">{project?.title || t("landingVisual.exploreBriefs")}</p>
             </div>
             <ArrowUpRight className="h-4 w-4 text-[#6ce1d0] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </div>
@@ -324,20 +325,20 @@ function HeroMarketplaceVisual() {
             {skills.map((tag) => <span key={tag} className="rounded bg-white/8 px-2 py-1 text-[10px] font-medium text-[#b7d6d8]">{tag}</span>)}
           </div>
           <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-3">
-            <span className="text-[11px] text-[#8db6bf]">Explore real open briefs</span>
-            <span className="text-sm font-bold text-[#7ce3d1]">Browse →</span>
+            <span className="text-[11px] text-[#8db6bf]">{t("landingVisual.exploreRealBriefs")}</span>
+            <span className="text-sm font-bold text-[#7ce3d1]">{t("landingVisual.browse")} →</span>
           </div>
         </Link>
 
         <Link to="#how-it-works" className="group rounded-control border border-[#2b7580] bg-[#0b3b4a]/95 p-4 transition-colors hover:border-[#72e1c8] hover:bg-[#0e4352]">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">Illustrative milestone</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7aa8b4]">{t("landingVisual.milestone")}</p>
             <ShieldCheck className="h-4 w-4 text-[#72e1c8]" />
           </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-white">{project ? formatCurrency(project.budget) : "Protected escrow"}</p>
-          <p className="mt-1 text-[11px] text-[#9ac6c6]">Funds stay protected until approval</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-white">{project ? formatCurrency(project.budget) : t("landingVisual.protectedEscrow")}</p>
+          <p className="mt-1 text-[11px] text-[#9ac6c6]">{t("landingVisual.fundsProtected")}</p>
           <div className="mt-5 space-y-2.5">
-            {[['Brief agreed', true], ['Student working', true], ['Release on approval', false]].map(([label, done]) => (
+            {[[t("landingVisual.briefAgreed"), true], [t("landingVisual.studentWorking"), true], [t("landingVisual.releaseApproval"), false]].map(([label, done]) => (
               <div key={label} className="flex items-center gap-2 text-[11px] text-[#c5e0df]">
                 <span className={`grid h-4 w-4 place-items-center rounded-full ${done ? 'bg-[#65d9b4] text-[#07313a]' : 'border border-[#55939a] text-transparent'}`}><Check className="h-2.5 w-2.5" /></span>
                 {label}
@@ -349,7 +350,7 @@ function HeroMarketplaceVisual() {
 
       <div className="relative z-10 mt-3 flex items-center gap-3 rounded-control border border-white/10 bg-[#082c3c]/90 px-4 py-3">
         <div className="grid h-9 w-9 place-items-center rounded-full bg-[#d3f7ed] text-[#08756b]"><Sparkles className="h-4 w-4" /></div>
-        <div className="min-w-0 flex-1"><p className="text-xs font-bold text-white">Verified talent, clear delivery</p><p className="mt-0.5 truncate text-[10px] text-[#8db6bf]">One workspace for proposals, milestones and payment.</p></div>
+        <div className="min-w-0 flex-1"><p className="text-xs font-bold text-white">{t("landingVisual.verifiedTalent")}</p><p className="mt-0.5 truncate text-[10px] text-[#8db6bf]">{t("landingVisual.oneWorkspace")}</p></div>
         <CircleDollarSign className="h-5 w-5 shrink-0 text-[#6ce1d0]" />
       </div>
     </div>
@@ -357,10 +358,11 @@ function HeroMarketplaceVisual() {
 }
 
 function HeroTrustBar() {
+  const { t } = useTranslation();
   const { data } = useQuery({ queryKey: ["projects", "hero-preview"], queryFn: () => listProjects() });
   const project = data?.data?.[0];
   const client = project?.client_id?.client_profile?.organization_name || project?.client_id?.name;
-  const context = project?.title ? `Live brief: ${project.title}` : "Students, clients and universities moving work forward together.";
+  const context = project?.title ? t("landingVisual.liveBrief", { title: project.title }) : t("landingVisual.trustTogether");
   const initials = (client || "NW")
     .split(/\s+/)
     .slice(0, 2)
@@ -374,7 +376,7 @@ function HeroTrustBar() {
         <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#b7e2d8] text-[9px] font-bold text-[#17695f]">{initials}</span>
         <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-[#c7d9ef] text-[9px] font-bold text-[#31557f]">ST</span>
       </div>
-      <p className="text-xs leading-relaxed text-content-secondary"><span className="font-bold text-content-primary">{client ? `${client} is hiring.` : "Built on trust."}</span> {context}</p>
+      <p className="text-xs leading-relaxed text-content-secondary"><span className="font-bold text-content-primary">{client ? t("landingVisual.hiring", { client }) : t("landingVisual.builtTrust")}</span> {context}</p>
       <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-brand" />
     </div>
   );
@@ -482,7 +484,7 @@ export default function LandingPage() {
   return (
     <div className="bg-canvas">
       <LandingOnboarding />
-      <section className="relative overflow-hidden border-b border-border-subtle bg-canvas" aria-label="Hero">
+      <section className="relative overflow-hidden border-b border-border-subtle bg-canvas" aria-label={t("landingVisual.heroAria")}>
         <HeroVideoBackground />
 
         <motion.div
@@ -538,7 +540,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <section className="border-b border-border-subtle bg-surface-soft" aria-label="Trust signals">
+      <section className="border-b border-border-subtle bg-surface-soft" aria-label={t("landingVisual.trustAria")}>
         <div className="grid w-full grid-cols-1 gap-3 px-6 py-5 sm:grid-cols-3 sm:px-10 lg:px-16">
           {trustSignals.map(({ title, body }, index) => (
             <div key={title} className="flex items-center gap-3 rounded-control border border-border-subtle bg-surface px-4 py-3 shadow-subtle">
