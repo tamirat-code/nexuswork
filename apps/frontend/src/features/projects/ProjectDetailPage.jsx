@@ -279,7 +279,7 @@ function RecommendedStudents({ projectId, token }) {
 
       {error && <Card><CardContent className="p-5"><p className="text-sm text-danger">{t("projects.recommendationsError", { defaultValue: "Recommendations could not be loaded. Refresh the page and try again." })}</p></CardContent></Card>}
 
-      {!isLoading && !error && matches.length === 0 && <Card><CardContent className="p-5"><p className="text-sm text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "No verified students are available yet. Recommendations will appear when eligible students complete verification." })}</p></CardContent></Card>}
+      {!isLoading && !error && matches.length === 0 && <Card><CardContent className="p-5" role="status"><p className="font-semibold text-slate">{t("projects.noRecommendedStudentsTitle", { defaultValue: "No matching student found" })}</p><p className="mt-1 text-sm leading-relaxed text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "We could not find an eligible verified student for this project yet. Recommendations require an active student profile, university verification, and relevant skills." })}</p><p className="mt-2 text-sm text-slate-300">{t("projects.noRecommendedStudentsAction", { defaultValue: "Try adding more specific required skills or check again after more students complete verification." })}</p></CardContent></Card>}
 
       {matches.map((m) => (
         <Card key={m.user._id}>
