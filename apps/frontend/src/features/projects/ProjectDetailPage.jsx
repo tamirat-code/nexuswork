@@ -178,7 +178,7 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [cvViewed, setCvViewed] = useState({});
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["project-proposals", projectId],
     queryFn: () => listProjectProposals(projectId, token),
     enabled: !!token,
@@ -260,7 +260,7 @@ function ClientProposalList({ projectId, token, currency = "USD" }) {
 
 function RecommendedStudents({ projectId, token }) {
   const { t } = useTranslation();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["project-student-matches", projectId],
     queryFn: () => getStudentMatchesForProject(projectId, token),
     enabled: !!token,
@@ -277,7 +277,9 @@ function RecommendedStudents({ projectId, token }) {
 
       {isLoading && <><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></>}
 
-      {!isLoading && matches.length === 0 && <Card><CardContent className="p-5"><p className="text-sm text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "No verified students match these skills yet. Try adding more required skills or check back after students update their profiles." })}</p></CardContent></Card>}
+      {error && <Card><CardContent className="p-5"><p className="text-sm text-danger">{t("projects.recommendationsError", { defaultValue: "Recommendations could not be loaded. Refresh the page and try again." })}</p></CardContent></Card>}
+
+      {!isLoading && !error && matches.length === 0 && <Card><CardContent className="p-5"><p className="text-sm text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "No verified students are available yet. Recommendations will appear when eligible students complete verification." })}</p></CardContent></Card>}
 
       {matches.map((m) => (
         <Card key={m.user._id}>

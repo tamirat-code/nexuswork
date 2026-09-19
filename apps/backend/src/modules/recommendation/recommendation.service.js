@@ -214,11 +214,20 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
   }
 
   const candidates = await StudentProfile.find({ verification_status: "verified" }).limit(500).lean();
-  const shortlist = candidates
+  let shortlist = candidates
     .map((profile) => ({ profile, score: scoreStudentBySkillOverlap(project, profile.skills) }))
     .filter((c) => c.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
+
+  // A new project may not share an exact catalog skill name with a profile
+  // yet. Keep verified candidates available for AI ranking instead of
+  // returning an empty recommendation panel.
+  if (!shortlist.length) {
+    shortlist = candidates
+      .map((profile) => ({ profile, score: 0 }))
+      .slice(0, 20);
+  }
 
   const userIds = shortlist.map((c) => c.profile.user_id);
   const users = await User.find({ _id: { $in: userIds }, role: "student", status: "active" }, "name avatarUrl").lean();
