@@ -225,6 +225,16 @@ export async function getPartner(partnerId) {
   return { ...partner, ...tierLimits(partner.tier) };
 }
 
+export async function getBrowserPartner(user) {
+  if (!user?._id) throw new ForbiddenError("You must be signed in as an API partner");
+  const partner = await ApiPartner.findOne({
+    $or: [{ created_by: user._id }, { contact_email: String(user.email || "").toLowerCase() }],
+    status: { $in: ["active", "suspended"] },
+  }).lean();
+  if (!partner) throw new NotFoundError("No API partner account is linked to this user");
+  return partner;
+}
+
 export async function listPartnerKeys(partnerId) {
   if (!await ApiPartner.exists({ _id: partnerId })) throw new NotFoundError("API partner not found");
   const keys = await ApiKey.find({ partner_id: partnerId }).sort({ createdAt: -1 }).lean();

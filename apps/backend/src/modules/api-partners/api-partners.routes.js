@@ -10,7 +10,7 @@ import {
   selfKeys, selfCreateKey, selfRevokeKey, usage, billing,
   adminBilling, webhooks, createWebhook, updateWebhook, rotateWebhook, disableWebhook, webhookDeliveries, billingSetupIntent, billingPaymentMethod, chargeBilling, walletTopUp, updateBillingMode,
 } from "./api-partners.controller.js";
-import { requirePartnerApiKey, requirePartnerScope } from "./api-partners.middleware.js";
+import { requirePartnerApiKey, requirePartnerScope, requireBrowserPartner } from "./api-partners.middleware.js";
 
 const adminRouter = Router();
 adminRouter.use(requireAuth);
@@ -46,7 +46,23 @@ partnerRouter.post("/me/webhooks/:subscriptionId/rotate-secret", requirePartnerS
 partnerRouter.delete("/me/webhooks/:subscriptionId", requirePartnerScope("webhooks:manage"), validateParams(webhookParamsSchema), disableWebhook);
 partnerRouter.get("/me/webhook-deliveries", requirePartnerScope("webhooks:manage"), validateQuery(partnerLimitQuerySchema), webhookDeliveries);
 
+const browserRouter = Router();
+browserRouter.use(requireAuth, requireBrowserPartner);
+browserRouter.get("/", profile);
+browserRouter.get("/keys", selfKeys);
+browserRouter.post("/keys", validateBody(createApiKeySchema), selfCreateKey);
+browserRouter.post("/keys/:keyId/revoke", validateParams(ownKeyParamsSchema), selfRevokeKey);
+browserRouter.get("/usage", usage);
+browserRouter.get("/billing", billing);
+browserRouter.get("/webhooks", webhooks);
+browserRouter.post("/webhooks", validateBody(createWebhookSubscriptionSchema), createWebhook);
+browserRouter.patch("/webhooks/:subscriptionId", validateParams(webhookParamsSchema), validateBody(updateWebhookSubscriptionSchema), updateWebhook);
+browserRouter.post("/webhooks/:subscriptionId/rotate-secret", validateParams(webhookParamsSchema), rotateWebhook);
+browserRouter.delete("/webhooks/:subscriptionId", validateParams(webhookParamsSchema), disableWebhook);
+browserRouter.get("/webhook-deliveries", validateQuery(partnerLimitQuerySchema), webhookDeliveries);
+
 export { adminRouter as ApiPartnerAdminRoutes };
+export { browserRouter as ApiPartnerBrowserRoutes };
 export default partnerRouter;
 
 export const ApiPartnerApplicationRoutes = Router();

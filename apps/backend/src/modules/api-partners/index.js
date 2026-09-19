@@ -6,4 +6,4 @@ export { default as ApiBillingLedger } from "./api-billing-ledger.model.js";
 export { default as ApiWalletPayment } from "./api-wallet-payment.model.js";
 export { default as ApiWebhookSubscription } from "./api-webhook-subscription.model.js";
 export { default as ApiWebhookDelivery } from "./api-webhook-delivery.model.js";
-export { default as ApiPartnerRoutes, ApiPartnerAdminRoutes, ApiPartnerApplicationRoutes } from "./api-partners.routes.js";
+export { default as ApiPartnerRoutes, ApiPartnerAdminRoutes, ApiPartnerBrowserRoutes, ApiPartnerApplicationRoutes } from "./api-partners.routes.js";

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Activity, Check, Copy, KeyRound, Link2, RefreshCw, ShieldCheck, Webhook, X } from "lucide-react";
+import { Activity, Check, Copy, KeyRound, RefreshCw, ShieldCheck, Webhook, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/shadcn/card.jsx";
 import { Button } from "../../components/ui/shadcn/button.jsx";
@@ -9,10 +9,11 @@ import { Input } from "../../components/ui/shadcn/input.jsx";
 import { Label } from "../../components/ui/shadcn/label.jsx";
 import { Switch } from "../../components/ui/shadcn/switch.jsx";
 import {
-  createPartnerKey, createPartnerWebhook, disablePartnerWebhook, getPartnerBilling, getPartnerProfile,
-  listPartnerKeys, listPartnerWebhookDeliveries, listPartnerWebhooks, revokePartnerKey,
-  rotatePartnerWebhookSecret,
+  createBrowserPartnerKey, createBrowserPartnerWebhook, disableBrowserPartnerWebhook, getBrowserPartnerBilling, getBrowserPartnerProfile,
+  listBrowserPartnerKeys, listBrowserPartnerWebhookDeliveries, listBrowserPartnerWebhooks, revokeBrowserPartnerKey,
+  rotateBrowserPartnerWebhookSecret,
 } from "../../services/api/partner.api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const WEBHOOK_EVENTS = ["talent.consent.updated", "usage.threshold"];
 
@@ -35,19 +36,18 @@ function SecretNotice({ secret, onDismiss, t }) {
 
 export default function PartnerPortalPage() {
   const { t, i18n } = useTranslation();
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [apiKey, setApiKey] = useState("");
+  const { user, token } = useAuth();
   const [keyName, setKeyName] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookEvents, setWebhookEvents] = useState([WEBHOOK_EVENTS[0]]);
   const [oneTimeSecret, setOneTimeSecret] = useState("");
   const [selectedKeyScopes, setSelectedKeyScopes] = useState([]);
 
-  const profileQuery = useQuery({ queryKey: ["partner-portal-profile", apiKey], queryFn: () => getPartnerProfile(apiKey), enabled: Boolean(apiKey), retry: false });
-  const keysQuery = useQuery({ queryKey: ["partner-portal-keys", apiKey], queryFn: () => listPartnerKeys(apiKey), enabled: Boolean(apiKey) });
-  const billingQuery = useQuery({ queryKey: ["partner-portal-billing", apiKey], queryFn: () => getPartnerBilling(apiKey), enabled: Boolean(apiKey) });
-  const webhooksQuery = useQuery({ queryKey: ["partner-portal-webhooks", apiKey], queryFn: () => listPartnerWebhooks(apiKey), enabled: Boolean(apiKey), retry: false });
-  const deliveriesQuery = useQuery({ queryKey: ["partner-portal-deliveries", apiKey], queryFn: () => listPartnerWebhookDeliveries(apiKey), enabled: Boolean(apiKey), retry: false });
+  const profileQuery = useQuery({ queryKey: ["partner-portal-profile", user?._id], queryFn: () => getBrowserPartnerProfile(token), enabled: Boolean(token), retry: false });
+  const keysQuery = useQuery({ queryKey: ["partner-portal-keys", user?._id], queryFn: () => listBrowserPartnerKeys(token), enabled: Boolean(token) });
+  const billingQuery = useQuery({ queryKey: ["partner-portal-billing", user?._id], queryFn: () => getBrowserPartnerBilling(token), enabled: Boolean(token) });
+  const webhooksQuery = useQuery({ queryKey: ["partner-portal-webhooks", user?._id], queryFn: () => listBrowserPartnerWebhooks(token), enabled: Boolean(token), retry: false });
+  const deliveriesQuery = useQuery({ queryKey: ["partner-portal-deliveries", user?._id], queryFn: () => listBrowserPartnerWebhookDeliveries(token), enabled: Boolean(token), retry: false });
   const partner = profileQuery.data?.data;
   const scopes = useMemo(() => partner?.scopes || [], [partner?.scopes]);
 
@@ -57,35 +57,23 @@ export default function PartnerPortalPage() {
       : scopes.slice(0, 1));
   }, [scopes]);
 
-  const connect = async () => {
-    const next = apiKeyInput.trim();
-    if (!next) return;
-    try {
-      await getPartnerProfile(next);
-      setApiKey(next);
-      setApiKeyInput("");
-    } catch (error) {
-      toast.error(error.message || t("partnerPortal.invalidKey"));
-    }
-  };
-
   const createKeyMutation = useMutation({
-    mutationFn: () => createPartnerKey({ name: keyName.trim(), scopes: selectedKeyScopes }, apiKey),
+    mutationFn: () => createBrowserPartnerKey({ name: keyName.trim(), scopes: selectedKeyScopes }, token),
     onSuccess: (response) => { setOneTimeSecret(response.data.api_key); setKeyName(""); keysQuery.refetch(); toast.success(t("partnerPortal.keyCreated")); },
     onError: (error) => toast.error(error.message),
   });
-  const revokeKeyMutation = useMutation({ mutationFn: (id) => revokePartnerKey(id, apiKey), onSuccess: () => { keysQuery.refetch(); toast.success(t("partnerPortal.keyRevoked")); }, onError: (error) => toast.error(error.message) });
+  const revokeKeyMutation = useMutation({ mutationFn: (id) => revokeBrowserPartnerKey(id, token), onSuccess: () => { keysQuery.refetch(); toast.success(t("partnerPortal.keyRevoked")); }, onError: (error) => toast.error(error.message) });
   const createWebhookMutation = useMutation({
-    mutationFn: () => createPartnerWebhook({ url: webhookUrl.trim(), events: webhookEvents }, apiKey),
+    mutationFn: () => createBrowserPartnerWebhook({ url: webhookUrl.trim(), events: webhookEvents }, token),
     onSuccess: (response) => { setOneTimeSecret(response.data.webhook_secret); setWebhookUrl(""); webhooksQuery.refetch(); toast.success(t("partnerPortal.webhookCreated")); },
     onError: (error) => toast.error(error.message),
   });
-  const rotateWebhookMutation = useMutation({ mutationFn: (id) => rotatePartnerWebhookSecret(id, apiKey), onSuccess: (response) => { setOneTimeSecret(response.data.webhook_secret); webhooksQuery.refetch(); toast.success(t("partnerPortal.secretRotated")); }, onError: (error) => toast.error(error.message) });
-  const disableWebhookMutation = useMutation({ mutationFn: (id) => disablePartnerWebhook(id, apiKey), onSuccess: () => { webhooksQuery.refetch(); toast.success(t("partnerPortal.webhookDisabled")); }, onError: (error) => toast.error(error.message) });
+  const rotateWebhookMutation = useMutation({ mutationFn: (id) => rotateBrowserPartnerWebhookSecret(id, token), onSuccess: (response) => { setOneTimeSecret(response.data.webhook_secret); webhooksQuery.refetch(); toast.success(t("partnerPortal.secretRotated")); }, onError: (error) => toast.error(error.message) });
+  const disableWebhookMutation = useMutation({ mutationFn: (id) => disableBrowserPartnerWebhook(id, token), onSuccess: () => { webhooksQuery.refetch(); toast.success(t("partnerPortal.webhookDisabled")); }, onError: (error) => toast.error(error.message) });
 
   const billing = billingQuery.data?.data?.current;
   const formatAmount = (minor = 0, currency = "usd") => new Intl.NumberFormat(i18n.language, { style: "currency", currency: currency.toUpperCase() }).format(minor / 100);
-  const connected = Boolean(apiKey && partner);
+  const connected = Boolean(token && partner);
   const webhookAccessError = webhooksQuery.error?.code === "PARTNER_SCOPE_REQUIRED";
   const canCreateKey = keyName.trim().length >= 2;
   const canCreateWebhook = webhookUrl.trim().length > 0 && webhookEvents.length > 0;
@@ -98,18 +86,10 @@ export default function PartnerPortalPage() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">{t("partnerPortal.subtitle")}</p>
       </header>
 
-      {!connected ? (
-        <Card className="mx-auto mt-8 max-w-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-brass" /> {t("partnerPortal.connectTitle")}</CardTitle>
-            <CardDescription>{t("partnerPortal.connectDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5"><Label htmlFor="partner-api-key">{t("partnerPortal.apiKeyLabel")}</Label><Input id="partner-api-key" type="password" value={apiKeyInput} onChange={(event) => setApiKeyInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") connect(); }} placeholder="nw_…" autoComplete="off" /></div>
-            <Button className="w-full" onClick={connect} loading={profileQuery.isFetching}><Link2 className="mr-2 h-4 w-4" />{t("partnerPortal.connect")}</Button>
-            <p className="text-xs leading-relaxed text-slate-300">{t("partnerPortal.keyNeverStored")}</p>
-          </CardContent>
-        </Card>
+      {!user ? (
+        <Card className="mx-auto mt-8 max-w-xl"><CardContent className="p-8 text-center"><p className="font-semibold text-slate">{t("partnerPortal.signInRequired", { defaultValue: "Sign in to access your partner portal" })}</p><Button className="mt-4" onClick={() => window.location.assign("/login?next=/partner-portal")}>{t("partnerPortal.signIn", { defaultValue: "Sign in" })}</Button></CardContent></Card>
+      ) : !connected ? (
+        <Card className="mx-auto mt-8 max-w-xl"><CardContent className="p-8 text-center"><p className="font-semibold text-slate">{profileQuery.isError ? t("partnerPortal.notLinked", { defaultValue: "No API partner account is linked to this user." }) : t("partnerPortal.loading", { defaultValue: "Loading your partner account…" })}</p></CardContent></Card>
       ) : (
         <div className="mt-8 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-300 bg-ink-50 p-4">

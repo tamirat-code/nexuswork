@@ -1,5 +1,5 @@
 import { getCookie, AUTH_COOKIE } from "../auth/auth.cookies.js";
-import { authenticateApiKey, markApiKeyUsed } from "./api-partners.service.js";
+import { authenticateApiKey, getBrowserPartner, markApiKeyUsed } from "./api-partners.service.js";
 import { consumePartnerRequest } from "./api-usage.service.js";
 
 export async function requirePartnerApiKey(req, res, next) {
@@ -46,4 +46,13 @@ export function requirePartnerScope(scope) {
     }
     next();
   };
+}
+
+export async function requireBrowserPartner(req, _res, next) {
+  try {
+    req.apiPartner = await getBrowserPartner(req.user);
+    next();
+  } catch (error) {
+    next(error);
+  }
 }

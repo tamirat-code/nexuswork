@@ -1,4 +1,19 @@
-import { partnerApiRequest } from "../../lib/http.js";
+import { apiRequest, partnerApiRequest } from "../../lib/http.js";
+
+const browserBase = "/api-partners/portal";
+const browserRequest = (path = "", options = {}) => apiRequest(`${browserBase}${path}`, options);
+
+export const getBrowserPartnerProfile = (token) => browserRequest("/", { token });
+export const listBrowserPartnerKeys = (token) => browserRequest("/keys", { token });
+export const createBrowserPartnerKey = (payload, token) => browserRequest("/keys", { method: "POST", body: payload, token });
+export const revokeBrowserPartnerKey = (keyId, token) => browserRequest(`/keys/${keyId}/revoke`, { method: "POST", token });
+export const getBrowserPartnerBilling = (token) => browserRequest("/billing", { token });
+export const listBrowserPartnerWebhooks = (token) => browserRequest("/webhooks", { token });
+export const createBrowserPartnerWebhook = (payload, token) => browserRequest("/webhooks", { method: "POST", body: payload, token });
+export const updateBrowserPartnerWebhook = (id, payload, token) => browserRequest(`/webhooks/${id}`, { method: "PATCH", body: payload, token });
+export const rotateBrowserPartnerWebhookSecret = (id, token) => browserRequest(`/webhooks/${id}/rotate-secret`, { method: "POST", token });
+export const disableBrowserPartnerWebhook = (id, token) => browserRequest(`/webhooks/${id}`, { method: "DELETE", token });
+export const listBrowserPartnerWebhookDeliveries = (token) => browserRequest("/webhook-deliveries", { token });
 
 export const getPartnerProfile = (apiKey) => partnerApiRequest("/me", { apiKey });
 export const listPartnerKeys = (apiKey) => partnerApiRequest("/me/keys", { apiKey });
