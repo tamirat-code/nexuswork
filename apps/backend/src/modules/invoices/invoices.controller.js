@@ -5,6 +5,7 @@ import { createInvoice, createOrganizationInvoice, listInvoicesForUser, getInvoi
 import { renderInvoicePdf } from "../../templates/invoice/invoice.pdf.js";
 import { renderInvoiceCsv } from "../../templates/invoice/invoice.csv.js";
 import { assertClientOnContract, assertInvoiceAccess } from "../../shared/authorization/resource-authorization.js";
+import { createInvoicePayment } from "./invoice-payments.service.js";
 
 export const postInvoice = asyncHandler(async (req, res) => {
   requireFields(req.body, ["contract_id", "amount", "line_items"]);
@@ -31,6 +32,23 @@ export const postOrganizationInvoice = asyncHandler(async (req, res) => {
     auditContext: { actor: req.user, correlationId: req.correlationId },
   });
   res.status(201).json({ success: true, data: invoice });
+});
+
+export const postInvoicePaymentIntent = asyncHandler(async (req, res) => {
+  await assertInvoiceAccess({ invoiceId: req.params.id, req, role: "client" });
+  const payment = await createInvoicePayment({
+    invoiceId: req.params.id,
+    requestingUserId: req.user._id,
+    auditContext: { actor: req.user, correlationId: req.correlationId },
+  });
+  res.status(201).json({
+    success: true,
+    data: {
+      ...payment.toObject(),
+      client_secret: payment.provider_checkout_url,
+      payment_intent_id: payment.provider_payment_id,
+    },
+  });
 });
 
 export const getInvoices = asyncHandler(async (req, res) => {

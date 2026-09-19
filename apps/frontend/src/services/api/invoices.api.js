@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 export const listMyInvoices = (token) => apiRequest("/invoices", { token });
 export const getInvoice = (id, token) => apiRequest(`/invoices/${id}`, { token });
+export const createInvoicePaymentIntent = (id, token) => apiRequest(`/invoices/${id}/payment-intent`, { method: "POST", token });
 
 export async function downloadInvoice(id, token, format = "pdf") {
   const res = await authenticatedFetch(`${API_BASE_URL}/invoices/${id}/download?format=${format}`, {

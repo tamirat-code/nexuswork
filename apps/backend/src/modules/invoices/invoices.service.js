@@ -108,29 +108,22 @@ export async function createOrganizationInvoice({ organizationId, milestoneIds, 
     select: "client_id student_id organization_id terms",
   }).lean();
   if (milestones.length !== ids.length) throw new NotFoundError("One or more milestones were not found");
-  const payments = await Payment.find({ milestone_id: { $in: milestones.map((m) => m._id) }, direction: "deposit", status: "succeeded" }).lean();
-  const byMilestone = new Map(payments.map((payment) => [String(payment.milestone_id), payment]));
   const lines = [];
   let currency;
   let totalMinor = 0;
-  const journalIds = [];
   for (const milestone of milestones) {
     const contract = milestone.contract_id;
     if (!contract || String(contract.organization_id) !== String(organizationId)) {
       throw new ForbiddenError("Every milestone must belong to the selected organization");
     }
-    const payment = byMilestone.get(String(milestone._id));
-    if (!payment || !payment.ledger_journal_id || !payment.provider_reference && !payment.provider_payment_id) {
-      throw new ValidationError("Every milestone must have definitive provider confirmation before invoicing");
+    if (!["not_funded", "funding_pending"].includes(milestone.status)) {
+      throw new ValidationError("Only unfunded milestones can be added to a new consolidated invoice");
     }
-    const journal = await FinancialJournal.findOne({ _id: payment.ledger_journal_id, source_type: "payment" }).lean();
-    if (!journal) throw new ValidationError("Every invoice line must reconcile to the financial ledger");
-    const lineCurrency = String(payment.currency).toLowerCase();
+    const lineCurrency = String(milestone.currency || "usd").toLowerCase();
     if (currency && currency !== lineCurrency) throw new ValidationError("Create separate invoices for each currency");
     currency = lineCurrency;
-    const amountMinor = Number.isSafeInteger(payment.amount_minor) ? payment.amount_minor : Math.round(Number(payment.amount) * 100);
+    const amountMinor = Number.isSafeInteger(milestone.amount_minor) ? milestone.amount_minor : Math.round(Number(milestone.amount) * 100);
     totalMinor += amountMinor;
-    journalIds.push(String(journal._id));
     lines.push({
       description: `Milestone: ${milestone.title}`,
       quantity: 1,
@@ -138,8 +131,6 @@ export async function createOrganizationInvoice({ organizationId, milestoneIds, 
       unit_price_minor: amountMinor,
       contract_id: contract._id,
       milestone_id: milestone._id,
-      provider_reference: payment.provider_reference || payment.provider_payment_id,
-      ledger_journal_id: String(journal._id),
     });
   }
   if (mode === "net_30" && organization.credit_limit_minor > 0 &&
@@ -161,10 +152,7 @@ export async function createOrganizationInvoice({ organizationId, milestoneIds, 
     status: "sent",
     due_date: dueDate || (mode === "net_30" ? new Date(Date.now() + 30 * 86400000) : new Date()),
     line_items: lines,
-    ledger_journal_ids: journalIds,
-    provider_reference: lines.map((line) => line.provider_reference).join(","),
-    reconciliation_status: "reconciled",
-    reconciled_at: new Date(),
+    reconciliation_status: "pending",
     consolidation_key: key,
   });
   if (mode === "net_30") {
@@ -179,7 +167,7 @@ export async function createOrganizationInvoice({ organizationId, milestoneIds, 
     previousState: null,
     newState: invoice.status,
     correlationId: auditContext.correlationId || crypto.randomUUID(),
-    metadata: { organizationId, milestoneIds: ids, billingMode: mode, ledgerJournalIds: journalIds },
+    metadata: { organizationId, milestoneIds: ids, billingMode: mode },
   });
   return invoice;
 }

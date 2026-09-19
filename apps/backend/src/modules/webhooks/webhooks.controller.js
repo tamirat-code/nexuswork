@@ -1,6 +1,7 @@
 import { getPaymentProvider } from "../payments/providers/index.js";
 import { confirmFunding } from "../milestones/milestones.service.js";
 import { markDepositFailed, handleDepositReversal } from "../payments/payments.service.js";
+import { confirmInvoicePayment, failInvoicePayment } from "../invoices/invoice-payments.service.js";
 import { markOnboardingStatus, updateWithdrawalFromPayoutEvent } from "../wallets/wallets.service.js";
 import { logger } from "../../shared/logger/logger.js";
 import WebhookEvent from "./webhookEvent.model.js";
@@ -30,13 +31,21 @@ async function confirmChapaReference(reference, req, providerEventId) {
   });
 }
 
+async function confirmInvoiceReference(reference, req, providerEventId) {
+  return confirmInvoicePayment(reference, {
+    correlationId: req.correlationId,
+    requestId: req.requestId || req.correlationId,
+    providerEventId,
+  });
+}
+
 export async function handleChapaCallback(req, res) {
   try {
     const reference = req.query.trx_ref || req.query.tx_ref;
     if (!reference || !/^[A-Za-z0-9_.:-]{4,200}$/.test(String(reference))) {
       return res.status(400).json({ success: false, message: "Payment reference is invalid" });
     }
-    const payment = await confirmChapaReference(reference, req, reference);
+    const payment = await confirmInvoiceReference(reference, req, reference) || await confirmChapaReference(reference, req, reference);
     if (!payment) return res.status(404).json({ success: false, message: "Payment reference is not recognized" });
     return res.json({ received: true, status: payment.status });
   } catch (err) {
@@ -87,7 +96,7 @@ export async function handleChapaWebhook(req, res) {
     }
     const reference = event.tx_ref || event.trx_ref;
     if (event.status === "success" || event.event === "charge.success") {
-      const payment = await confirmChapaReference(reference, req, eventId);
+      const payment = await confirmInvoiceReference(reference, req, eventId) || await confirmChapaReference(reference, req, eventId);
       if (!payment) throw new Error("Chapa event references an unknown payment");
     }
     if (["reversed", "refunded", "cancelled", "canceled", "failed"].includes(String(event.status || "").toLowerCase())) {
@@ -156,11 +165,13 @@ export async function handleStripeWebhook(req, res) {
   try {
     switch (event.type) {
       case "payment_intent.succeeded":
-        await confirmFunding(event.data.object.id, null, { correlationId: req.correlationId });
+        await confirmInvoicePayment(event.data.object.id, { correlationId: req.correlationId })
+          || await confirmFunding(event.data.object.id, null, { correlationId: req.correlationId });
         break;
 
       case "payment_intent.payment_failed":
-        await markDepositFailed(event.data.object.id, event.data.object.last_payment_error);
+        await failInvoicePayment(event.data.object.id, event.data.object.last_payment_error?.message)
+          || await markDepositFailed(event.data.object.id, event.data.object.last_payment_error);
         break;
 
       case "account.updated": {
