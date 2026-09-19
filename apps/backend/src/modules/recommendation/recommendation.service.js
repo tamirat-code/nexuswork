@@ -28,6 +28,28 @@ function scoreStudentBySkillOverlap(project, studentSkills) {
   return scoreBySkillOverlap(project, studentSkills || []);
 }
 
+async function rankClientStudentsWithAI(project, candidates) {
+  if (aiConfig.provider === "none" || !aiConfig.apiKey || !candidates.length) return null;
+  const prompt = `You are matching verified student freelancers to a client project.
+Project: ${JSON.stringify({ title: project.title, description: project.description?.slice(0, 1000), category: project.category, experience_level: project.experience_level, required_skills: project.required_skills })}.
+Candidates: ${JSON.stringify(candidates.map(({ profile, user }) => ({ id: String(user._id), name: user.name, skills: profile.skills, program: profile.program, bio: profile.bio?.slice(0, 300) })))}.
+Return ONLY a JSON array in this exact shape, best match first: [{"id":"student_id","score":85,"reason":"Matches the required skills."}].
+Use integer scores from 0 to 100 and reasons of no more than 18 words.`;
+  try {
+    const text = await callAIText(prompt, 700);
+    const parsed = JSON.parse((text || "[]").replace(/```json|```/gi, "").trim());
+    if (!Array.isArray(parsed)) return null;
+    const validIds = new Set(candidates.map(({ user }) => String(user._id)));
+    return [...new Map(parsed.filter((item) => validIds.has(String(item.id))).map((item) => [String(item.id), {
+      score: Math.max(0, Math.min(100, Math.round(Number(item.score) || 0))),
+      reason: String(item.reason || "AI matched this student to the project.").slice(0, 240),
+    }])).entries()];
+  } catch (error) {
+    logger.warn("[recommendation] client AI ranking failed, falling back to skill overlap:", error.message);
+    return null;
+  }
+}
+
 
 async function callAIText(prompt, maxTokens) {
   if (aiConfig.provider === "none" || !aiConfig.apiKey) return null;
@@ -199,13 +221,19 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
     .slice(0, 20);
 
   const userIds = shortlist.map((c) => c.profile.user_id);
-  const users = await User.find({ _id: { $in: userIds } }, "name avatarUrl").lean();
+  const users = await User.find({ _id: { $in: userIds }, role: "student", status: "active" }, "name avatarUrl").lean();
   const userById = new Map(users.map((u) => [String(u._id), u]));
+  const usable = shortlist.map(({ profile, score }) => ({ profile, score, user: userById.get(String(profile.user_id)) })).filter((item) => item.user);
+  const aiRanking = await rankClientStudentsWithAI(project, usable);
+  const aiById = new Map(aiRanking || []);
+  const ranked = [...usable].sort((a, b) => (aiById.get(String(b.user._id))?.score ?? b.score * 100) - (aiById.get(String(a.user._id))?.score ?? a.score * 100));
 
-  return shortlist.map(({ profile, score }) => ({
-    user: userById.get(String(profile.user_id)) || { _id: profile.user_id },
+  return ranked.map(({ profile, score, user }) => ({
+    user: { ...user, avatar_url: user.avatarUrl },
     skills: profile.skills,
-    match_score: Math.round(score * 100) / 100,
+    match_score: aiById.has(String(user._id)) ? aiById.get(String(user._id)).score / 100 : Math.round(score * 100) / 100,
+    ranking_source: aiById.has(String(user._id)) ? "ai" : "skill_overlap",
+    ai_reason: aiById.get(String(user._id))?.reason || null,
   }));
 }
 

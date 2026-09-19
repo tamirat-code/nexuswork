@@ -267,8 +267,6 @@ function RecommendedStudents({ projectId, token }) {
   });
 
   const matches = data?.data ?? [];
-  if (!isLoading && matches.length === 0) return null;
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -278,6 +276,8 @@ function RecommendedStudents({ projectId, token }) {
       <p className="text-sm text-slate-300">{t("projects.recommendedHint", { defaultValue: "Verified students whose skills best match this brief — no proposal required yet." })}</p>
 
       {isLoading && <><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></>}
+
+      {!isLoading && matches.length === 0 && <Card><CardContent className="p-5"><p className="text-sm text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "No verified students match these skills yet. Try adding more required skills or check back after students update their profiles." })}</p></CardContent></Card>}
 
       {matches.map((m) => (
         <Card key={m.user._id}>
@@ -289,6 +289,7 @@ function RecommendedStudents({ projectId, token }) {
               </Avatar>
               <div className="min-w-0">
                 <p className="truncate font-semibold text-slate">{m.user.name || "Student"}</p>
+                {m.ai_reason && <p className="mt-1 text-xs text-slate-300">{m.ai_reason}</p>}
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(m.skills || []).slice(0, 4).map((s) => (
                     <Badge key={s.name} variant="secondary" className="text-xs">{s.name}</Badge>

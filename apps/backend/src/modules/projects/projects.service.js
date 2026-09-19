@@ -12,7 +12,8 @@ export async function createProject(actingUserId, data) {
   const { on_behalf_of_client_id, organization_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
 
   if (projectData.category) projectData.category = normalizeCategory(projectData.category);
-  if (!(projectData.deadline instanceof Date) || projectData.deadline <= new Date()) {
+  if (projectData.deadline && !(projectData.deadline instanceof Date)) projectData.deadline = new Date(projectData.deadline);
+  if (!(projectData.deadline instanceof Date) || Number.isNaN(projectData.deadline.getTime()) || projectData.deadline <= new Date()) {
     throw new ValidationError("Project deadline must be in the future");
   }
 

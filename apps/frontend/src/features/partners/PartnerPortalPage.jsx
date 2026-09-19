@@ -94,7 +94,7 @@ export default function PartnerPortalPage() {
         <div className="mt-8 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-300 bg-ink-50 p-4">
             <div><p className="text-xs uppercase tracking-wider text-slate-300">{t("partnerPortal.connectedAs")}</p><p className="mt-1 font-display text-xl text-slate">{partner.name}</p></div>
-            <div className="flex items-center gap-2"><span className="rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs font-semibold text-teal"><Check className="mr-1 inline h-3.5 w-3.5" />{partner.status}</span><Button size="sm" variant="ghost" onClick={() => setApiKey("")}>{t("partnerPortal.disconnect")}</Button></div>
+            <div className="flex items-center gap-2"><span className="rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs font-semibold text-teal"><Check className="mr-1 inline h-3.5 w-3.5" />{partner.status}</span></div>
           </div>
 
           <SecretNotice secret={oneTimeSecret} onDismiss={() => setOneTimeSecret("")} t={t} />
