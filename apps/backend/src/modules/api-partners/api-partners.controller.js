@@ -3,11 +3,12 @@ import { ForbiddenError } from "../../shared/exceptions/AppError.js";
 import {
   createPartner, listPartners, getPartner, listPartnerKeys, createPartnerKey, revokePartnerKey, updatePartnerStatus,
     submitPartnerApplication, approvePartnerApplication,
-  listOwnPartnerKeys, createOwnPartnerKey, revokeOwnPartnerKey,
+  listOwnPartnerKeys, createOwnPartnerKey, revokeOwnPartnerKey, updatePartnerBillingMode,
 } from "./api-partners.service.js";
 import { getCurrentPartnerUsage } from "./api-usage.service.js";
 import { searchTalent } from "./talent-api.service.js";
 import { getPartnerBilling, listPartnerBilling, updatePartnerBillingStatus } from "./api-billing.service.js";
+import { createStripeBillingSetupIntent, saveStripePaymentMethod, chargePartnerUsageStatement, createEtbWalletTopUp } from "./api-billing-payments.service.js";
 import {
   createWebhookSubscription, listWebhookSubscriptions, updateWebhookSubscription, rotateWebhookSecret,
   disableWebhookSubscription, listWebhookDeliveries,
@@ -103,6 +104,27 @@ export const adminBilling = asyncHandler(async (req, res) => {
 export const updateBillingStatus = asyncHandler(async (req, res) => {
   requireAdmin(req);
   res.json({ success: true, data: await updatePartnerBillingStatus({ partnerId: req.params.partnerId, ledgerId: req.params.ledgerId, ...req.body, actor: req.user, req }) });
+});
+
+export const updateBillingMode = asyncHandler(async (req, res) => {
+  requireAdmin(req);
+  res.json({ success: true, data: await updatePartnerBillingMode({ partnerId: req.params.partnerId, billingMode: req.body.billing_mode, actor: req.user, req }) });
+});
+
+export const billingSetupIntent = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await createStripeBillingSetupIntent({ partnerId: req.params.partnerId, actor: req.user, req }) });
+});
+
+export const billingPaymentMethod = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await saveStripePaymentMethod({ partnerId: req.params.partnerId, paymentMethodId: req.body.payment_method_id, actor: req.user, req }) });
+});
+
+export const chargeBilling = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await chargePartnerUsageStatement({ ledgerId: req.params.ledgerId, actor: req.user, req }) });
+});
+
+export const walletTopUp = asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await createEtbWalletTopUp({ partnerId: req.params.partnerId, amountMinor: req.body.amount_minor, actor: req.user }) });
 });
 
 export const webhooks = asyncHandler(async (req, res) => {

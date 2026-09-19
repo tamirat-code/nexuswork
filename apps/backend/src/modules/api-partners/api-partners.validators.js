@@ -70,3 +70,15 @@ export const updateApiBillingStatusSchema = z.object({
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["settlement_error"], message: "Settlement error is required when marking an invoice failed" });
   }
 });
+
+export const stripePaymentMethodSchema = z.object({
+  payment_method_id: z.string().trim().min(3).max(200),
+});
+
+export const apiWalletTopUpSchema = z.object({
+  amount_minor: z.coerce.number().int().min(100),
+});
+
+export const apiBillingModeSchema = z.object({
+  billing_mode: z.enum(["manual", "prepaid_etb", "stripe_usage"]),
+});

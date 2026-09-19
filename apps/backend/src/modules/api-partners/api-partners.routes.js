@@ -2,13 +2,13 @@ import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { validateBody, validateParams, validateQuery } from "../../shared/validators/ZodValidator.js";
 import {
-  createPartnerSchema, submitPartnerApplicationSchema, createApiKeySchema, updatePartnerStatusSchema, apiPartnerParamsSchema, apiKeyParamsSchema, ownKeyParamsSchema, apiBillingStatusParamsSchema, updateApiBillingStatusSchema,
+  createPartnerSchema, submitPartnerApplicationSchema, createApiKeySchema, updatePartnerStatusSchema, apiPartnerParamsSchema, apiKeyParamsSchema, ownKeyParamsSchema, apiBillingStatusParamsSchema, updateApiBillingStatusSchema, stripePaymentMethodSchema, apiWalletTopUpSchema, apiBillingModeSchema,
   talentSearchQuerySchema, createWebhookSubscriptionSchema, updateWebhookSubscriptionSchema, webhookParamsSchema, partnerLimitQuerySchema,
 } from "./api-partners.validators.js";
 import {
   create, apply, approve, list, get, keys, createKey, revokeKey, updateStatus, updateBillingStatus, profile, talentSearch,
   selfKeys, selfCreateKey, selfRevokeKey, usage, billing,
-  adminBilling, webhooks, createWebhook, updateWebhook, rotateWebhook, disableWebhook, webhookDeliveries,
+  adminBilling, webhooks, createWebhook, updateWebhook, rotateWebhook, disableWebhook, webhookDeliveries, billingSetupIntent, billingPaymentMethod, chargeBilling, walletTopUp, updateBillingMode,
 } from "./api-partners.controller.js";
 import { requirePartnerApiKey, requirePartnerScope } from "./api-partners.middleware.js";
 
@@ -21,9 +21,14 @@ adminRouter.get("/:partnerId", validateParams(apiPartnerParamsSchema), get);
 adminRouter.get("/:partnerId/keys", validateParams(apiPartnerParamsSchema), keys);
 adminRouter.post("/:partnerId/keys", validateParams(apiPartnerParamsSchema), validateBody(createApiKeySchema), createKey);
 adminRouter.patch("/:partnerId/status", validateParams(apiPartnerParamsSchema), validateBody(updatePartnerStatusSchema), updateStatus);
+adminRouter.patch("/:partnerId/billing/mode", validateParams(apiPartnerParamsSchema), validateBody(apiBillingModeSchema), updateBillingMode);
 adminRouter.post("/:partnerId/keys/:keyId/revoke", validateParams(apiKeyParamsSchema), revokeKey);
 adminRouter.get("/:partnerId/billing", validateParams(apiPartnerParamsSchema), validateQuery(partnerLimitQuerySchema), adminBilling);
 adminRouter.patch("/:partnerId/billing/:ledgerId/status", validateParams(apiBillingStatusParamsSchema), validateBody(updateApiBillingStatusSchema), updateBillingStatus);
+adminRouter.post("/:partnerId/billing/stripe/setup-intent", validateParams(apiPartnerParamsSchema), billingSetupIntent);
+adminRouter.post("/:partnerId/billing/stripe/payment-method", validateParams(apiPartnerParamsSchema), validateBody(stripePaymentMethodSchema), billingPaymentMethod);
+adminRouter.post("/:partnerId/billing/:ledgerId/charge", validateParams(apiBillingStatusParamsSchema), chargeBilling);
+adminRouter.post("/:partnerId/wallet/topup", validateParams(apiPartnerParamsSchema), validateBody(apiWalletTopUpSchema), walletTopUp);
 
 const partnerRouter = Router();
 partnerRouter.use(requirePartnerApiKey);

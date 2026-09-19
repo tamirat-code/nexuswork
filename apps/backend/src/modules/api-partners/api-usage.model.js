@@ -6,6 +6,7 @@ const apiUsageSchema = new mongoose.Schema(
     period_start: { type: Date, required: true },
     period_end: { type: Date, required: true },
     request_count: { type: Number, default: 0, min: 0 },
+    wallet_debited_minor: { type: Number, default: 0, min: 0 },
     data_read_count: { type: Number, default: 0, min: 0 },
     export_count: { type: Number, default: 0, min: 0 },
     thresholds_notified: { type: [Number], default: [] },

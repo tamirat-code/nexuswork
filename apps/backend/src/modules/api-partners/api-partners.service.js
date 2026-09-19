@@ -13,6 +13,23 @@ const TIER_DEFAULTS = Object.freeze({
   enterprise: { monthlyQuota: env.partnerEnterpriseMonthlyQuota, requestsPerMinute: env.partnerEnterpriseRequestsPerMinute, pricePerThousandMinor: env.partnerEnterprisePricePerThousandMinor },
 });
 
+export function tierEtbPricing(tier) {
+  return ({
+    sandbox: env.partnerSandboxEtbPricePerThousandMinor,
+    growth: env.partnerGrowthEtbPricePerThousandMinor,
+    enterprise: env.partnerEnterpriseEtbPricePerThousandMinor,
+  }[tier] || env.partnerSandboxEtbPricePerThousandMinor);
+}
+
+export async function updatePartnerBillingMode({ partnerId, billingMode, actor, req }) {
+  if (actor?.role !== "admin") throw new ForbiddenError("Only administrators can change API billing mode");
+  if (!["manual", "prepaid_etb", "stripe_usage"].includes(billingMode)) throw new ValidationError("Invalid API billing mode");
+  const partner = await ApiPartner.findByIdAndUpdate(partnerId, { $set: { billing_mode: billingMode } }, { new: true });
+  if (!partner) throw new NotFoundError("API partner not found");
+  await audit(actor, "api_partner_billing_mode_updated", "api_partner.billing_mode_updated", "api_partner", partner._id, { billing_mode: billingMode }, req);
+  return { ...partner.toObject(), ...tierLimits(partner.tier) };
+}
+
 export function hashApiKey(apiKey) {
   return crypto.createHash("sha256").update(String(apiKey)).digest("hex");
 }

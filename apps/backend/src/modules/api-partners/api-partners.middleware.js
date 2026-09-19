@@ -21,7 +21,12 @@ export async function requirePartnerApiKey(req, res, next) {
     if (usage.rate?.resetAt) res.setHeader("X-RateLimit-Reset", String(Math.ceil(usage.rate.resetAt.getTime() / 1000)));
     if (!usage.allowed) {
       res.setHeader("Retry-After", String(usage.retryAfterSeconds));
-      return res.status(429).json({ success: false, code: usage.code, message: usage.code === "PARTNER_RATE_LIMITED" ? "Partner API rate limit exceeded" : "Partner API monthly quota exceeded", retry_after_seconds: usage.retryAfterSeconds, usage: usage.usage });
+      const message = usage.code === "PARTNER_RATE_LIMITED"
+        ? "Partner API rate limit exceeded"
+        : usage.code === "PARTNER_MONTHLY_QUOTA_EXCEEDED"
+          ? "Partner API monthly quota exceeded"
+          : "Partner prepaid balance exhausted";
+      return res.status(429).json({ success: false, code: usage.code, message, retry_after_seconds: usage.retryAfterSeconds, usage: usage.usage });
     }
     req.apiUsage = usage.usage;
     next();

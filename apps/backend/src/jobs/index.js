@@ -8,6 +8,7 @@ import { reconcilePendingReleases, reconcilePendingRefunds } from "../modules/pa
 import JobLock from "./job-lock.model.js";
 import { dispatchDueWebhookDeliveries } from "../modules/api-partners/api-webhooks.service.js";
 import { evaluateAtRiskMilestones } from "../modules/oversight/index.js";
+import { chargeDueStripePartnerStatements } from "../modules/api-partners/api-billing-payments.service.js";
 
 const JOB_LOCK_TTL_MS = 4 * 60 * 1000;
 
@@ -102,11 +103,24 @@ export function registerJobs() {
   }, 5 * 60 * 1000);
   oversightTimer.unref?.();
 
+  const apiBillingTimer = setInterval(async () => {
+    await withJobLock("api-stripe-usage-billing", async () => {
+      try {
+        const result = await chargeDueStripePartnerStatements({ limit: 100 });
+        if (result.checked) console.log("[jobs] API billing checked=" + result.checked + " charged=" + result.charged + " failed=" + result.failed);
+      } catch (error) {
+        console.error("[jobs] API billing failed:", error.message);
+      }
+    });
+  }, 60 * 60 * 1000);
+  apiBillingTimer.unref?.();
+
   return () => {
     clearInterval(timer);
     clearInterval(reconciliationTimer);
     clearInterval(refundReconciliationTimer);
     clearInterval(webhookDeliveryTimer);
     clearInterval(oversightTimer);
+    clearInterval(apiBillingTimer);
   };
 }

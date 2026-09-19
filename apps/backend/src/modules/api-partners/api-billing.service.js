@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import ApiBillingLedger from "./api-billing-ledger.model.js";
 import { monthWindow } from "./api-windows.js";
-import { tierPricing } from "./api-partners.service.js";
+import { tierPricing, tierEtbPricing } from "./api-partners.service.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { postJournal } from "../financial-ledger/financial-ledger.service.js";
@@ -17,7 +17,9 @@ export function calculateUsageAmountMinor(requestCount, pricePer1000Minor) {
 
 export async function recordPartnerBillingUsage(partner, now = new Date()) {
   const { start, end } = monthWindow(now);
-  const pricePerThousandMinor = tierPricing(partner.tier);
+  const prepaid = partner.billing_mode === "prepaid_etb";
+  const pricePerThousandMinor = prepaid ? tierEtbPricing(partner.tier) : tierPricing(partner.tier);
+  const billingCurrency = prepaid ? "etb" : "usd";
   try {
     const statement = await ApiBillingLedger.findOneAndUpdate(
       { partner_id: partner._id, period_start: start },
@@ -31,7 +33,7 @@ export async function recordPartnerBillingUsage(partner, now = new Date()) {
         $setOnInsert: {
           partner_id: partner._id,
           period_start: start,
-          currency: "usd",
+          currency: billingCurrency,
           invoice_number: invoiceNumber(partner._id, start),
           status: "open",
         },
@@ -68,7 +70,9 @@ function present(statement) {
 
 export async function getPartnerBilling(partner, now = new Date()) {
   const { start, end } = monthWindow(now);
-  const pricePerThousandMinor = tierPricing(partner.tier);
+  const prepaid = partner.billing_mode === "prepaid_etb";
+  const pricePerThousandMinor = prepaid ? tierEtbPricing(partner.tier) : tierPricing(partner.tier);
+  const billingCurrency = prepaid ? "etb" : "usd";
   const statement = await ApiBillingLedger.findOne({ partner_id: partner._id, period_start: start }).lean();
   const history = await ApiBillingLedger.find({ partner_id: partner._id, period_start: { $ne: start } })
     .sort({ period_start: -1 }).limit(12).lean();
@@ -78,7 +82,7 @@ export async function getPartnerBilling(partner, now = new Date()) {
         partner_id: partner._id,
         period_start: start,
         period_end: end,
-        currency: "usd",
+        currency: billingCurrency,
         status: "open",
         request_count: 0,
         price_per_1000_minor: pricePerThousandMinor,

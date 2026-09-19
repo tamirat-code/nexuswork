@@ -15,6 +15,13 @@ const apiPartnerSchema = new mongoose.Schema(
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     suspended_at: { type: Date },
     suspended_reason: { type: String, trim: true, maxlength: 500 },
+    billing_mode: { type: String, enum: ["manual", "prepaid_etb", "stripe_usage"], default: "manual" },
+    wallet_currency: { type: String, enum: ["etb"], default: "etb" },
+    wallet_balance_minor: { type: Number, min: 0, default: 0 },
+    stripe_customer_id: { type: String, trim: true },
+    stripe_payment_method_id: { type: String, trim: true },
+    stripe_payment_method_brand: { type: String, trim: true },
+    stripe_payment_method_last4: { type: String, trim: true, maxlength: 4 },
   },
   { timestamps: true }
 );

@@ -12,9 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/shadcn/select.jsx";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/shadcn/dialog.jsx";
 import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
+import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { stripePromise } from "../../lib/stripeClient.js";
 import {
   createApiPartner, createApiPartnerKey, listApiPartnerBilling, listApiPartnerKeys, listApiPartners,
   revokeApiPartnerKey, updateApiPartnerStatus,
+  updateApiPartnerBillingMode, createStripeBillingSetupIntent, saveStripeBillingPaymentMethod, createApiWalletTopUp,
 } from "../../services/api/api-partners.admin.api.js";
 
 const TIERS = ["sandbox", "growth", "enterprise"];
@@ -55,6 +58,22 @@ function ScopePicker({ scopes, selected, onChange, t }) {
       </div>
     </div>
   );
+}
+
+function StripeBillingSetup({ partnerId, token, clientSecret, onSaved }) {
+  const { t } = useTranslation();
+  const stripe = useStripe();
+  const elements = useElements();
+  const save = useMutation({ mutationFn: (paymentMethodId) => saveStripeBillingPaymentMethod(partnerId, paymentMethodId, token), onSuccess: onSaved });
+  async function submit(event) {
+    event.preventDefault();
+    if (!stripe || !elements) return;
+    const result = await stripe.confirmSetup({ elements, redirect: "if_required" });
+    if (result.error) return toast.error(result.error.message || t("admin.apiBillingSetupFailed", { defaultValue: "Could not save payment method" }));
+    const paymentMethodId = typeof result.setupIntent?.payment_method === "string" ? result.setupIntent.payment_method : result.setupIntent?.payment_method?.id;
+    if (paymentMethodId) save.mutate(paymentMethodId);
+  }
+  return <form onSubmit={submit} className="space-y-4"><PaymentElement /><Button type="submit" disabled={!stripe || !elements || save.isPending} loading={save.isPending}>{t("admin.savePaymentMethod", { defaultValue: "Save payment method" })}</Button></form>;
 }
 
 function CreatePartnerDialog({ token, onCreated }) {
@@ -102,6 +121,8 @@ export default function ApiPartnersAdminPanel({ token }) {
   const [keyName, setKeyName] = useState("");
   const [keyScopes, setKeyScopes] = useState(["talent:read"]);
   const [statusTarget, setStatusTarget] = useState(null);
+  const [setupIntent, setSetupIntent] = useState(null);
+  const [topUpAmount, setTopUpAmount] = useState("10000");
 
   const partnersQuery = useQuery({ queryKey: ["admin-api-partners"], queryFn: () => listApiPartners(token), enabled: Boolean(token) });
   const partners = partnersQuery.data?.data || [];
@@ -128,6 +149,21 @@ export default function ApiPartnersAdminPanel({ token }) {
   const changeStatus = useMutation({
     mutationFn: ({ id, status }) => updateApiPartnerStatus(id, { status }, token),
     onSuccess: () => { setStatusTarget(null); refresh(); toast.success(t("admin.apiPartnerStatusUpdated")); },
+    onError: (error) => toast.error(error.message),
+  });
+  const changeBillingMode = useMutation({
+    mutationFn: (billing_mode) => updateApiPartnerBillingMode(partnerId, billing_mode, token),
+    onSuccess: () => { refresh(); toast.success(t("admin.apiBillingModeUpdated", { defaultValue: "Billing mode updated" })); },
+    onError: (error) => toast.error(error.message),
+  });
+  const setupBilling = useMutation({
+    mutationFn: () => createStripeBillingSetupIntent(partnerId, token),
+    onSuccess: (response) => setSetupIntent(response.data),
+    onError: (error) => toast.error(error.message || t("admin.apiBillingSetupFailed", { defaultValue: "Could not start payment setup" })),
+  });
+  const topUp = useMutation({
+    mutationFn: () => createApiWalletTopUp(partnerId, Math.round(Number(topUpAmount) * 100), token),
+    onSuccess: (response) => window.location.assign(response.data.checkout_url),
     onError: (error) => toast.error(error.message),
   });
 
@@ -164,9 +200,12 @@ export default function ApiPartnersAdminPanel({ token }) {
         )}
       </div>
 
-      {selectedPartner && <Card><CardHeader><CardTitle className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-brass" />{t("admin.apiBillingTitle")}</CardTitle><CardDescription>{t("admin.apiBillingDescription")}</CardDescription></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-4">{[{ label: t("admin.apiBillStatus"), value: currentBill?.status || "open" }, { label: t("admin.apiBillRequests"), value: (currentBill?.request_count || 0).toLocaleString() }, { label: t("admin.apiBillRate"), value: formatAmount(currentBill?.price_per_1000_minor || 0, currentBill?.currency) + " / 1,000" }, { label: t("admin.apiBillAmount"), value: formatAmount(currentBill?.amount_minor || 0, currentBill?.currency) }].map((item) => <div key={item.label} className="rounded-lg border border-ink-300 p-4"><p className="text-xs text-slate-300">{item.label}</p><p className="mt-2 font-display text-xl text-slate">{item.value}</p></div>)}</div><p className="mt-4 flex items-center gap-2 text-xs leading-relaxed text-slate-300"><Activity className="h-4 w-4 shrink-0 text-teal" />{t("admin.apiPaymentStatusHint")}</p>{billingQuery.isLoading && <p className="mt-3 text-xs text-slate-300">{t("admin.loading")}</p>}</CardContent></Card>}
+      {selectedPartner && <Card><CardHeader><CardTitle className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-brass" />{t("admin.apiBillingTitle")}</CardTitle><CardDescription>{t("admin.apiBillingDescription")}</CardDescription></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{[{ label: t("admin.apiBillStatus"), value: currentBill?.status || "open" }, { label: t("admin.apiBillRequests"), value: (currentBill?.request_count || 0).toLocaleString() }, { label: t("admin.apiBillRate"), value: formatAmount(currentBill?.price_per_1000_minor || 0, currentBill?.currency) + " / 1,000" }, { label: t("admin.apiBillAmount"), value: formatAmount(currentBill?.amount_minor || 0, currentBill?.currency) }, { label: t("admin.apiWalletBalance", { defaultValue: "ETB wallet balance" }), value: formatAmount(selectedPartner.wallet_balance_minor || 0, "etb") }].map((item) => <div key={item.label} className="rounded-lg border border-ink-300 p-4"><p className="text-xs text-slate-300">{item.label}</p><p className="mt-2 font-display text-xl text-slate">{item.value}</p></div>)}</div><div className="mt-4 flex flex-wrap items-end gap-2"><label className="text-xs text-slate-300">{t("admin.apiBillingMode", { defaultValue: "Billing mode" })}<select className="ml-2 h-9 rounded border border-ink-300 bg-ink-100 px-2 text-sm text-slate" value={selectedPartner.billing_mode || "manual"} onChange={(event) => changeBillingMode.mutate(event.target.value)}><option value="manual">{t("admin.manualBilling", { defaultValue: "Manual" })}</option><option value="prepaid_etb">{t("admin.chapaPrepaidEtb", { defaultValue: "Chapa prepaid ETB" })}</option><option value="stripe_usage">{t("admin.stripeMonthlyUsage", { defaultValue: "Stripe monthly usage" })}</option></select></label>{selectedPartner.billing_mode === "stripe_usage" && <Button size="sm" variant="outline" loading={setupBilling.isPending} onClick={() => setupBilling.mutate()}>{t("admin.savePaymentMethod", { defaultValue: "Save payment method" })}</Button>}{selectedPartner.billing_mode === "prepaid_etb" && <><Input className="w-32" type="number" min="1" value={topUpAmount} onChange={(event) => setTopUpAmount(event.target.value)} aria-label={t("admin.etbTopUpAmount", { defaultValue: "ETB top-up amount" })} /><Button size="sm" loading={topUp.isPending} onClick={() => topUp.mutate()}>{t("admin.topUpWallet", { defaultValue: "Top up ETB wallet" })}</Button></>}</div><div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-300"><span>{t("admin.apiSettlementStatus", { defaultValue: "Settlement" })}: <strong className="text-slate">{currentBill?.settlement_status || t("admin.notApplicable", { defaultValue: "Not applicable" })}</strong></span><span>{t("admin.apiReconciliationStatus", { defaultValue: "Reconciliation" })}: <strong className="text-slate">{currentBill?.reconciliation_status || t("admin.pending", { defaultValue: "Pending" })}</strong></span>{selectedPartner.stripe_payment_method_last4 && <span>{t("admin.savedCard", { defaultValue: "Saved card" })}: <strong className="text-slate">{selectedPartner.stripe_payment_method_brand || "card"} •••• {selectedPartner.stripe_payment_method_last4}</strong></span>}</div>{billing.length > 1 && <div className="mt-5 space-y-2 border-t border-ink-300 pt-4"><p className="text-sm font-semibold text-slate">{t("admin.apiStatementHistory", { defaultValue: "Statement history" })}</p>{billing.slice(1, 5).map((statement) => <div key={statement._id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink-300 p-3 text-xs"><span className="text-slate-300">{statement.invoice_number} · {statement.request_count.toLocaleString()} {t("admin.requests", { defaultValue: "requests" })}</span><span className="font-semibold text-slate">{formatAmount(statement.amount_minor, statement.currency)} · {statement.status}</span></div>)}</div>}<p className="mt-4 flex items-center gap-2 text-xs leading-relaxed text-slate-300"><Activity className="h-4 w-4 shrink-0 text-teal" />{t("admin.apiPaymentStatusHint")}</p>{billingQuery.isLoading && <p className="mt-3 text-xs text-slate-300">{t("admin.loading")}</p>}</CardContent></Card>}
 
       <ConfirmDialog open={Boolean(statusTarget)} loading={changeStatus.isPending} onCancel={() => setStatusTarget(null)} onConfirm={() => changeStatus.mutate({ id: statusTarget.partner._id, status: statusTarget.status })} tone="danger" confirmLabel={statusTarget?.status === "revoked" ? t("admin.revokePartner") : t("admin.suspend")} title={t("admin.confirmPartnerStatusTitle")} description={t("admin.confirmPartnerStatusDescription", { name: statusTarget?.partner?.name, status: statusTarget?.status })} />
+      <Dialog open={Boolean(setupIntent)} onOpenChange={(open) => !open && setSetupIntent(null)}>
+        <DialogContent><DialogHeader><DialogTitle>{t("admin.savePaymentMethod", { defaultValue: "Save payment method" })}</DialogTitle><DialogDescription>{t("admin.apiBillingSetupHint", { defaultValue: "The saved card will be charged automatically for monthly API usage." })}</DialogDescription></DialogHeader>{setupIntent && <Elements stripe={stripePromise} options={{ clientSecret: setupIntent.client_secret, appearance: { theme: "night" } }}><StripeBillingSetup partnerId={partnerId} token={token} clientSecret={setupIntent.client_secret} onSaved={() => { setSetupIntent(null); refresh(); toast.success(t("admin.apiPaymentMethodSaved", { defaultValue: "Payment method saved" })); }} /></Elements>}</DialogContent>
+      </Dialog>
     </div>
   );
 }

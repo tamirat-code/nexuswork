@@ -4,6 +4,7 @@ import { tierLimits } from "./api-partners.service.js";
 import { recordPartnerBillingUsage } from "./api-billing.service.js";
 import { monthWindow, minuteWindow } from "./api-windows.js";
 import { publishPartnerEvent } from "./api-webhooks.service.js";
+import { debitEtbWallet, creditEtbWallet, etbRequestCostMinor } from "./api-billing-payments.service.js";
 
 export { monthWindow, minuteWindow } from "./api-windows.js";
 
@@ -28,6 +29,10 @@ async function incrementWithLimit(Model, filter, limit, defaults, increment = { 
 
 export async function consumePartnerRequest(partner, now = new Date()) {
   const limits = tierLimits(partner.tier);
+  const prepaidCost = partner.billing_mode === "prepaid_etb" ? etbRequestCostMinor(partner) : 0;
+  if (prepaidCost && !await debitEtbWallet(partner, prepaidCost)) {
+    return { allowed: false, code: "PARTNER_PREPAID_BALANCE_EXHAUSTED", retryAfterSeconds: 3600, usage: { requestCount: 0, quota: limits.monthlyQuota, remaining: 0 } };
+  }
   const minute = minuteWindow(now);
   const rate = await incrementWithLimit(
     ApiRateLimitBucket,
@@ -37,6 +42,7 @@ export async function consumePartnerRequest(partner, now = new Date()) {
   );
 
   if (!rate) {
+    if (prepaidCost) await creditEtbWallet(partner._id, prepaidCost);
     return {
       allowed: false,
       code: "PARTNER_RATE_LIMITED",
@@ -51,10 +57,11 @@ export async function consumePartnerRequest(partner, now = new Date()) {
     { partner_id: partner._id, period_start: month.start },
     limits.monthlyQuota,
     { partner_id: partner._id, period_start: month.start, period_end: month.end },
-    { request_count: 1 }
+    { request_count: 1, ...(prepaidCost ? { wallet_debited_minor: prepaidCost } : {}) }
   );
 
   if (!usage) {
+    if (prepaidCost) await creditEtbWallet(partner._id, prepaidCost);
     return {
       allowed: false,
       code: "PARTNER_MONTHLY_QUOTA_EXCEEDED",
