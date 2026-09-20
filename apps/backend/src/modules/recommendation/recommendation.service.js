@@ -33,8 +33,10 @@ async function rankClientStudentsWithAI(project, candidates) {
   const projectContext = JSON.stringify({ title: project.title, description: project.description?.slice(0, 1000), category: project.category, experience_level: project.experience_level, required_skills: project.required_skills });
   const ranked = new Map();
   const batchSize = 30;
-  for (let start = 0; start < candidates.length; start += batchSize) {
-    const batch = candidates.slice(start, start + batchSize);
+  const batches = [];
+  for (let start = 0; start < candidates.length; start += batchSize) batches.push(candidates.slice(start, start + batchSize));
+
+  async function rankBatch(batch, batchNumber) {
     const prompt = `You are matching verified student freelancers to a client project.
 Project: ${projectContext}.
 Candidates (evaluate every candidate and every listed skill): ${JSON.stringify(batch.map(({ profile, user }) => ({ id: String(user._id), name: user.name, skills: profile.skills, program: profile.program, bio: profile.bio?.slice(0, 300) })))}.
@@ -43,15 +45,22 @@ Use integer scores from 0 to 100 and reasons of no more than 18 words.`;
     try {
       const text = await callAIText(prompt, 900);
       const parsed = JSON.parse((text || "[]").replace(/```json|```/gi, "").trim());
-      if (!Array.isArray(parsed)) continue;
+      if (!Array.isArray(parsed)) return;
       const validIds = new Set(batch.map(({ user }) => String(user._id)));
       parsed.filter((item) => validIds.has(String(item.id))).forEach((item) => ranked.set(String(item.id), {
         score: Math.max(0, Math.min(100, Math.round(Number(item.score) || 0))),
         reason: String(item.reason || "AI matched this student to the project.").slice(0, 240),
       }));
     } catch (error) {
-      logger.warn(`[recommendation] client AI batch ${start / batchSize + 1} failed:`, error.message);
+      logger.warn(`[recommendation] client AI batch ${batchNumber} failed:`, error.message);
     }
+  }
+
+  // Keep a small concurrency limit so the complete pool is evaluated quickly
+  // without flooding Groq or triggering provider rate limits.
+  const concurrency = 4;
+  for (let start = 0; start < batches.length; start += concurrency) {
+    await Promise.all(batches.slice(start, start + concurrency).map((batch, index) => rankBatch(batch, start + index + 1)));
   }
   return ranked.size ? [...ranked.entries()] : null;
 }
