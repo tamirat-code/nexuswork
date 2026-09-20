@@ -179,7 +179,7 @@ export default function PostProjectPage() {
     onSuccess: (response) => {
       toast.success(t("projectsForm.projectPosted"));
       const projectId = response?.data?._id;
-      navigate(projectId ? `/projects/${projectId}` : "/projects");
+      navigate(projectId ? `/projects/${projectId}#recommendations` : "/projects");
     },
     onError: (err) => toast.error(err.message || t("projectsForm.postError")),
   });

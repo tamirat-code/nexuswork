@@ -228,7 +228,10 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
     if (!allowed) throw new ForbiddenError("Not authorized to view recommendations for this project");
   }
 
-  const candidates = await StudentProfile.find({ verification_status: "verified" }).lean();
+  // Client matching searches every student profile. Verification status is
+  // returned with the match so the client can distinguish verified talent;
+  // eligibility and contract/proposal gates remain enforced elsewhere.
+  const candidates = await StudentProfile.find({}).lean();
   const candidatePool = candidates.map((profile) => ({ profile, score: scoreStudentBySkillOverlap(project, profile.skills) }));
 
   const userIds = candidatePool.map((c) => c.profile.user_id);
@@ -242,6 +245,7 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
   return ranked.slice(0, 20).map(({ profile, score, user }) => ({
     user: { ...user, avatar_url: user.avatarUrl },
     skills: profile.skills,
+    verification_status: profile.verification_status,
     match_score: aiById.has(String(user._id)) ? aiById.get(String(user._id)).score / 100 : Math.round(score * 100) / 100,
     ranking_source: aiById.has(String(user._id)) ? "ai" : "skill_overlap",
     ai_reason: aiById.get(String(user._id))?.reason || null,

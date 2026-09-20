@@ -268,18 +268,18 @@ function RecommendedStudents({ projectId, token }) {
 
   const matches = data?.data ?? [];
   return (
-    <div className="space-y-3">
+    <div id="recommendations" className="space-y-3 scroll-mt-24">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-brass" />
         <h2 className="font-display text-lg text-slate">{t("projects.recommendedStudents", { defaultValue: "Recommended students" })}</h2>
       </div>
-      <p className="text-sm text-slate-300">{t("projects.recommendedHint", { defaultValue: "Verified students whose skills best match this brief — no proposal required yet." })}</p>
+      <p className="text-sm text-slate-300">{t("projects.recommendedHint", { defaultValue: "Students whose skills best match this brief — no proposal required yet." })}</p>
 
       {isLoading && <><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></>}
 
       {error && <Card><CardContent className="p-5"><p className="text-sm text-danger">{t("projects.recommendationsError", { defaultValue: "Recommendations could not be loaded. Refresh the page and try again." })}</p></CardContent></Card>}
 
-      {!isLoading && !error && matches.length === 0 && <Card><CardContent className="p-5" role="status"><p className="font-semibold text-slate">{t("projects.noRecommendedStudentsTitle", { defaultValue: "No matching student found" })}</p><p className="mt-1 text-sm leading-relaxed text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "We could not find an eligible verified student for this project yet. Recommendations require an active student profile, university verification, and relevant skills." })}</p><p className="mt-2 text-sm text-slate-300">{t("projects.noRecommendedStudentsAction", { defaultValue: "Try adding more specific required skills or check again after more students complete verification." })}</p></CardContent></Card>}
+      {!isLoading && !error && matches.length === 0 && <Card><CardContent className="p-5" role="status"><p className="font-semibold text-slate">{t("projects.noRecommendedStudentsTitle", { defaultValue: "No matching student found" })}</p><p className="mt-1 text-sm leading-relaxed text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "We could not find an active student profile with enough information to match this project yet." })}</p><p className="mt-2 text-sm text-slate-300">{t("projects.noRecommendedStudentsAction", { defaultValue: "Try adding specific required skills or check again after students complete their profiles." })}</p></CardContent></Card>}
 
       {matches.map((m) => (
         <Card key={m.user._id}>

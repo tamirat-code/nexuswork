@@ -1,4 +1,5 @@
 import Project from "../projects/projects.model.js";
+import User from "../users/users.model.js";
 import StudentProfile from "../students/students.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
@@ -25,8 +26,9 @@ async function assertParticipant(conversationId, userId) {
 
 export async function startPreContractConversation(projectId, studentId, user) {
   const project = await assertProjectClient(projectId, user);
-  const student = await StudentProfile.findOne({ user_id: studentId, verification_status: "verified" }).select("user_id").lean();
-  if (!student) throw new ValidationError("Only verified students can be contacted before a contract");
+  const student = await StudentProfile.findOne({ user_id: studentId }).select("user_id").lean();
+  const activeStudent = await User.findOne({ _id: studentId, role: "student", status: "active" }).select("_id").lean();
+  if (!student || !activeStudent) throw new ValidationError("This student is not available for a pre-contract conversation");
 
   return PreContractConversation.findOneAndUpdate(
     { project_id: project._id, client_id: user._id, student_id: student.user_id },
