@@ -488,7 +488,11 @@ export default function ProjectDetailPage() {
   }
 
   const project = data.data;
-  const isClientOwner = user?.role === ROLES.CLIENT && String(project.client_id?._id || project.client_id) === String(user._id);
+  // Auth responses expose the current account id as `id`; tolerate `_id` too
+  // for populated/legacy user objects so owner-only project tools render.
+  const currentUserId = user?.id || user?._id;
+  const projectClientId = project.client_id?._id || project.client_id?.id || project.client_id;
+  const isClientOwner = user?.role === ROLES.CLIENT && String(projectClientId) === String(currentUserId);
   const isStudent = user?.role === ROLES.STUDENT;
   const canSave = Boolean(user && [ROLES.STUDENT, ROLES.CLIENT].includes(user.role) && !isClientOwner);
   const isSaved = Boolean(savedProjectsQuery.data?.data?.some((entry) => String(entry.project_id?._id || entry.project_id) === String(project._id)));
