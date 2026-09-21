@@ -4,6 +4,7 @@ const projectSchema = new mongoose.Schema(
   {
     client_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     organization_id: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
+    is_cohort_program: { type: Boolean, default: false, index: true },
     
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     title: { type: String, required: true, trim: true },

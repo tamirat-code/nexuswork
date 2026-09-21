@@ -100,6 +100,7 @@ export const workspaceNav = [
       { to: "/contracts", label: "Contracts", icon: "shield", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       { to: "/meetings", label: "Meetings", icon: "video", roles: [ROLES.STUDENT, ROLES.CLIENT] },
       { to: "/disputes", label: "Disputes", icon: "flag", roles: [ROLES.STUDENT, ROLES.CLIENT] },
+      { to: "/cohorts", label: "Cohort hiring", icon: "users", roles: [ROLES.STUDENT, ROLES.CLIENT, ROLES.ADMIN] },
     ],
   },
   {
@@ -175,6 +176,7 @@ export const WORKSPACE_PATHS = [
   "/recommendations",
   "/meetings",
   "/organizations",
+  "/cohorts",
   "/admin/institutions",
   "/institution-onboarding",
 ];

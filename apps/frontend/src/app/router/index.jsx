@@ -53,6 +53,7 @@ const NotFoundPage = lazy(() => import("../../features/misc/NotFoundPage.jsx"));
 const MeetingPage = lazy(() => import("../../features/meetings/MeetingPage.jsx"));
 const MeetingsListPage = lazy(() => import("../../features/meetings/MeetingsListPage.jsx"));
 const OrganizationsPage = lazy(() => import("../../features/organizations/OrganizationsPage.jsx"));
+const CohortsPage = lazy(() => import("../../features/cohorts/CohortsPage.jsx"));
 const InstitutionOnboardingAdminPage = lazy(() => import("../../features/organizations/InstitutionOnboardingAdminPage.jsx"));
 const InstitutionOnboardingPage = lazy(() => import("../../features/organizations/InstitutionOnboardingPage.jsx"));
 const PartnerPortalPage = lazy(() => import("../../features/partners/PartnerPortalPage.jsx"));
@@ -132,6 +133,8 @@ export default function AppRouter() {
       <Route path="/meetings/:meetingId" element={protect(<MeetingPage />)} />
       <Route path="/meetings" element={protect(<MeetingsListPage />)} />
       <Route path="/organizations" element={protect(<OrganizationsPage />, [ROLES.CLIENT, ROLES.ADMIN])} />
+      <Route path="/cohorts" element={protect(<CohortsPage />)} />
+      <Route path="/cohorts/:id" element={protect(<CohortsPage />)} />
       <Route path="/institution-onboarding" element={protect(<InstitutionOnboardingPage />, [ROLES.UNIVERSITY_STAFF, ROLES.ADMIN])} />
       <Route path="/admin/institutions" element={protect(<InstitutionOnboardingAdminPage />, [ROLES.ADMIN])} />
 

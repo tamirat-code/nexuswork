@@ -205,7 +205,7 @@ export async function getRecommendationsForStudent(studentUserId) {
   }
 
   const studentSkills = profile.skills || [];
-  const openProjects = await Project.find({ status: "open" }).limit(200);
+  const openProjects = await Project.find({ status: "open", is_cohort_program: { $ne: true } }).limit(200);
   const shortlist = openProjects
     .map((p) => ({ project: p, score: scoreBySkillOverlap(p, studentSkills) }))
     .filter(({ score }) => score > 0)

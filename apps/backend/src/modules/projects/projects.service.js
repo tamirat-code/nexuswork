@@ -169,7 +169,7 @@ const SORT_STAGES = {
 export async function searchProjects(query) {
   const { skill, minBudget, maxBudget, q, search, status, category, experience_level, sort } = query;
 
-  const match = { status: status || "open" };
+  const match = { status: status || "open", is_cohort_program: { $ne: true } };
   if (!status || status === "open") match.deadline = { $gt: new Date() };
   if (skill) {
     match.required_skill_ids = skill.match(/^[0-9a-fA-F]{24}$/)

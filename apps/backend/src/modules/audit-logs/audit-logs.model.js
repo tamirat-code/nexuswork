@@ -26,6 +26,7 @@ const AUDIT_ACTION_TYPES = [
   "api_partner_created", "api_partner_application_submitted", "api_partner_approved", "api_partner_active", "api_partner_suspended", "api_partner_revoked", "api_partner_rejected", "api_billing_status_updated",
   "api_key_created", "api_key_revoked", "partner_api_read",
   "SSO_CONFIGURATION_UPDATED", "SSO_LOGIN_STARTED", "SSO_LOGIN_SUCCEEDED", "SSO_LOGIN_FAILED", "SSO_ACCOUNT_LINKED", "SSO_ROLE_MAPPED",
+  "COHORT_CREATED", "COHORT_APPLICATION_CREATED", "COHORT_APPLICATION_ACCEPTED",
 ];
 
 
