@@ -14,6 +14,8 @@ import {
   setupMfa,
   verifyMfa,
   csrf,
+  ssoStart,
+  ssoCallback,
 } from "./auth.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { loginRateLimiter, verificationRateLimiter } from "../../middleware/rateLimiter.middleware.js";
@@ -34,6 +36,8 @@ const router = Router();
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", loginRateLimiter, validateBody(loginSchema), login);
 router.post("/google", loginRateLimiter, validateBody(googleAuthSchema), googleAuth);
+router.get("/sso/start", loginRateLimiter, ssoStart);
+router.get("/sso/callback", ssoCallback);
 router.post("/mfa/setup/initiate", requireAuth, initiateMfaSetup);
 router.post("/mfa/setup", loginRateLimiter, validateBody(mfaCodeSchema), setupMfa);
 router.post("/mfa/verify", loginRateLimiter, validateBody(mfaCodeSchema), verifyMfa);

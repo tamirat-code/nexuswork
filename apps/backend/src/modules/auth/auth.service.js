@@ -5,6 +5,8 @@ import User from "../users/users.model.js";
 import Wallet from "../wallets/wallets.model.js";
 import StudentProfile from "../students/students.model.js";
 import ClientProfile from "../clients/clients.model.js";
+import Organization from "../organizations/organizations.model.js";
+import OrgMembership from "../organizations/org-membership.model.js";
 import University from "../universities/universities.model.js";
 import { RevokedToken, PasswordResetToken, EmailVerificationToken } from "./tokens.model.js";
 import { authConfig } from "../../config/auth.config.js";
@@ -37,6 +39,10 @@ function signToken(user, amr = ["pwd"]) {
   return jwt.sign({ sub: user._id, role: user.role, jti, amr, sessionVersion: getSessionVersion(user) }, authConfig.jwtSecret, {
     expiresIn: authConfig.jwtExpiresIn,
   });
+}
+
+export function issueTokenForUser(user, amr = ["sso"]) {
+  return signToken(user, amr);
 }
 
 function generateRawToken() {
@@ -152,8 +158,14 @@ export async function loginUser({ email, password }) {
     throw err;
   }
 
-  if (user.auth_provider === "google" && !user.password_hash) {
-    throw new ValidationError("This account uses Google Sign-In. Continue with Google instead of a password.");
+  if (user.auth_provider !== "local" && !user.password_hash) {
+    throw new ValidationError(`This account uses ${user.auth_provider === "oidc" ? "organization SSO" : "Google Sign-In"}. Continue with the configured provider instead of a password.`);
+  }
+
+  const domain = email.toLowerCase().split("@")[1];
+  const memberships = await OrgMembership.find({ user_id: user._id, status: "active" }).select("organization_id").lean();
+  if (memberships.length && await Organization.exists({ _id: { $in: memberships.map((item) => item.organization_id) }, status: "active", "sso.enabled": true, "sso.enforced": true, "sso.allowed_domains": domain })) {
+    throw new ValidationError("Organization SSO is required for this account. Continue with organization SSO.");
   }
 
   if (user.locked_until && user.locked_until > new Date()) {

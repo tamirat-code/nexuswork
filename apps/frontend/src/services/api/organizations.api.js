@@ -10,6 +10,8 @@ export const listOrganizationMembers = (id, token) => apiRequest(`/organizations
 export const inviteOrganizationMember = (id, payload, token) => apiRequest(`/organizations/${id}/members`, { method: "POST", body: payload, token });
 export const updateOrganizationMember = (id, userId, payload, token) => apiRequest(`/organizations/${id}/members/${userId}`, { method: "PATCH", body: payload, token });
 export const removeOrganizationMember = (id, userId, token) => apiRequest(`/organizations/${id}/members/${userId}`, { method: "DELETE", token });
+export const getOrganizationSso = (id, token) => apiRequest(`/organizations/${id}/sso`, { token });
+export const updateOrganizationSso = (id, payload, token) => apiRequest(`/organizations/${id}/sso`, { method: "PUT", body: payload, token });
 export const requestInstitutionOnboarding = (payload, token) => apiRequest("/organizations/institution-onboarding", { method: "POST", body: payload, token });
 export const listMyInstitutionRequests = (token) => apiRequest("/organizations/institution-onboarding/mine", { token });
 export const listInstitutionOnboardingRequests = (status = "pending", token) => apiRequest(`/organizations/institution-onboarding?status=${encodeURIComponent(status)}`, { token });

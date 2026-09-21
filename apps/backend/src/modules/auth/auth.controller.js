@@ -1,8 +1,13 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import crypto from "node:crypto";
 import { requireFields } from "../../shared/validators/validate.js";
 import * as authService from "./auth.service.js";
 import { clearAuthCookies, getCookie, setAuthCookies, setCsrfCookie, CSRF_COOKIE } from "./auth.cookies.js";
 import { getPrivateProfile } from "../users/users.service.js";
+import { startSso, finishSso } from "./sso.service.js";
+import SsoTransaction from "./sso-transaction.model.js";
+import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import { env } from "../../config/env.js";
 
 function toPublicUser(user) {
   return {
@@ -143,5 +148,25 @@ export const googleAuth = asyncHandler(async (req, res) => {
       return res.status(422).json({ success: false, message: err.message, needsRole: true });
     }
     throw err;
+  }
+});
+
+export const ssoStart = asyncHandler(async (req, res) => {
+  const url = await startSso(req.query.email);
+  res.redirect(302, url);
+});
+
+export const ssoCallback = asyncHandler(async (req, res) => {
+  try {
+    const result = await finishSso({ code: req.query.code, state: req.query.state });
+    setAuthCookies(res, result.token);
+    res.redirect(302, `${env.clientUrl || "http://localhost:5173"}/login?sso=success`);
+  } catch (error) {
+    try {
+      const transaction = await SsoTransaction.findOne({ state: req.query.state }).select("organization_id").lean();
+      if (transaction) await recordEvent({ actor: { role: "system" }, eventType: "SSO_LOGIN_FAILED", action: "organization.sso_login_failed", entityType: "organization", entityId: transaction.organization_id, organizationId: transaction.organization_id, correlationId: req.correlationId || crypto.randomUUID(), metadata: { reason: error.message } });
+    } catch { /* preserve the user-facing SSO error even if audit persistence fails */ }
+    const message = encodeURIComponent(error.message || "SSO login failed");
+    res.redirect(302, `${env.clientUrl || "http://localhost:5173"}/login?sso_error=${message}`);
   }
 });

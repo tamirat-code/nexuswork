@@ -4,6 +4,7 @@ import {
   submitOnboardingRequest, listOnboardingRequests, decideOnboardingRequest,
   listActiveInstitutions, listMyInstitutionRequests, listMyInstitutions,
 } from "./organizations.service.js";
+import { configureOrganizationSso, getOrganizationSso } from "../auth/sso.service.js";
 
 export const create = asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await createOrganization({ actor: req.user, ...req.body, req }) }));
 export const updateOrganization = asyncHandler(async (req, res) => res.json({ success: true, data: await updateOrganizationSettings(req.params.organizationId, req.user, req.body, req) }));
@@ -20,3 +21,5 @@ export const myInstitutions = asyncHandler(async (req, res) => res.json({ succes
 export const onboardingRequests = asyncHandler(async (req, res) => res.json({ success: true, data: await listOnboardingRequests(req.query.status || "pending") }));
 export const decideOnboarding = asyncHandler(async (req, res) => res.json({ success: true, data: await decideOnboardingRequest(req.user, req.params.requestId, req.body, req) }));
 export { approveNet30, billingState, collectInvoice } from "./organization-billing.controller.js";
+export const getSso = asyncHandler(async (req, res) => res.json({ success: true, data: await getOrganizationSso(req.params.organizationId, req.user._id) }));
+export const updateSso = asyncHandler(async (req, res) => res.json({ success: true, data: await configureOrganizationSso(req.params.organizationId, req.user, req.body, req) }));

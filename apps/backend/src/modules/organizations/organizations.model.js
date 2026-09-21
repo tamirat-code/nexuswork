@@ -16,6 +16,22 @@ const organizationSchema = new mongoose.Schema(
     suspended_at: { type: Date },
     suspension_reason: { type: String, maxlength: 500 },
     status: { type: String, enum: ["active", "suspended"], default: "active" },
+    sso: {
+      enabled: { type: Boolean, default: false },
+      enforced: { type: Boolean, default: false },
+      provider: { type: String, enum: ["oidc"], default: "oidc" },
+      issuer: { type: String, trim: true, default: null },
+      client_id: { type: String, trim: true, default: null },
+      client_secret: { type: String, select: false, default: null },
+      authorization_endpoint: { type: String, trim: true, default: null },
+      token_endpoint: { type: String, trim: true, default: null },
+      jwks_uri: { type: String, trim: true, default: null },
+      allowed_domains: { type: [String], default: [] },
+      role_claim: { type: String, default: "groups" },
+      role_mapping: { type: mongoose.Schema.Types.Mixed, default: { admin: ["admin"], recruiter: ["recruiter"], billing_viewer: ["billing_viewer"] } },
+      configured_at: { type: Date, default: null },
+      configured_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    },
   },
   { timestamps: true }
 );

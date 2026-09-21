@@ -5,11 +5,11 @@ import { validateBody, validateParams } from "../../shared/validators/ZodValidat
 import { objectIdParamsSchema } from "../../shared/validators/schemas.js";
 import {
   createOrganizationSchema, updateOrganizationSchema, inviteMemberSchema, updateMemberSchema, onboardingRequestSchema, onboardingDecisionSchema, organizationMemberParamsSchema,
-  organizationNet30Schema, organizationBillingStateSchema, organizationCollectionSchema,
+  organizationNet30Schema, organizationBillingStateSchema, organizationCollectionSchema, organizationSsoSchema,
 } from "./organizations.validators.js";
 import {
   create, updateOrganization, mine, getOne, members, invite, update, remove, requestInstitution, onboardingRequests, decideOnboarding, institutions, myInstitutionRequests, myInstitutions,
-  approveNet30, billingState, collectInvoice,
+  approveNet30, billingState, collectInvoice, getSso, updateSso,
 } from "./organizations.controller.js";
 
 const router = Router();
@@ -27,6 +27,8 @@ router.patch("/institution-onboarding/:requestId", requireRole("admin"), validat
 router.get("/:organizationId", validateParams(objectIdParamsSchema("organizationId")), getOne);
 router.patch("/:organizationId", validateParams(objectIdParamsSchema("organizationId")), validateBody(updateOrganizationSchema), updateOrganization);
 router.get("/:organizationId/members", validateParams(objectIdParamsSchema("organizationId")), members);
+router.get("/:organizationId/sso", validateParams(objectIdParamsSchema("organizationId")), getSso);
+router.put("/:organizationId/sso", validateParams(objectIdParamsSchema("organizationId")), validateBody(organizationSsoSchema), updateSso);
 router.post("/:organizationId/members", validateParams(objectIdParamsSchema("organizationId")), validateBody(inviteMemberSchema), invite);
 router.patch("/:organizationId/members/:userId", validateParams(organizationMemberParamsSchema), validateBody(updateMemberSchema), update);
 router.delete("/:organizationId/members/:userId", validateParams(organizationMemberParamsSchema), remove);

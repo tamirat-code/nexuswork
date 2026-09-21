@@ -46,6 +46,7 @@ export function buildEnv(source = process.env) {
     credentialIssuerPublicKey: optional(source.CREDENTIAL_ISSUER_PUBLIC_KEY),
     jwtSecret: optional(source.JWT_SECRET),
     jwtExpiresIn: source.JWT_EXPIRES_IN || "7d",
+    ssoCallbackUrl: optional(source.SSO_CALLBACK_URL) || `${optional(source.CREDENTIAL_ISSUER_URL) || "http://localhost:5000"}/v1/auth/sso/callback`,
 
     googleClientId: optional(source.GOOGLE_CLIENT_ID),
     paymentProvider: (source.PAYMENT_PROVIDER || "stripe").toLowerCase(),

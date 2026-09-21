@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useToast } from "../../components/notifications/ToastProvider.jsx";
@@ -31,6 +31,16 @@ export default function LoginPage() {
   const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState(null);
   const [googleCheckPassed, setGoogleCheckPassed] = useState(false);
   const googleRecaptchaRef = useRef(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sso") === "success") navigate("/dashboard", { replace: true });
+    if (params.get("sso_error")) setError(params.get("sso_error"));
+  }, [navigate]);
+
+  function startOrganizationSso() {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/v1";
+    window.location.assign(`${apiBase}/auth/sso/start?email=${encodeURIComponent(email)}`);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -209,6 +219,9 @@ try {
             {t("auth.logIn")}
           </Button>
         </form>
+        <Button type="button" variant="outline" className="w-full" onClick={startOrganizationSso} disabled={!email.trim()}>
+          {t("auth.continueWithOrganizationSso", { defaultValue: "Continue with organization SSO" })}
+        </Button>
       </div>
     </AuthShell>
   );

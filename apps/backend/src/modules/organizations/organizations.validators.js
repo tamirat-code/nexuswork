@@ -56,3 +56,18 @@ export const organizationBillingStateSchema = z.object({
 export const organizationCollectionSchema = z.object({
   provider_reference: z.string().trim().min(4).max(200),
 });
+
+export const organizationSsoSchema = z.object({
+  enabled: z.boolean().optional().default(true),
+  enforced: z.boolean().optional().default(false),
+  issuer: z.string().url().optional(),
+  client_id: z.string().trim().min(1).max(300).optional(),
+  client_secret: z.string().min(1).max(1000).optional(),
+  allowed_domains: z.array(domain).min(1).max(20).optional(),
+  role_claim: z.string().trim().min(1).max(100).optional(),
+  role_mapping: z.object({
+    admin: z.array(z.string().trim().min(1)).optional(),
+    recruiter: z.array(z.string().trim().min(1)).optional(),
+    billing_viewer: z.array(z.string().trim().min(1)).optional(),
+  }).optional(),
+});

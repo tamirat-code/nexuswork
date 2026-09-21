@@ -10,8 +10,10 @@ const userSchema = new mongoose.Schema(
         return this.auth_provider === "local";
       },
     },
-    auth_provider: { type: String, enum: ["local", "google"], default: "local" },
+    auth_provider: { type: String, enum: ["local", "google", "oidc"], default: "local" },
     google_id: { type: String, unique: true, sparse: true }, // sparse = unique only among docs that HAVE this field
+    oidc_issuer: { type: String, default: null },
+    oidc_subject: { type: String, default: null },
     role: {
       type: String,
       enum: ["student", "client", "university_staff", "admin"],
