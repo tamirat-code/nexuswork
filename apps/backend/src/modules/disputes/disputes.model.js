@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const disputeSchema = new mongoose.Schema(
   {
     milestone_id: { type: mongoose.Schema.Types.ObjectId, ref: "Milestone", required: true },
+    organization_id: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     opened_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     reason: { type: String, required: true },
     status: { type: String, enum: ["open", "under_review", "resolved"], default: "open" },
@@ -16,5 +17,7 @@ const disputeSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+disputeSchema.index({ organization_id: 1, createdAt: -1 });
 
 export default mongoose.model("Dispute", disputeSchema);

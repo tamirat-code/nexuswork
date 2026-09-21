@@ -10,9 +10,7 @@ import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { RecommendationEvent } from "../recommendation/recommendation-governance.model.js";
 import crypto from "node:crypto";
 
-import {
-  isOrgMember,
-} from "../clients/clients.service.js";
+import { requireOrganizationAccess, listOrganizationIdsForUser } from "../organizations/organization-access.service.js";
 
 import {
   ForbiddenError,
@@ -109,6 +107,7 @@ export async function submitProposal(
   const proposal =
     await Proposal.create({
       ...data,
+      organization_id: project.organization_id || null,
       student_id: studentId,
       price_minor: proposalMoney.amountMinor,
       currency: proposalMoney.currency,
@@ -165,26 +164,9 @@ export async function listForProject(
   }
 
 
-  if (
-    String(project.client_id) !==
-      String(requestingUser._id) &&
-    requestingUser.role !== "admin"
-  ) {
-
-    const allowed =
-      await isOrgMember(
-        project.client_id,
-        requestingUser._id
-      );
-
-    if (!allowed) {
-
-      throw new ForbiddenError(
-        "Not authorized to view these proposals"
-      );
-
-    }
-
+  if (String(project.client_id) !== String(requestingUser._id) && requestingUser.role !== "admin") {
+    if (!project.organization_id) throw new ForbiddenError("Not authorized to view these proposals");
+    await requireOrganizationAccess(project.organization_id, requestingUser._id, ["admin", "recruiter"]);
   }
 
 
@@ -276,72 +258,8 @@ export async function listForClient(
 
   } else {
 
-    const ownedProjectIds =
-      await Project.find({
-        client_id:
-          requestingUser._id,
-      }).distinct("_id");
-
-    const clientProfiles =
-      await Project.find({
-        client_id: {
-          $exists: true,
-        },
-      })
-        .select("client_id")
-        .lean();
-
-
-    const ownerIds = [
-      ...new Set(
-        clientProfiles.map(
-          (item) =>
-            String(item.client_id)
-        )
-      ),
-    ];
-
-
-    const memberOwnerIds = [];
-
-    for (const ownerId of ownerIds) {
-
-      const allowed =
-        await isOrgMember(
-          ownerId,
-          requestingUser._id
-        );
-
-      if (allowed) {
-        memberOwnerIds.push(
-          ownerId
-        );
-      }
-
-    }
-
-
-    const projectIds =
-      await Project.find({
-        client_id: {
-          $in: [
-            requestingUser._id,
-            ...memberOwnerIds,
-          ],
-        },
-      }).distinct("_id");
-
-
-    projectQuery = {
-      _id: {
-        $in: [
-          ...new Set([
-            ...ownedProjectIds.map(String),
-            ...projectIds.map(String),
-          ]),
-        ],
-      },
-    };
+    const organizationIds = await listOrganizationIdsForUser(requestingUser._id, ["admin", "recruiter"]);
+    projectQuery = { $or: [{ client_id: requestingUser._id }, ...(organizationIds.length ? [{ organization_id: { $in: organizationIds } }] : [])] };
 
   }
 
@@ -351,7 +269,7 @@ export async function listForClient(
       projectQuery
     )
       .select(
-        "_id title description budget deadline status client_id"
+        "_id title description budget deadline status client_id organization_id"
       )
       .lean();
 
@@ -441,20 +359,8 @@ async function assertCanManageProposal(
   }
 
 
-  const allowed =
-    await isOrgMember(
-      project.client_id,
-      requestingUser._id
-    );
-
-
-  if (!allowed) {
-
-    throw new ForbiddenError(
-      "You are not authorized to manage this proposal"
-    );
-
-  }
+  if (!project.organization_id) throw new ForbiddenError("You are not authorized to manage this proposal");
+  await requireOrganizationAccess(project.organization_id, requestingUser._id, ["admin", "recruiter"]);
 
 }
 
@@ -543,6 +449,7 @@ export async function acceptProposal(
     action: "contract.created",
     entityType: "contract",
     entityId: contract._id,
+    organizationId: project.organization_id,
     previousState: null,
     newState: contract.status,
     correlationId,

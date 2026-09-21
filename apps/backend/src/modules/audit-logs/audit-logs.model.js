@@ -58,6 +58,7 @@ const auditLogsSchema = new mongoose.Schema(
       required: true,
     },
     entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },
+    organization_id: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", immutable: true },
     related_entity_type: { type: String, immutable: true },
     related_entity_id: { type: mongoose.Schema.Types.ObjectId, immutable: true },
     reason: { type: String, immutable: true },
@@ -96,5 +97,6 @@ auditLogsSchema.index({ actor_id: 1, createdAt: -1 }); // By actor
 auditLogsSchema.index({ action_type: 1, createdAt: -1 }); // By action type
 auditLogsSchema.index({ entity_type: 1, entity_id: 1, createdAt: -1 }); // By affected entity
 auditLogsSchema.index({ status: 1, createdAt: -1 }); // Flagged entries
+auditLogsSchema.index({ organization_id: 1, createdAt: -1 });
 
 export default mongoose.model("AuditLog", auditLogsSchema);

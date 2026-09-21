@@ -1,7 +1,6 @@
 import Invoice from "./invoices.model.js";
 import Contract from "../contracts/contracts.model.js";
 import Organization from "../organizations/organizations.model.js";
-import OrgMembership from "../organizations/org-membership.model.js";
 import Milestone from "../milestones/milestones.model.js";
 import Payment from "../payments/payments.model.js";
 import FinancialJournal from "../financial-ledger/financial-journals.model.js";
@@ -10,6 +9,7 @@ import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exc
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import crypto from "node:crypto";
 import { moneyFromLegacyMajorUnits } from "../../shared/money/money.js";
+import { listOrganizationIdsForUser, getOrganizationMembershipForUser } from "../organizations/organization-access.service.js";
 
 function generateInvoiceNumber() {
   const date = new Date();
@@ -69,6 +69,7 @@ export async function createInvoice({ contractId, requestingUserId, amount, curr
     action: "invoice.created",
     entityType: "invoice",
     entityId: invoice._id,
+    organizationId: invoice.organization_id,
     previousState: null,
     newState: invoice.status,
     correlationId: auditContext.correlationId || crypto.randomUUID(),
@@ -79,7 +80,8 @@ export async function createInvoice({ contractId, requestingUserId, amount, curr
 }
 
 async function organizationMember(organizationId, userId) {
-  return OrgMembership.findOne({ organization_id: organizationId, user_id: userId, status: "active" });
+  const access = await getOrganizationMembershipForUser(organizationId, userId);
+  return access && ["admin", "billing_viewer"].includes(access.role) ? access : null;
 }
 
 /**
@@ -164,6 +166,7 @@ export async function createOrganizationInvoice({ organizationId, milestoneIds, 
     action: "organization.invoice_created",
     entityType: "invoice",
     entityId: invoice._id,
+    organizationId,
     previousState: null,
     newState: invoice.status,
     correlationId: auditContext.correlationId || crypto.randomUUID(),
@@ -175,7 +178,7 @@ export async function createOrganizationInvoice({ organizationId, milestoneIds, 
 export async function listInvoicesForUser(userId, { status } = {}) {
   const query = { $or: [{ client_id: userId }, { student_id: userId }] };
   if (status && status !== "all") query.status = status;
-  const orgs = await OrgMembership.find({ user_id: userId, status: "active" }).distinct("organization_id");
+  const orgs = await listOrganizationIdsForUser(userId, ["admin", "billing_viewer"]);
   if (orgs.length) query.$or.push({ organization_id: { $in: orgs } });
   return Invoice.find(query)
     .populate("client_id", "name email")

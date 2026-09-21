@@ -9,7 +9,7 @@ import {
 } from "./contracts.service.js";
 
 export const getMyContracts = asyncHandler(async (req, res) => {
-  const contracts = await listForUser(req.user._id);
+  const contracts = await listForUser(req.user);
 
   res.json({
     success: true,

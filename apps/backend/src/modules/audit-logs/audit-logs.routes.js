@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware.js";
-import { list, getHistory, flag, getSummary } from "./audit-logs.controller.js";
+import { list, listOrganization, getHistory, flag, getSummary } from "./audit-logs.controller.js";
 
 const router = Router();
 
@@ -9,6 +9,7 @@ router.use(requireAuth);
 
 // List audit logs with filtering
 router.get("/", list);
+router.get("/organizations/:organizationId", listOrganization);
 
 // Get history for a specific entity
 router.get("/history/:entity_type/:entity_id", getHistory);

@@ -7,6 +7,7 @@ import {
   flagForReview,
   getAuditSummary,
 } from "./audit-logs.service.js";
+import { requireOrganizationAccess } from "../organizations/organization-access.service.js";
 
 /**
  * List audit log entries (admin/moderator only).
@@ -21,6 +22,7 @@ export const list = asyncHandler(async (req, res) => {
     action_type: req.query.action_type,
     entity_type: req.query.entity_type,
     entity_id: req.query.entity_id,
+    organization_id: req.query.organization_id,
     partner_id: req.query.partner_id,
     limit: parseInt(req.query.limit) || 50,
     skip: parseInt(req.query.skip) || 0,
@@ -29,6 +31,23 @@ export const list = asyncHandler(async (req, res) => {
     end_date: req.query.end_date,
   });
 
+  res.json({ success: true, data: result });
+});
+
+export const listOrganization = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) await requireOrganizationAccess(req.params.organizationId, req.user._id, ["admin"]);
+  const result = await listLogs({
+    organization_id: req.params.organizationId,
+    actor_id: req.query.user_id || req.query.actor_id,
+    actor_role: req.query.actor_role,
+    action_type: req.query.action_type,
+    entity_type: req.query.entity_type,
+    entity_id: req.query.entity_id,
+    limit: parseInt(req.query.limit) || 50,
+    skip: parseInt(req.query.skip) || 0,
+    start_date: req.query.start_date,
+    end_date: req.query.end_date,
+  });
   res.json({ success: true, data: result });
 });
 

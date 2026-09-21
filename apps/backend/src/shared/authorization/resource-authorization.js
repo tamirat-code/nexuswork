@@ -6,8 +6,8 @@ import Invoice from "../../modules/invoices/invoices.model.js";
 import File from "../../modules/files/files.model.js";
 import Message from "../../modules/messaging/messaging.model.js";
 import Project from "../../modules/projects/projects.model.js";
-import OrgMembership from "../../modules/organizations/org-membership.model.js";
 import { isOrgMember } from "../../modules/clients/clients.service.js";
+import { requireOrganizationAccess } from "../../modules/organizations/organization-access.service.js";
 import { ForbiddenError, NotFoundError } from "../exceptions/AppError.js";
 import { ROLES } from "../enums/roles.enum.js";
 
@@ -36,7 +36,7 @@ function assertParty(contract, user) {
 }
 
 async function loadContract(contractId) {
-  const contract = await Contract.findById(contractId).select("client_id student_id project_id status");
+  const contract = await Contract.findById(contractId).select("client_id student_id organization_id project_id status");
   if (!contract) throw new NotFoundError("Contract not found");
   return contract;
 }
@@ -46,6 +46,10 @@ export async function assertContractParty({ contractId, user, req, roles, allowA
   if (roles) requireRole(authenticated, roles);
   const contract = await loadContract(contractId);
   if (allowAdmin && authenticated.role === ROLES.ADMIN) return contract;
+  if (authenticated.role === ROLES.CLIENT && contract.organization_id) {
+    await requireOrganizationAccess(contract.organization_id, authenticated._id, ["admin", "recruiter"]);
+    return contract;
+  }
   if (allowOrganizationMember && authenticated.role === ROLES.CLIENT && await isOrgMember(contract.client_id, authenticated._id)) return contract;
   assertParty(contract, authenticated);
   return contract;
@@ -56,6 +60,10 @@ export async function assertClientOnContract({ contractId, user, req, allowOrgan
   requireRole(authenticated, [ROLES.CLIENT]);
   const contract = await loadContract(contractId);
   const isOwner = sameId(contract.client_id, authenticated._id);
+  if (!isOwner && contract.organization_id && allowOrganizationMember) {
+    await requireOrganizationAccess(contract.organization_id, authenticated._id, ["admin", "recruiter"]);
+    return contract;
+  }
   const isMember = !isOwner && allowOrganizationMember && await isOrgMember(contract.client_id, authenticated._id);
   if (!isOwner && !isMember) throw new ForbiddenError("You do not have client access to this contract");
   return contract;
@@ -87,7 +95,8 @@ export async function assertMilestoneAccess({ milestoneId, user, req, role } = {
   const contract = await loadContract(milestone.contract_id);
   if (role === ROLES.CLIENT) {
     requireRole(authenticated, [ROLES.CLIENT]);
-    if (!sameId(contract.client_id, authenticated._id) && !(await isOrgMember(contract.client_id, authenticated._id))) {
+    if (contract.organization_id && !sameId(contract.client_id, authenticated._id)) await requireOrganizationAccess(contract.organization_id, authenticated._id, ["admin", "recruiter"]);
+    else if (!sameId(contract.client_id, authenticated._id) && !(await isOrgMember(contract.client_id, authenticated._id))) {
       throw new ForbiddenError("You do not have client access to this milestone");
     }
   } else if (role === ROLES.STUDENT) {
@@ -127,7 +136,10 @@ export async function assertInvoiceAccess({ invoiceId, user, req, role } = {}) {
   const invoice = await Invoice.findById(invoiceId).select("contract_id organization_id client_id student_id");
   if (!invoice) throw new NotFoundError("Invoice not found");
   if (!invoice.contract_id && invoice.organization_id) {
-    if (authenticated.role === ROLES.CLIENT && await OrgMembership.exists({ organization_id: invoice.organization_id, user_id: authenticated._id, status: "active" })) return { invoice, contract: null };
+    if (authenticated.role === ROLES.CLIENT) {
+      await requireOrganizationAccess(invoice.organization_id, authenticated._id, ["admin", "billing_viewer"]);
+      return { invoice, contract: null };
+    }
     throw new ForbiddenError("You do not have organization access to this invoice");
   }
   const contract = await loadContract(invoice.contract_id);

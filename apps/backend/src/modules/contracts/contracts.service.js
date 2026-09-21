@@ -7,6 +7,7 @@ import {
 } from "../../shared/exceptions/AppError.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import { listOrganizationIdsForUser } from "../organizations/organization-access.service.js";
 
 function buildFingerprint(terms, version = 1) {
   return crypto
@@ -107,11 +108,17 @@ export async function getContract(id) {
   return normalizeContract(contract);
 }
 
-export async function listForUser(userId) {
+export async function listForUser(userOrId) {
+  const userId = userOrId?._id || userOrId;
+  const role = userOrId?.role;
+  const organizationIds = role === "client" || role === "admin"
+    ? await listOrganizationIdsForUser(userId, ["admin", "recruiter"])
+    : [];
   const contracts = await Contract.find({
     $or: [
       { client_id: userId },
       { student_id: userId },
+      ...(organizationIds.length ? [{ organization_id: { $in: organizationIds } }] : []),
     ],
   })
     .populate(
@@ -232,6 +239,7 @@ export async function reviewContract(
     action: "contract.reviewed",
     entityType: "contract",
     entityId: contract._id,
+    organizationId: contract.organization_id,
     previousState: previousState === contract.status ? null : previousState,
     newState: previousState === contract.status ? null : contract.status,
     correlationId: auditContext.correlationId,
@@ -408,6 +416,7 @@ export async function signContract(
     action: "contract.signed",
     entityType: "contract",
     entityId: contract._id,
+    organizationId: contract.organization_id,
     previousState: previousState === contract.status ? null : previousState,
     newState: previousState === contract.status ? null : contract.status,
     correlationId: requestMeta.correlationId,
@@ -421,6 +430,7 @@ export async function signContract(
       action: "contract.activated",
       entityType: "contract",
       entityId: contract._id,
+      organizationId: contract.organization_id,
       previousState,
       newState: contract.status,
       correlationId: requestMeta.correlationId,

@@ -12,6 +12,7 @@ import { Input } from "../../components/ui/shadcn/input.jsx";
 import { Label } from "../../components/ui/shadcn/label.jsx";
 import { Badge } from "../../components/ui/shadcn/badge.jsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/shadcn/select.jsx";
+import OrganizationAuditPanel from "./OrganizationAuditPanel.jsx";
 
 const roleFallbacks = { admin: "Admin", recruiter: "Recruiter", billing_viewer: "Billing viewer" };
 
@@ -157,6 +158,7 @@ export default function OrganizationsPage() {
           </>}
         </Card>
       </div>
+      {isAdmin && organizationId && <OrganizationAuditPanel organizationId={organizationId} token={token} />}
     </div>
   );
 }

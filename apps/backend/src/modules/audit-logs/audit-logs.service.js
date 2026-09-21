@@ -36,6 +36,7 @@ export async function recordEvent({
   status = "logged",
   relatedEntityType,
   relatedEntityId,
+  organizationId,
   ipAddress,
   userAgent,
 }) {
@@ -60,6 +61,7 @@ export async function recordEvent({
     action_type: eventType,
     entity_type: entityType,
     entity_id: entityId,
+    organization_id: organizationId,
     related_entity_type: relatedEntityType,
     related_entity_id: relatedEntityId,
     reason,
@@ -83,6 +85,7 @@ export async function logAction({
   user_agent,
   related_entity_type,
   related_entity_id,
+  organization_id,
   eventType,
   action,
   previousState,
@@ -107,17 +110,20 @@ export async function logAction({
     status,
     relatedEntityType: related_entity_type,
     relatedEntityId: related_entity_id,
+    organizationId: organization_id,
     ipAddress: ip_address,
     userAgent: user_agent,
   });
 }
 
-export async function listLogs({ actor_role, action_type, entity_type, entity_id, partner_id, limit = 50, skip = 0, status, start_date, end_date }) {
+export async function listLogs({ actor_id, actor_role, action_type, entity_type, entity_id, organization_id, partner_id, limit = 50, skip = 0, status, start_date, end_date }) {
   const query = {};
+  if (actor_id) query.actor_id = actor_id;
   if (actor_role) query.actor_role = actor_role;
   if (action_type) query.action_type = action_type;
   if (entity_type) query.entity_type = entity_type;
   if (entity_id) query.entity_id = entity_id;
+  if (organization_id) query.organization_id = organization_id;
   if (partner_id) query["metadata.partner_id"] = String(partner_id);
   if (status) query.status = status;
   if (start_date || end_date) {

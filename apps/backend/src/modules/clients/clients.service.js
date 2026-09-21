@@ -2,6 +2,8 @@ import ClientProfile from "./clients.model.js";
 import User from "../users/users.model.js";
 import Project from "../projects/projects.model.js";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../shared/exceptions/AppError.js";
+import Organization from "../organizations/organizations.model.js";
+import OrgMembership from "../organizations/org-membership.model.js";
 
 export async function getOrCreateProfile(userId) {
   let profile = await ClientProfile.findOne({ user_id: userId });
@@ -134,6 +136,7 @@ export async function removePoster(ownerUserId, posterUserId) {
 export async function isOrgMember(ownerUserId, requestingUserId) {
   if (String(ownerUserId) === String(requestingUserId)) return true;
   const profile = await ClientProfile.findOne({ user_id: ownerUserId }).lean();
-  if (!profile) return false;
-  return (profile.additional_posters || []).some((id) => String(id) === String(requestingUserId));
+  if (profile && (profile.additional_posters || []).some((id) => String(id) === String(requestingUserId))) return true;
+  const organizations = await Organization.find({ owner_id: ownerUserId, status: "active" }).distinct("_id");
+  return Boolean(await OrgMembership.exists({ organization_id: { $in: organizations }, user_id: requestingUserId, status: "active" }));
 }

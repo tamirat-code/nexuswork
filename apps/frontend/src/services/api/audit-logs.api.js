@@ -1,6 +1,8 @@
 import { apiRequest } from "../../lib/http.js";
 
 export const listAuditLogs = (query = "", token) => apiRequest(`/audit-logs${query}`, { token });
+export const listOrganizationAuditLogs = (organizationId, query = "", token) =>
+  apiRequest(`/audit-logs/organizations/${organizationId}${query}`, { token });
 export const getAuditSummary = (query = "", token) => apiRequest(`/audit-logs/summary${query}`, { token });
 export const getEntityHistory = (entityType, entityId, token) =>
   apiRequest(`/audit-logs/history/${entityType}/${entityId}`, { token });

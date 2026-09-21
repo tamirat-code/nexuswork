@@ -6,7 +6,7 @@ import File from "../files/files.model.js";
 import Skill from "../skills/skills.model.js";
 import { getCategoryMatchValues, normalizeCategory } from "../milestones/deliverable-templates.js";
 import Organization from "../organizations/organizations.model.js";
-import OrgMembership from "../organizations/org-membership.model.js";
+import { requireOrganizationAccess } from "../organizations/organization-access.service.js";
 
 export async function createProject(actingUserId, data) {
   const { on_behalf_of_client_id, organization_id, required_skill_ids = [], required_skills = [], ...projectData } = data;
@@ -27,7 +27,7 @@ export async function createProject(actingUserId, data) {
   }
   if (organization_id) {
     const organization = await Organization.findOne({ _id: organization_id, status: "active" });
-    const membership = await OrgMembership.findOne({ organization_id, user_id: actingUserId, status: "active" });
+    const membership = await requireOrganizationAccess(organization_id, actingUserId, ["admin", "recruiter"]);
     if (!organization || !membership) throw new ForbiddenError("You are not authorized to post for this organization");
     if (String(organization.owner_id) !== String(ownerId)) {
       throw new ForbiddenError("The organization owner must own the project client account");
@@ -83,9 +83,8 @@ export async function createProject(actingUserId, data) {
 export async function updateProject(projectId, actingUserId, data) {
   const project = await Project.findById(projectId);
   if (!project) throw new NotFoundError("Project not found");
-  if (String(project.client_id) !== String(actingUserId) && !(await isOrgMember(project.client_id, actingUserId))) {
-    throw new ForbiddenError("Not authorized to edit this project");
-  }
+  if (project.organization_id) await requireOrganizationAccess(project.organization_id, actingUserId, ["admin", "recruiter"]);
+  else if (String(project.client_id) !== String(actingUserId)) throw new ForbiddenError("Not authorized to edit this project");
   if (project.status !== "open") {
     throw new ValidationError("Only open projects can be edited");
   }
@@ -148,9 +147,8 @@ export async function updateProject(projectId, actingUserId, data) {
 export async function closeProjectById(projectId, actingUserId) {
   const project = await Project.findById(projectId);
   if (!project) throw new NotFoundError("Project not found");
-  if (String(project.client_id) !== String(actingUserId) && !(await isOrgMember(project.client_id, actingUserId))) {
-    throw new ForbiddenError("Not authorized to close this project");
-  }
+  if (project.organization_id) await requireOrganizationAccess(project.organization_id, actingUserId, ["admin", "recruiter"]);
+  else if (String(project.client_id) !== String(actingUserId)) throw new ForbiddenError("Not authorized to close this project");
   if (project.status !== "open") {
     throw new ValidationError("Only open projects can be closed");
   }

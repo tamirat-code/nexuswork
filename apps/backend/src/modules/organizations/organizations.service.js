@@ -8,6 +8,7 @@ import University from "../universities/universities.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { legalConfig } from "../../config/legal.config.js";
+import { getOrganizationMembershipForUser } from "./organization-access.service.js";
 
 const ORG_ROLES = ["admin", "recruiter", "billing_viewer"];
 
@@ -25,6 +26,7 @@ async function audit(actor, eventType, action, entityType, entityId, metadata = 
     correlationId: req.correlationId || req.requestId || `org-${entityId}-${Date.now()}`,
     requestId: req.requestId || req.correlationId,
     metadata,
+    organizationId: entityType === "organization" ? entityId : metadata.organizationId,
     ipAddress: req.ip,
     userAgent: req.get?.("user-agent"),
   });
@@ -35,10 +37,10 @@ export async function getOrganizationMembership(organizationId, userId) {
 }
 
 export async function requireOrganizationRole(organizationId, userId, roles = ORG_ROLES) {
-  const membership = await getOrganizationMembership(organizationId, userId);
-  if (!membership) throw new ForbiddenError("You are not an active member of this organization");
-  if (!roles.includes(membership.role)) throw new ForbiddenError("Your organization role cannot perform this action");
-  return membership;
+  const access = await getOrganizationMembershipForUser(organizationId, userId);
+  if (!access) throw new ForbiddenError("You are not an active member of this organization");
+  if (!roles.includes(access.role)) throw new ForbiddenError("Your organization role cannot perform this action");
+  return access;
 }
 
 export async function createOrganization({ actor, name, institution_id, billing_mode, req }) {

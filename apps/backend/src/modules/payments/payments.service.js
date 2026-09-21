@@ -13,6 +13,10 @@ import FinancialJournal from "../financial-ledger/financial-journals.model.js";
 import { PAYMENT_STATUSES, transitionPaymentStatus } from "./payment-state.js";
 import { logger } from "../../shared/logger/logger.js";
 
+function isMongoObjectId(value) {
+  return /^[a-f\d]{24}$/i.test(String(value || ""));
+}
+
 async function failReleasePayment(payment, milestoneId, error, auditContext = {}) {
   payment.status = "failed";
   payment.failure_message = error.message;
@@ -32,6 +36,8 @@ async function failReleasePayment(payment, milestoneId, error, auditContext = {}
 }
 
 export async function createDepositIntent(milestone, requestedProvider) {
+  const fundingContract = await Contract.findById(milestone.contract_id).select("organization_id").lean();
+  const organizationId = fundingContract?.organization_id || null;
   const milestoneMoney = Number.isSafeInteger(milestone.amount_minor)
     ? money(milestone.amount_minor, milestone.currency || paymentConfig.currency)
     : moneyFromLegacyMajorUnits(milestone.amount, milestone.currency || paymentConfig.currency, "milestone.amount");
@@ -44,6 +50,11 @@ export async function createDepositIntent(milestone, requestedProvider) {
 
   if (existing?.status === "succeeded") {
     return { payment_intent_id: existing.provider_payment_id || existing.stripe_payment_intent_id, already_succeeded: true, provider: existing.provider };
+  }
+
+  if (existing && !existing.organization_id && organizationId) {
+    existing.organization_id = organizationId;
+    await existing.save();
   }
 
   const existingProviderId = existing?.provider_payment_id || existing?.stripe_payment_intent_id;
@@ -111,6 +122,7 @@ export async function createDepositIntent(milestone, requestedProvider) {
     } else {
       await Payment.create({
         milestone_id: milestone._id,
+        organization_id: organizationId,
         amount: milestone.amount,
         amount_minor: milestoneMoney.amountMinor,
         currency: milestoneMoney.currency,
@@ -131,6 +143,7 @@ export async function createDepositIntent(milestone, requestedProvider) {
     action_type: "payment_deposit_initiated",
     entity_type: "milestone",
     entity_id: milestone._id,
+    organization_id: organizationId,
     details: {
       amount: milestone.amount,
       currency: milestoneMoney.currency,
@@ -308,6 +321,11 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
     ? money(amountMinor, currency || paymentConfig.currency)
     : moneyFromLegacyMajorUnits(amount, currency || paymentConfig.currency, "release.amount");
   const providerName = releaseMoney.currency === "etb" ? "chapa" : "stripe";
+  const releaseMilestone = isMongoObjectId(milestoneId)
+    ? await Milestone.findById(milestoneId).select("contract_id").lean()
+    : null;
+  const releaseContract = releaseMilestone ? await Contract.findById(releaseMilestone.contract_id).select("organization_id").lean() : null;
+  const organizationId = releaseContract?.organization_id || null;
   const provider = getPaymentProvider(providerName);
   const depositPayment = providerName === "stripe"
     ? await Payment.findOne({ milestone_id: milestoneId, direction: "deposit", status: "succeeded" })
@@ -342,6 +360,11 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
 
   if (payment?.status === "succeeded") return payment;
 
+  if (payment && !payment.organization_id && organizationId) {
+    payment.organization_id = organizationId;
+    await payment.save();
+  }
+
   if (!payment) {
     payment = await Payment.findOneAndUpdate(
       { milestone_id: milestoneId, direction: "release", status: "failed" },
@@ -352,6 +375,7 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
           amount_minor: releaseMoney.amountMinor,
           currency: releaseMoney.currency,
           provider: providerName,
+          organization_id: organizationId,
           provider_operation_key: `milestone-release-${milestoneId}`,
           stripe_account_id: stripeAccountId,
           processing_at: new Date(),
@@ -366,6 +390,7 @@ export async function releaseToStudent({ milestoneId, amount, amountMinor, curre
     try {
       payment = await Payment.create({
         milestone_id: milestoneId,
+        organization_id: organizationId,
         amount,
         amount_minor: releaseMoney.amountMinor,
         currency: releaseMoney.currency,
@@ -552,6 +577,15 @@ export async function refundClient(milestoneId, auditContext = {}) {
       "No successful deposit found for this milestone to refund."
     );
   }
+  const refundMilestone = isMongoObjectId(milestoneId)
+    ? await Milestone.findById(milestoneId).select("contract_id").lean()
+    : null;
+  const refundContract = refundMilestone ? await Contract.findById(refundMilestone.contract_id).select("organization_id").lean() : null;
+  const organizationId = depositPayment.organization_id || refundContract?.organization_id || null;
+  if (!depositPayment.organization_id && organizationId) {
+    depositPayment.organization_id = organizationId;
+    await depositPayment.save();
+  }
 
   let payment = await Payment.findOne({
     milestone_id: milestoneId,
@@ -559,10 +593,15 @@ export async function refundClient(milestoneId, auditContext = {}) {
     status: { $in: ["pending", "succeeded"] },
   });
   if (payment?.status === "succeeded") return payment;
+  if (payment && !payment.organization_id && organizationId) {
+    payment.organization_id = organizationId;
+    await payment.save();
+  }
   if (!payment) {
     try {
       payment = await Payment.create({
         milestone_id: milestoneId,
+        organization_id: organizationId,
         amount: depositPayment.amount,
         amount_minor: moneyFromRecord(depositPayment).amountMinor,
         currency: depositPayment.currency,
@@ -853,9 +892,18 @@ export async function reconcilePendingReleases({ limit = 100, auditContext = {} 
   return results;
 }
 
-export async function listForUser(userId) {
+export async function listForUser(userOrId) {
+  const userId = userOrId?._id || userOrId;
+  const { listOrganizationIdsForUser } = await import("../organizations/organization-access.service.js");
+  const organizationIds = userOrId?.role === "client" || userOrId?.role === "admin"
+    ? await listOrganizationIdsForUser(userId, ["admin", "billing_viewer"])
+    : [];
   const contracts = await Contract.find({
-    $or: [{ client_id: userId }, { student_id: userId }],
+    $or: [
+      { client_id: userId },
+      { student_id: userId },
+      ...(organizationIds.length ? [{ organization_id: { $in: organizationIds } }] : []),
+    ],
   }).select("_id");
 
   const contractIds = contracts.map((c) => c._id);

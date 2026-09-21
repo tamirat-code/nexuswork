@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const paymentSchema = new mongoose.Schema(
   {
     milestone_id: { type: mongoose.Schema.Types.ObjectId, ref: "Milestone", required: true },
+    organization_id: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     amount: { type: Number, required: true },
     // Canonical payment-boundary value. Legacy amount remains for API/backward compatibility.
     amount_minor: { type: Number, min: 0 },

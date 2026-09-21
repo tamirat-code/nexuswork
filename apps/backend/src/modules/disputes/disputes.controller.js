@@ -35,6 +35,6 @@ export const getOpen = asyncHandler(async (req, res) => {
 });
 
 export const getMine = asyncHandler(async (req, res) => {
-  const disputes = await listForUser(req.user._id);
+  const disputes = await listForUser(req.user);
   res.json({ success: true, data: disputes });
 });

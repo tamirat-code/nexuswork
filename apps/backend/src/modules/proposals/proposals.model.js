@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const proposalSchema = new mongoose.Schema(
   {
     project_id: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
+    organization_id: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     student_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     price: { type: Number, required: true },
     price_minor: { type: Number, min: 0 },
@@ -25,5 +26,6 @@ const proposalSchema = new mongoose.Schema(
 
 // one proposal per student per project
 proposalSchema.index({ project_id: 1, student_id: 1 }, { unique: true });
+proposalSchema.index({ organization_id: 1, createdAt: -1 });
 
 export default mongoose.model("Proposal", proposalSchema);

@@ -13,6 +13,7 @@ import { recordEvent } from "../audit-logs/audit-logs.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import crypto from "node:crypto";
 import { money, moneyFromLegacyMajorUnits, majorUnitsFromMoney } from "../../shared/money/money.js";
+import { requireOrganizationAccess, listOrganizationIdsForUser } from "../organizations/organization-access.service.js";
 
 const VALID_OUTCOMES = ["refund_client", "release_student", "resume_work"];
 
@@ -22,7 +23,10 @@ export async function openDispute(milestoneId, openedBy, reason, auditContext = 
 
   const contract = milestone.contract_id;
   const isParty = [String(contract.client_id), String(contract.student_id)].includes(String(openedBy));
-  if (!isParty) {
+  const organizationAccess = !isParty && contract.organization_id
+    ? await requireOrganizationAccess(contract.organization_id, openedBy, ["admin", "recruiter"])
+    : null;
+  if (!isParty && !organizationAccess) {
     throw new ForbiddenError("Only a party to this contract can open a dispute on its milestone");
   }
 
@@ -32,7 +36,7 @@ export async function openDispute(milestoneId, openedBy, reason, auditContext = 
   const preDisputeStatus = milestone.status;
   milestone.status = "disputed";
   await milestone.save();
-  const dispute = await Dispute.create({ milestone_id: milestoneId, opened_by: openedBy, reason, pre_dispute_status: preDisputeStatus });
+  const dispute = await Dispute.create({ milestone_id: milestoneId, organization_id: contract.organization_id || null, opened_by: openedBy, reason, pre_dispute_status: preDisputeStatus });
   const correlationId = auditContext.correlationId || crypto.randomUUID();
   await recordEvent({
     actor: auditContext.actor,
@@ -40,6 +44,7 @@ export async function openDispute(milestoneId, openedBy, reason, auditContext = 
     action: "milestone.disputed",
     entityType: "milestone",
     entityId: milestone._id,
+    organizationId: contract.organization_id,
     previousState: preDisputeStatus,
     newState: milestone.status,
     correlationId,
@@ -51,6 +56,7 @@ export async function openDispute(milestoneId, openedBy, reason, auditContext = 
     action: "dispute.opened",
     entityType: "dispute",
     entityId: dispute._id,
+    organizationId: contract.organization_id,
     previousState: null,
     newState: dispute.status,
     correlationId,
@@ -102,7 +108,10 @@ export async function getDisputeEvidence(disputeId, requestingUser) {
   const requestingUserId = String(requestingUser._id);
   const contractPartyIds = [contract.client_id?._id || contract.client_id, contract.student_id?._id || contract.student_id];
   const isParty = contractPartyIds.map(String).includes(requestingUserId);
-  if (requestingUser.role !== "admin" && !isParty) {
+  const organizationAccess = !isParty && contract.organization_id
+    ? await requireOrganizationAccess(contract.organization_id, requestingUser._id, ["admin", "recruiter"])
+    : null;
+  if (requestingUser.role !== "admin" && !isParty && !organizationAccess) {
     throw new ForbiddenError("Not authorized to view this dispute's evidence");
   }
 
@@ -172,6 +181,7 @@ export async function resolveDispute(disputeId, { resolution_summary, outcome },
     action: "dispute.resolved",
     entityType: "dispute",
     entityId: dispute._id,
+    organizationId: contract.organization_id,
     previousState: previousDisputeState,
     newState: dispute.status,
     correlationId: auditContext.correlationId || crypto.randomUUID(),
@@ -194,10 +204,18 @@ export async function listOpen() {
 }
 
 
-export async function listForUser(userId) {
+export async function listForUser(userOrId) {
+  const userId = userOrId?._id || userOrId;
+  const organizationIds = userOrId?.role === "client" || userOrId?.role === "admin"
+    ? await listOrganizationIdsForUser(userId, ["admin", "recruiter"])
+    : [];
   
   const contractIds = await Contract.distinct("_id", {
-    $or: [{ client_id: userId }, { student_id: userId }],
+    $or: [
+      { client_id: userId },
+      { student_id: userId },
+      ...(organizationIds.length ? [{ organization_id: { $in: organizationIds } }] : []),
+    ],
   });
 
   if (!contractIds.length) return [];
