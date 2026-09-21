@@ -1,6 +1,8 @@
 import Project from "../projects/projects.model.js";
 import StudentProfile from "../students/students.model.js";
 import Proposal from "../proposals/proposals.model.js";
+import Contract from "../contracts/contracts.model.js";
+import Milestone from "../milestones/milestones.model.js";
 import User from "../users/users.model.js";
 import LearningResource from "../learning/learning.model.js";
 import { isOrgMember } from "../clients/clients.service.js";
@@ -9,6 +11,7 @@ import RecommendationFeedback from "./recommendation-feedback.model.js";
 import { aiConfig } from "../../config/ai.config.js";
 import { logger } from "../../shared/logger/logger.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
+import { assertEnabledModelEvaluated } from "./recommendation-governance.service.js";
 
 
 function scoreBySkillOverlap(project, studentSkills) {
@@ -28,8 +31,52 @@ function scoreStudentBySkillOverlap(project, studentSkills) {
   return scoreBySkillOverlap(project, studentSkills || []);
 }
 
+function clampScore(value) {
+  return Math.max(0, Math.min(1, Number(value) || 0));
+}
+
+function buildFactorBreakdown(project, profile, user, context = {}) {
+  const skillOverlap = clampScore(scoreStudentBySkillOverlap(project, profile.skills));
+  const verification = profile.verification_status === "verified" ? 1 : profile.verification_status === "pending" ? 0.5 : 0;
+  const activeContracts = context.activeContractsByStudent?.get(String(user._id)) || 0;
+  const availability = activeContracts === 0 ? 1 : activeContracts < 2 ? 0.7 : 0.4;
+  const delivery = context.deliveryByStudent?.get(String(user._id)) || { completed: 0, onTime: 0 };
+  const deliveryHistory = delivery.completed ? clampScore(delivery.onTime / delivery.completed) : 0.5;
+  const projectCategory = String(project.category || "").toLowerCase().replace(/[-_]/g, " ");
+  const categoryRelevance = (profile.skills || []).some((skill) => String(skill.category || "").toLowerCase().replace(/[-_]/g, " ").includes(projectCategory) || projectCategory.includes(String(skill.category || "").toLowerCase())) ? 1 : 0.5;
+  const budgetHistory = context.budgetByStudent?.get(String(user._id));
+  const budgetCompatibility = budgetHistory?.length ? (budgetHistory.some((amount) => Number(amount) <= Number(project.budget || 0)) ? 1 : 0.4) : 0.5;
+  const weights = { skill_overlap: 0.35, verification_tier: 0.15, availability: 0.15, delivery_history: 0.15, category_relevance: 0.1, budget_compatibility: 0.1 };
+  const factors = {
+    skill_overlap: { score: skillOverlap, weight: weights.skill_overlap, explanation: `${Math.round(skillOverlap * 100)}% of required skills overlap` },
+    verification_tier: { score: verification, weight: weights.verification_tier, explanation: profile.verification_status === "verified" ? "University verification is complete" : "University verification is not complete" },
+    availability: { score: availability, weight: weights.availability, explanation: activeContracts ? `${activeContracts} active contract${activeContracts === 1 ? "" : "s"}` : "No active contracts" },
+    delivery_history: { score: deliveryHistory, weight: weights.delivery_history, explanation: delivery.completed ? `${Math.round(deliveryHistory * 100)}% on-time delivery history` : "No delivery history yet" },
+    category_relevance: { score: categoryRelevance, weight: weights.category_relevance, explanation: categoryRelevance === 1 ? "Skill category matches the project category" : "Related category signal" },
+    budget_compatibility: { score: budgetCompatibility, weight: weights.budget_compatibility, explanation: budgetHistory?.length ? "Compared with prior proposal amounts" : "No prior pricing history" },
+  };
+  const weightedScore = Object.values(factors).reduce((total, factor) => total + factor.score * factor.weight, 0);
+  return { factors, weighted_score: Math.round(weightedScore * 100) / 100 };
+}
+
+function buildStudentProjectFactors(project, profile) {
+  const skill = clampScore(scoreBySkillOverlap(project, profile.skills || []));
+  const category = (profile.skills || []).some((item) => String(item.category || "").toLowerCase().includes(String(project.category || "").toLowerCase().replace(/[-_]/g, " "))) ? 1 : 0.5;
+  const budget = Number(project.budget || 0) > 0 ? 0.5 : 0;
+  return {
+    skill_overlap: { score: skill, weight: 0.6, explanation: `${Math.round(skill * 100)}% of required skills overlap` },
+    category_relevance: { score: category, weight: 0.25, explanation: category === 1 ? "Your skill category matches the project" : "Related category signal" },
+    budget_compatibility: { score: budget, weight: 0.15, explanation: budget ? "Project has an explicit budget" : "No budget signal available" },
+  };
+}
+
 async function rankClientStudentsWithAI(project, candidates) {
   if (aiConfig.provider === "none" || !aiConfig.apiKey || !candidates.length) return null;
+  const modelStatus = await assertEnabledModelEvaluated();
+  if (!modelStatus.evaluated) {
+    logger.warn("[recommendation] AI ranking disabled until the enabled model has a current evaluation record");
+    return null;
+  }
   const projectContext = JSON.stringify({ title: project.title, description: project.description?.slice(0, 1000), category: project.category, experience_level: project.experience_level, required_skills: project.required_skills });
   const ranked = new Map();
   const batchSize = 30;
@@ -37,7 +84,7 @@ async function rankClientStudentsWithAI(project, candidates) {
   for (let start = 0; start < candidates.length; start += batchSize) batches.push(candidates.slice(start, start + batchSize));
 
   async function rankBatch(batch, batchNumber) {
-    const prompt = `You are matching verified student freelancers to a client project.
+    const prompt = `You are matching student freelancers to a client project. Do not reject a candidate because verification is incomplete; verification is only one ranking factor.
 Project: ${projectContext}.
 Candidates (evaluate every candidate and every listed skill): ${JSON.stringify(batch.map(({ profile, user }) => ({ id: String(user._id), name: user.name, skills: profile.skills, program: profile.program, bio: profile.bio?.slice(0, 300) })))}.
 Return ONLY a JSON array containing every candidate in this batch, sorted best first, in this exact shape: [{"id":"student_id","score":85,"reason":"Matches the required skills."}].
@@ -215,6 +262,8 @@ export async function getRecommendationsForStudent(studentUserId) {
     matched_skills: matchedSkills(project, studentSkills),
     ranking_source: rankingSource,
     ai_reason: aiEvaluations.get(String(project._id))?.reason || null,
+    factor_breakdown: buildStudentProjectFactors(project, profile),
+    model: { provider: aiConfig.provider || "skill-overlap", name: aiConfig.model || "skill-overlap", version: aiConfig.modelVersion || "v1" },
   }));
 }
 
@@ -237,18 +286,44 @@ export async function getRecommendationsForClient(projectId, requestingUser) {
   const userIds = candidatePool.map((c) => c.profile.user_id);
   const users = await User.find({ _id: { $in: userIds }, role: "student", status: "active" }, "name avatarUrl").lean();
   const userById = new Map(users.map((u) => [String(u._id), u]));
-  const usable = candidatePool.map(({ profile, score }) => ({ profile, score, user: userById.get(String(profile.user_id)) })).filter((item) => item.user);
+  const [activeContracts, completedMilestones, proposals] = await Promise.all([
+    Contract.find({ student_id: { $in: userIds }, status: "active" }).select("student_id").lean(),
+    Milestone.find({ status: { $in: ["delivered", "approved", "released"] } }).populate({ path: "contract_id", select: "student_id" }).select("contract_id due_date delivered_at approved_at released_at").lean(),
+    Proposal.find({ student_id: { $in: userIds }, status: { $in: ["accepted", "pending"] } }).select("student_id price").lean(),
+  ]);
+  const activeContractsByStudent = new Map();
+  activeContracts.forEach((contract) => activeContractsByStudent.set(String(contract.student_id), (activeContractsByStudent.get(String(contract.student_id)) || 0) + 1));
+  const deliveryByStudent = new Map();
+  completedMilestones.forEach((milestone) => {
+    const studentId = milestone.contract_id?.student_id;
+    if (!studentId) return;
+    const key = String(studentId);
+    const current = deliveryByStudent.get(key) || { completed: 0, onTime: 0 };
+    const completedAt = milestone.released_at || milestone.approved_at || milestone.delivered_at;
+    current.completed += 1;
+    if (!milestone.due_date || (completedAt && new Date(completedAt) <= new Date(milestone.due_date))) current.onTime += 1;
+    deliveryByStudent.set(key, current);
+  });
+  const budgetByStudent = new Map();
+  proposals.forEach((proposal) => budgetByStudent.set(String(proposal.student_id), [...(budgetByStudent.get(String(proposal.student_id)) || []), proposal.price]));
+  const factorContext = { activeContractsByStudent, deliveryByStudent, budgetByStudent };
+  const usable = candidatePool.map(({ profile, score }) => {
+    const user = userById.get(String(profile.user_id));
+    return user ? { profile, score, user, breakdown: buildFactorBreakdown(project, profile, user, factorContext) } : null;
+  }).filter(Boolean);
   const aiRanking = await rankClientStudentsWithAI(project, usable);
   const aiById = new Map(aiRanking || []);
-  const ranked = [...usable].sort((a, b) => (aiById.get(String(b.user._id))?.score ?? b.score * 100) - (aiById.get(String(a.user._id))?.score ?? a.score * 100));
+  const ranked = [...usable].sort((a, b) => (aiById.get(String(b.user._id))?.score ?? b.breakdown.weighted_score * 100) - (aiById.get(String(a.user._id))?.score ?? a.breakdown.weighted_score * 100));
 
-  return ranked.slice(0, 20).map(({ profile, score, user }) => ({
+  return ranked.slice(0, 20).map(({ profile, score, user, breakdown }) => ({
     user: { ...user, avatar_url: user.avatarUrl },
     skills: profile.skills,
     verification_status: profile.verification_status,
-    match_score: aiById.has(String(user._id)) ? aiById.get(String(user._id)).score / 100 : Math.round(score * 100) / 100,
+    match_score: aiById.has(String(user._id)) ? aiById.get(String(user._id)).score / 100 : breakdown.weighted_score,
     ranking_source: aiById.has(String(user._id)) ? "ai" : "skill_overlap",
     ai_reason: aiById.get(String(user._id))?.reason || null,
+    factor_breakdown: breakdown.factors,
+    model: { provider: aiConfig.provider || "skill-overlap", name: aiConfig.model || "skill-overlap", version: aiConfig.modelVersion || "v1" },
   }));
 }
 

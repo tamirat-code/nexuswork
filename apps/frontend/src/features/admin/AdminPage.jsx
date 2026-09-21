@@ -43,6 +43,7 @@ import { reportValidation } from "../../lib/validation.js";
 import ConfirmDialog from "../../components/dialogs/ConfirmDialog.jsx";
 import OperationalStatusCard from "./OperationalStatusCard.jsx";
 import ApiPartnersAdminPanel from "./ApiPartnersAdminPanel.jsx";
+import RecommendationGovernancePanel from "./RecommendationGovernancePanel.jsx";
 
 function CreateUniversityDialog({ token }) {
   const qc = useQueryClient();
@@ -707,6 +708,7 @@ export default function AdminPage() {
           <TabsTrigger value="categories"><Tag className="h-4 w-4" /> {t("admin.tabCategories")}</TabsTrigger>
           <TabsTrigger value="audit-log"><ScrollText className="h-4 w-4" /> {t("admin.tabAuditLogs")}</TabsTrigger>
           <TabsTrigger value="api-partners"><PlugZap className="h-4 w-4" /> {t("admin.tabApiPartners")}</TabsTrigger>
+          <TabsTrigger value="governance"><ShieldCheck className="h-4 w-4" /> {t("admin.tabGovernance", { defaultValue: "AI governance" })}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories">
@@ -719,6 +721,10 @@ export default function AdminPage() {
 
         <TabsContent value="api-partners">
           <ApiPartnersAdminPanel token={token} />
+        </TabsContent>
+
+        <TabsContent value="governance">
+          <RecommendationGovernancePanel token={token} />
         </TabsContent>
 
         <TabsContent value="overview">

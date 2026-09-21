@@ -1,6 +1,7 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { requireFields } from "../../shared/validators/validate.js";
-import { trackEvent, getPlatformMetrics, getUserMetrics, getUniversityMetrics, getMyUniversityMetrics } from "./analytics.service.js";
+import { trackEvent, getPlatformMetrics, getUserMetrics, getUniversityMetrics, getMyUniversityMetrics, getDeliveryAnalytics } from "./analytics.service.js";
+import { ForbiddenError } from "../../shared/exceptions/AppError.js";
 
 export const postEvent = asyncHandler(async (req, res) => {
   requireFields(req.body, ["event_type"]);
@@ -32,4 +33,9 @@ export const getUniversity = asyncHandler(async (req, res) => {
 export const getMyUniversity = asyncHandler(async (req, res) => {
   const metrics = await getMyUniversityMetrics(req.user);
   res.json({ success: true, data: metrics });
+});
+
+export const getDelivery = asyncHandler(async (req, res) => {
+  if (req.user.role !== "admin") throw new ForbiddenError("Only admins can view delivery analytics");
+  res.json({ success: true, data: await getDeliveryAnalytics({ studentId: req.query.student_id, category: req.query.category }) });
 });

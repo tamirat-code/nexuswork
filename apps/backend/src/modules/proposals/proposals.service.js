@@ -7,6 +7,7 @@ import StudentProfile from "../students/students.model.js";
 import Category from "../categories/categories.model.js";
 import Skill from "../skills/skills.model.js";
 import { recordEvent } from "../audit-logs/audit-logs.service.js";
+import { RecommendationEvent } from "../recommendation/recommendation-governance.model.js";
 import crypto from "node:crypto";
 
 import {
@@ -547,6 +548,28 @@ export async function acceptProposal(
     correlationId,
     metadata: { proposalId: proposal._id, projectId: project._id },
   });
+
+  // Preserve the recommendation funnel outcome when the selected student was
+  // shown by the matcher. This is append-only and never changes hiring logic.
+  const recommendationImpression = await RecommendationEvent.findOne({
+    project_id: project._id,
+    student_id: proposal.student_id._id,
+    event_type: "impression",
+  }).sort({ createdAt: -1 }).lean();
+  if (recommendationImpression) {
+    await RecommendationEvent.create({
+      event_type: "outcome",
+      actor_id: requestingUser._id,
+      project_id: project._id,
+      student_id: proposal.student_id._id,
+      recommendation_id: recommendationImpression.recommendation_id,
+      model_provider: recommendationImpression.model_provider,
+      model_name: recommendationImpression.model_name,
+      model_version: recommendationImpression.model_version,
+      factors: recommendationImpression.factors,
+      metadata: { outcome: "contract_created", contract_id: contract._id, proposal_id: proposal._id },
+    });
+  }
 
   await createNotification({
     userId: proposal.student_id._id,

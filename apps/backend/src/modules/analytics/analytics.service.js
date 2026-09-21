@@ -108,6 +108,32 @@ export async function getPlatformMetrics({ days = 30 } = {}) {
   };
 }
 
+export async function getDeliveryAnalytics({ studentId, category } = {}) {
+  const contracts = await Contract.find(studentId ? { student_id: studentId } : {})
+    .populate("project_id", "category")
+    .select("student_id project_id")
+    .lean();
+  const contractIds = contracts.filter((contract) => !category || contract.project_id?.category === category).map((contract) => contract._id);
+  const milestones = await Milestone.find({ contract_id: { $in: contractIds }, delivered_at: { $ne: null } }).select("contract_id due_date delivered_at status").lean();
+  const contractById = new Map(contracts.map((contract) => [String(contract._id), contract]));
+  const grouped = new Map();
+  for (const milestone of milestones) {
+    const contract = contractById.get(String(milestone.contract_id));
+    if (!contract) continue;
+    const key = `${contract.student_id}:${contract.project_id?.category || "uncategorized"}`;
+    const row = grouped.get(key) || { student_id: contract.student_id, category: contract.project_id?.category || "uncategorized", delivered: 0, on_time: 0, late: 0 };
+    row.delivered += 1;
+    if (milestone.due_date && new Date(milestone.delivered_at) <= new Date(milestone.due_date)) row.on_time += 1;
+    else row.late += 1;
+    grouped.set(key, row);
+  }
+  const rows = [...grouped.values()].map((row) => ({ ...row, on_time_rate: row.delivered ? Math.round((row.on_time / row.delivered) * 1000) / 10 : null }));
+  const studentIds = [...new Set(rows.map((row) => String(row.student_id)))];
+  const users = await User.find({ _id: { $in: studentIds } }).select("name email").lean();
+  const names = new Map(users.map((user) => [String(user._id), user]));
+  return rows.map((row) => ({ ...row, student: names.get(String(row.student_id)) || null }));
+}
+
 export async function getUserMetrics(userId) {
 
   const myContracts = await Contract.find({ student_id: userId }).select("_id");

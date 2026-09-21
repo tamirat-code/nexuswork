@@ -1,5 +1,6 @@
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { getRecommendationsForStudent, getRecommendationsForClient, getPriceSuggestion, getCareerRecommendation, getRecommendationHistory, saveRecommendationFeedback } from "./recommendation.service.js";
+import { recordRecommendationEvent, listRecommendationEvents } from "./recommendation-governance.service.js";
 
 export const getMyRecommendations = asyncHandler(async (req, res) => {
   const projects = await getRecommendationsForStudent(req.user._id);
@@ -32,4 +33,13 @@ export const getSuggestedPrice = asyncHandler(async (req, res) => {
     : (req.query.skills || "").split(",").filter(Boolean);
   const suggestion = await getPriceSuggestion({ requiredSkills, category: req.query.category });
   res.json({ success: true, data: suggestion });
+});
+
+export const postRecommendationEvent = asyncHandler(async (req, res) => {
+  const event = await recordRecommendationEvent(req.user, req.body);
+  res.status(201).json({ success: true, data: event });
+});
+
+export const getRecommendationEvents = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listRecommendationEvents({ projectId: req.query.project_id, limit: req.query.limit }) });
 });

@@ -15,11 +15,12 @@ import {
 } from "../../components/ui/index.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeAgo } from "../../utils/date.utils.js";
+import { getContractsOverview } from "../../services/api/oversight.api.js";
 
 /** All contracts the signed-in user is a party to. */
 export default function ContractsPage() {
   const { t } = useTranslation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["contracts"],
     queryFn: () => listMyContracts(token),
@@ -27,6 +28,11 @@ export default function ContractsPage() {
   });
 
   const contracts = data?.data ?? [];
+  const overview = useQuery({
+    queryKey: ["contracts-overview"],
+    queryFn: () => getContractsOverview(token),
+    enabled: Boolean(token && ["client", "admin"].includes(user?.role)),
+  });
 
   return (
     <>
@@ -96,7 +102,13 @@ export default function ContractsPage() {
           })}
         </ul>
       )}
+
+      {overview.data?.data?.length > 0 && <Card className="mt-6 border-brand/30 bg-brand-soft">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-display text-lg text-content-primary">{t("contracts.oversightTitle", { defaultValue: "Cross-contract oversight" })}</h2><p className="text-sm text-content-secondary">{t("contracts.oversightHint", { defaultValue: "All contracts, milestone funding, and delivery status in one view." })}</p></div>
+          <div className="flex gap-4 text-sm"><span><strong>{overview.data.data.length}</strong> {t("contracts.contracts", { defaultValue: "contracts" })}</span><span><strong>{overview.data.data.reduce((sum, item) => sum + (item.oversight?.at_risk_milestones || 0), 0)}</strong> {t("contracts.atRisk", { defaultValue: "at risk" })}</span></div>
+        </div>
+      </Card>}
     </>
   );
 }
-

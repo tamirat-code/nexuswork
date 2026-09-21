@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BarChart3, TrendingUp, Users, Briefcase, Wallet, FileText } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { getPlatformAnalytics, getMyUniversityAnalytics, getMyAnalytics } from "../../services/api/analytics.api.js";
+import { getPlatformAnalytics, getMyUniversityAnalytics, getMyAnalytics, getDeliveryAnalytics } from "../../services/api/analytics.api.js";
 import { getMyWallet } from "../../services/api/wallets.api.js";
 import { listMyProposals } from "../../services/api/proposals.api.js";
 import { listMyContracts } from "../../services/api/contracts.api.js";
@@ -96,9 +96,15 @@ export default function AnalyticsPage() {
     queryFn: () => listAdminStats(token),
     enabled: !!token && isAdmin,
   });
+  const { data: deliveryRes, isLoading: deliveryLoading } = useQuery({
+    queryKey: ["analytics", "delivery"],
+    queryFn: () => getDeliveryAnalytics({}, token),
+    enabled: !!token && isAdmin,
+  });
   const isLoading = analyticsLoading || (isAdmin && adminDashboardLoading);
   const a = data?.data ?? {};
   const adminDashboard = adminDashboardRes?.data ?? {};
+  const deliveryRows = deliveryRes?.data ?? [];
   if (isStudent) {
     return <PersonalAnalytics t={t} analytics={personalRes?.data ?? {}} wallet={personalWalletRes?.data ?? {}} proposals={proposalsRes?.data ?? []} contracts={contractsRes?.data ?? []} loading={personalLoading || personalWalletLoading || proposalsLoading || contractsLoading} />;
   }
@@ -300,6 +306,10 @@ export default function AnalyticsPage() {
           ) : <p className="py-16 text-center text-sm text-slate-300">{t("analytics.noData")}</p>}
         </CardContent>
       </Card>
+      {isAdmin && <Card className="mt-6">
+        <CardHeader><CardTitle>{t("analytics.deliveryByStudentCategory", { defaultValue: "Delivery by student and category" })}</CardTitle></CardHeader>
+        <CardContent>{deliveryLoading ? <Skeleton className="h-24 w-full" /> : deliveryRows.length ? <div className="space-y-2">{deliveryRows.slice(0, 12).map((row) => <div key={`${row.student_id}-${row.category}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm"><span className="font-medium text-content-primary">{row.student?.name || row.student?.email || "Student"} · {row.category}</span><span className="text-content-secondary">{row.on_time_rate}% on time · {row.delivered} delivered</span></div>)}</div> : <p className="text-sm text-content-secondary">{t("analytics.noData")}</p>}</CardContent>
+      </Card>}
     </div>
   );
 }

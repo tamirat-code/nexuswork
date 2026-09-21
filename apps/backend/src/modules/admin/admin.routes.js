@@ -12,6 +12,10 @@ import {
   resolveDisputeHandler,
   getReports,
   reviewUserReport,
+  getRecommendationGovernance,
+  patchRecommendationGovernance,
+  getRecommendationEvaluations,
+  postRecommendationEvaluation,
 } from "./admin.controller.js";
 import { validateBody, validateParams } from "../../shared/validators/ZodValidator.js";
 import { adminActionSchema, updateUserRoleSchema, resolveAdminDisputeSchema, reviewUserReportSchema } from "../../shared/validators/schemas.js";
@@ -24,6 +28,10 @@ router.use(requireAuth);
 
 // Dashboard
 router.get("/dashboard", getDashboard);
+router.get("/recommendation-governance", getRecommendationGovernance);
+router.patch("/recommendation-governance", patchRecommendationGovernance);
+router.get("/recommendation-governance/evaluations", getRecommendationEvaluations);
+router.post("/recommendation-governance/evaluations", postRecommendationEvaluation);
 
 // Users management
 router.get("/users", getUsers);

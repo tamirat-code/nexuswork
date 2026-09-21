@@ -6,13 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, BadgeCheck, Bookmark, BookmarkCheck, Sparkles, Users, Send } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Bookmark, BookmarkCheck, Sparkles, Users, Send, X } from "lucide-react";
 import { getProject, updateProject, closeProject } from "../../services/api/projects.api.js";
 import { listSkills } from "../../services/api/skills.api.js";
 import { submitProposal, listProjectProposals, acceptProposal, markProposalCvViewed, getCommissionPreview } from "../../services/api/proposals.api.js";
 import { getProposalDraft, saveProposalDraft } from "../../services/api/proposal-drafts.api.js";
 import { listSavedProjects, saveProject, removeSavedProject } from "../../services/api/saved-projects.api.js";
-import { getStudentMatchesForProject } from "../../services/api/recommendation.api.js";
+import { getStudentMatchesForProject, recordRecommendationEvent } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeAgo, formatTimeLeft } from "../../utils/date.utils.js";
@@ -265,8 +265,24 @@ function RecommendedStudents({ projectId, token }) {
     queryFn: () => getStudentMatchesForProject(projectId, token),
     enabled: !!token,
   });
+  const [dismissed, setDismissed] = useState(() => new Set());
 
   const matches = data?.data ?? [];
+  useEffect(() => {
+    if (!matches.length || !token) return;
+    matches.forEach((match) => {
+      recordRecommendationEvent({
+        event_type: "impression",
+        project_id: projectId,
+        student_id: match.user._id,
+        recommendation_id: `${projectId}:${match.user._id}:${match.model?.version || "v1"}`,
+        model_provider: match.model?.provider,
+        model_name: match.model?.name,
+        model_version: match.model?.version,
+        factors: match.factor_breakdown,
+      }, token).catch(() => { /* analytics must never block recommendations */ });
+    });
+  }, [matches, projectId, token]);
   return (
     <div id="recommendations" className="space-y-3 scroll-mt-24">
       <div className="flex items-center gap-2">
@@ -281,7 +297,7 @@ function RecommendedStudents({ projectId, token }) {
 
       {!isLoading && !error && matches.length === 0 && <Card><CardContent className="p-5" role="status"><p className="font-semibold text-slate">{t("projects.noRecommendedStudentsTitle", { defaultValue: "No matching student found" })}</p><p className="mt-1 text-sm leading-relaxed text-slate-300">{t("projects.noRecommendedStudents", { defaultValue: "We could not find an active student profile with enough information to match this project yet." })}</p><p className="mt-2 text-sm text-slate-300">{t("projects.noRecommendedStudentsAction", { defaultValue: "Try adding specific required skills or check again after students complete their profiles." })}</p></CardContent></Card>}
 
-      {matches.map((m) => (
+      {matches.filter((m) => !dismissed.has(String(m.user._id))).map((m) => (
         <Card key={m.user._id}>
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div className="flex min-w-0 items-center gap-3">
@@ -297,9 +313,12 @@ function RecommendedStudents({ projectId, token }) {
                     <Badge key={s.name} variant="secondary" className="text-xs">{s.name}</Badge>
                   ))}
                 </div>
+                {m.factor_breakdown && <details className="mt-2 text-[11px] text-slate-300"><summary className="cursor-pointer text-brand">{t("projects.whyThisMatch", { defaultValue: "Why this match" })}</summary><div className="mt-1 grid gap-1 sm:grid-cols-2">
+                  {Object.entries(m.factor_breakdown).map(([key, factor]) => <span key={key}><strong className="capitalize">{key.replaceAll("_", " ")}</strong>: {factor.explanation} ({Math.round((factor.score || 0) * 100)}%)</span>)}
+                </div></details>}
               </div>
             </div>
-            <div className="flex items-center gap-2"><Badge variant="outline" className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> {Math.round((m.match_score || 0) * 100)}% match</Badge><PreContractInterviewDialog projectId={projectId} student={m.user} token={token} /></div>
+            <div className="flex items-center gap-2"><Badge variant="outline" className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> {Math.round((m.match_score || 0) * 100)}% match</Badge><PreContractInterviewDialog projectId={projectId} student={m.user} token={token} onSelected={() => recordRecommendationEvent({ event_type: "selection", project_id: projectId, student_id: m.user._id, recommendation_id: `${projectId}:${m.user._id}:${m.model?.version || "v1"}`, factors: m.factor_breakdown }, token).catch(() => {})} /><Button variant="ghost" size="icon" aria-label={t("projects.dismissRecommendation", { defaultValue: "Dismiss recommendation" })} onClick={() => { setDismissed((current) => new Set([...current, String(m.user._id)])); recordRecommendationEvent({ event_type: "dismissal", project_id: projectId, student_id: m.user._id, recommendation_id: `${projectId}:${m.user._id}:${m.model?.version || "v1"}`, factors: m.factor_breakdown }, token).catch(() => {}); }}><X className="h-4 w-4" /></Button></div>
           </CardContent>
         </Card>
       ))}
@@ -307,7 +326,7 @@ function RecommendedStudents({ projectId, token }) {
   );
 }
 
-function PreContractInterviewDialog({ projectId, student, token }) {
+function PreContractInterviewDialog({ projectId, student, token, onSelected }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [conversationId, setConversationId] = useState(null);
@@ -317,7 +336,10 @@ function PreContractInterviewDialog({ projectId, student, token }) {
   const send = useMutation({ mutationFn: () => sendPreContractMessage(conversationId, body, token), onSuccess: () => { setBody(""); conversation.refetch(); } });
   function handleOpen(nextOpen) {
     setOpen(nextOpen);
-    if (nextOpen && !conversationId) start.mutate();
+    if (nextOpen) {
+      onSelected?.();
+      if (!conversationId) start.mutate();
+    }
   }
 
   return (

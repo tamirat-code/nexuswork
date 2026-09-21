@@ -14,6 +14,7 @@ import {
   getDashboardStats,
 } from "./admin.service.js";
 import { listReports, reviewReport } from "../safety/safety.service.js";
+import { getGovernanceSettings, updateGovernanceSettings, listModelEvaluations, createModelEvaluation, getRecommendationGovernanceSummary } from "../recommendation/recommendation-governance.service.js";
 
 /**
  * Get admin dashboard with platform statistics.
@@ -24,6 +25,26 @@ export const getDashboard = asyncHandler(async (req, res) => {
   }
   const stats = await getDashboardStats();
   res.json({ success: true, data: stats });
+});
+
+export const getRecommendationGovernance = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) throw new ForbiddenError("Only admins can access recommendation governance");
+  res.json({ success: true, data: await getRecommendationGovernanceSummary() });
+});
+
+export const patchRecommendationGovernance = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) throw new ForbiddenError("Only admins can change recommendation governance");
+  res.json({ success: true, data: await updateGovernanceSettings(req.user, req.body) });
+});
+
+export const getRecommendationEvaluations = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) throw new ForbiddenError("Only admins can view model evaluations");
+  res.json({ success: true, data: await listModelEvaluations() });
+});
+
+export const postRecommendationEvaluation = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.ADMIN) throw new ForbiddenError("Only admins can create model evaluations");
+  res.status(201).json({ success: true, data: await createModelEvaluation(req.user, req.body) });
 });
 
 /**

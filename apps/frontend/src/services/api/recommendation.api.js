@@ -18,3 +18,4 @@ export const getSuggestedPrice = ({ skills = [], category } = {}, token) => {
   const qs = params.toString();
   return apiRequest(`/recommendations/price-suggestion${qs ? `?${qs}` : ""}`, { token });
 };
+export const recordRecommendationEvent = (payload, token) => apiRequest("/recommendations/events", { method: "POST", body: payload, token });

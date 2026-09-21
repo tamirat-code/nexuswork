@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sparkles, Zap, TrendingUp, BookOpen, ThumbsDown, ThumbsUp } from "lucide-react";
-import { getRecommendations, getCareerRecommendation, submitRecommendationFeedback } from "../../services/api/recommendation.api.js";
+import { getRecommendations, getCareerRecommendation, submitRecommendationFeedback, recordRecommendationEvent } from "../../services/api/recommendation.api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { formatCurrency } from "../../utils/currency.utils.js";
 import { formatTimeLeft } from "../../utils/date.utils.js";
@@ -23,6 +24,13 @@ export default function RecommendationPage() {
     enabled: !!token && isStudent,
   });
   const recs = data?.data ?? [];
+  useEffect(() => {
+    if (!isStudent || !user?.id || !recs.length) return;
+    recs.forEach((recommendation) => {
+      const project = recommendation.project || recommendation;
+      recordRecommendationEvent({ event_type: "impression", project_id: project._id, student_id: user.id, recommendation_id: `${project._id}:${user.id}:${recommendation.model?.version || "v1"}`, model_provider: recommendation.model?.provider, model_name: recommendation.model?.name, model_version: recommendation.model?.version, factors: recommendation.factor_breakdown }).catch(() => {});
+    });
+  }, [isStudent, recs, token, user?.id]);
   const feedback = useMutation({
     mutationFn: ({ projectId, sentiment }) => submitRecommendationFeedback(projectId, { sentiment }, token),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recommendation-history"] }),
@@ -167,6 +175,7 @@ export default function RecommendationPage() {
                     <span className="font-semibold text-brass">AI explanation:</span> {r.ai_reason}
                   </p>
                 )}
+                {r.factor_breakdown && <details className="mt-3 text-xs text-slate-300"><summary className="cursor-pointer text-brass">{t("recommendations.whyThisMatch", { defaultValue: "Why this match" })}</summary><div className="mt-1 space-y-1">{Object.entries(r.factor_breakdown).map(([key, factor]) => <p key={key}><strong className="capitalize">{key.replaceAll("_", " ")}</strong>: {factor.explanation} ({Math.round((factor.score || 0) * 100)}%)</p>)}</div></details>}
 
                 <div className="mt-4 flex items-center justify-between border-t border-ink-300 pt-3 text-xs text-slate-300">
                   <span>{formatTimeLeft(p.deadline)}</span>

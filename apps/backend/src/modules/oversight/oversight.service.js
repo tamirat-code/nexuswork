@@ -8,6 +8,8 @@ import { isOrgMember } from "../clients/clients.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { ForbiddenError, NotFoundError, ValidationError } from "../../shared/exceptions/AppError.js";
 import { env } from "../../config/env.js";
+import { getRiskThresholds } from "../recommendation/recommendation-governance.service.js";
+import OrgMembership from "../organizations/org-membership.model.js";
 
 const TERMINAL_MILESTONE_STATUSES = new Set(["released"]);
 const ACTIVE_MILESTONE_STATUSES = new Set(["funded", "in_progress", "submitted", "delivered", "revision_requested", "approved"]);
@@ -86,7 +88,7 @@ export async function listCheckIns(projectId, user) {
   return CheckIn.find({ project_id: projectId }).populate("author_id", "name role").sort({ createdAt: -1 }).lean();
 }
 
-export function riskFactors({ milestone, tasks, latestCheckIn, now = new Date(), deadlineWarningHours = env.oversightDeadlineWarningHours, staleCheckInDays = env.oversightStaleCheckInDays }) {
+export function riskFactors({ milestone, tasks, latestCheckIn, now = new Date(), deadlineWarningHours = env.oversightDeadlineWarningHours, staleCheckInDays = env.oversightStaleCheckInDays, maxOverdueTasks = 0 }) {
   if (TERMINAL_MILESTONE_STATUSES.has(milestone.status)) return [];
   const factors = [];
   const dueDate = milestone.due_date ? new Date(milestone.due_date) : null;
@@ -95,7 +97,7 @@ export function riskFactors({ milestone, tasks, latestCheckIn, now = new Date(),
   const blocked = tasks.filter((task) => task.status === "blocked").length;
   const overdueTasks = tasks.filter((task) => task.due_date && new Date(task.due_date) < now && task.status !== "completed").length;
   if (blocked) factors.push({ code: "blocked_tasks", count: blocked, severity: "high" });
-  if (overdueTasks) factors.push({ code: "overdue_tasks", count: overdueTasks, severity: "medium" });
+  if (overdueTasks > maxOverdueTasks) factors.push({ code: "overdue_tasks", count: overdueTasks, threshold: maxOverdueTasks, severity: "medium" });
   if (ACTIVE_MILESTONE_STATUSES.has(milestone.status) && (!latestCheckIn || now.getTime() - new Date(latestCheckIn.createdAt).getTime() > staleCheckInDays * 24 * 60 * 60 * 1000)) {
     factors.push({ code: "stale_check_in", severity: "medium" });
   }
@@ -112,7 +114,8 @@ export async function evaluateMilestoneRisk(milestoneId, { notify = true } = {})
     CheckIn.findOne({ milestone_id: milestone._id }).sort({ createdAt: -1 }).lean(),
     AtRiskAssessment.findOne({ milestone_id: milestone._id }).lean(),
   ]);
-  const factors = riskFactors({ milestone, tasks, latestCheckIn });
+  const thresholds = await getRiskThresholds();
+  const factors = riskFactors({ milestone, tasks, latestCheckIn, ...thresholds });
   const status = factors.length ? "at_risk" : "not_at_risk";
   const assessment = await AtRiskAssessment.findOneAndUpdate(
     { milestone_id: milestone._id },
@@ -165,4 +168,34 @@ export async function evaluateAtRiskMilestones({ limit = 100 } = {}) {
     evaluated: results.filter((result) => result.status === "fulfilled").length,
     failed: results.filter((result) => result.status === "rejected").length,
   };
+}
+
+export async function getClientContractsOverview(user) {
+  if (!["client", "admin"].includes(user.role)) throw new ForbiddenError("Only clients and admins can view contract oversight");
+  let query = {};
+  if (user.role !== "admin") {
+    const memberships = await OrgMembership.find({ user_id: user._id, status: "active" }).select("organization_id").lean();
+    query = { $or: [{ client_id: user._id }, ...(memberships.length ? [{ organization_id: { $in: memberships.map((item) => item.organization_id) } }] : [])] };
+  }
+  const contracts = await Contract.find(query)
+    .populate("project_id", "title category deadline")
+    .populate("student_id", "name avatarUrl")
+    .populate("client_id", "name")
+    .sort({ createdAt: -1 })
+    .lean();
+  const contractIds = contracts.map((contract) => contract._id);
+  const milestones = await Milestone.find({ contract_id: { $in: contractIds } }).sort({ sequence: 1 }).lean();
+  return contracts.map((contract) => {
+    const items = milestones.filter((milestone) => String(milestone.contract_id) === String(contract._id));
+    return {
+      ...contract,
+      milestones: items,
+      oversight: {
+        total_milestones: items.length,
+        released_milestones: items.filter((item) => item.status === "released").length,
+        funded_milestones: items.filter((item) => ["funded", "in_progress", "submitted", "delivered", "revision_requested", "approved", "release_pending"].includes(item.status)).length,
+        at_risk_milestones: items.filter((item) => ["release_failed", "disputed"].includes(item.status)).length,
+      },
+    };
+  });
 }

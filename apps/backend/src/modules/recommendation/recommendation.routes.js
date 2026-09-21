@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMyRecommendations, getMyCareerRecommendation, getStudentMatchesForProject, getSuggestedPrice, getMyRecommendationHistory, postRecommendationFeedback } from "./recommendation.controller.js";
+import { getMyRecommendations, getMyCareerRecommendation, getStudentMatchesForProject, getSuggestedPrice, getMyRecommendationHistory, postRecommendationFeedback, postRecommendationEvent, getRecommendationEvents } from "./recommendation.controller.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { requireRole } from "../../middleware/role.middleware.js";
 import { validateParams } from "../../shared/validators/ZodValidator.js";
@@ -14,5 +14,7 @@ router.post("/:projectId/feedback", requireAuth, requireRole("student"), validat
 // Authorization (project owner, org member, or admin) enforced in the service layer.
 router.get("/project/:projectId/students", requireAuth, requireRole("client", "admin"), validateParams(objectIdParamsSchema("projectId")), getStudentMatchesForProject);
 router.get("/price-suggestion", requireAuth, requireRole("client", "admin"), getSuggestedPrice);
+router.post("/events", requireAuth, postRecommendationEvent);
+router.get("/events", requireAuth, requireRole("admin"), getRecommendationEvents);
 
 export default router;

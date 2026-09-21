@@ -17,3 +17,7 @@ export const suspendAdminUser = (userId, reason, token) => apiRequest(`/admin/us
 export const restoreAdminUser = (userId, reason, token) => apiRequest(`/admin/users/${userId}/restore`, { method: "PATCH", body: { reason }, token });
 export const changeAdminUserRole = (userId, payload, token) => apiRequest(`/admin/users/${userId}/role`, { method: "PATCH", body: payload, token });
 export const deleteAdminUser = (userId, reason, token) => apiRequest(`/admin/users/${userId}`, { method: "DELETE", body: { reason }, token });
+export const getRecommendationGovernance = (token) => apiRequest("/admin/recommendation-governance", { token });
+export const updateRecommendationGovernance = (payload, token) => apiRequest("/admin/recommendation-governance", { method: "PATCH", body: payload, token });
+export const listRecommendationEvaluations = (token) => apiRequest("/admin/recommendation-governance/evaluations", { token });
+export const createRecommendationEvaluation = (payload, token) => apiRequest("/admin/recommendation-governance/evaluations", { method: "POST", body: payload, token });
