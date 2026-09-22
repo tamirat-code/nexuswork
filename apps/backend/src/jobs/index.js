@@ -9,6 +9,7 @@ import JobLock from "./job-lock.model.js";
 import { dispatchDueWebhookDeliveries } from "../modules/api-partners/api-webhooks.service.js";
 import { evaluateAtRiskMilestones } from "../modules/oversight/index.js";
 import { chargeDueStripePartnerStatements } from "../modules/api-partners/api-billing-payments.service.js";
+import { syncActiveRepositories } from "../modules/evidence/index.js";
 
 const JOB_LOCK_TTL_MS = 4 * 60 * 1000;
 
@@ -115,6 +116,18 @@ export function registerJobs() {
   }, 60 * 60 * 1000);
   apiBillingTimer.unref?.();
 
+  const evidenceSyncTimer = setInterval(async () => {
+    await withJobLock("repository-evidence-sync", async () => {
+      try {
+        const result = await syncActiveRepositories({ limit: 100 });
+        if (result.checked) console.log(`[jobs] repository evidence checked=${result.checked} succeeded=${result.succeeded} failed=${result.failed}`);
+      } catch (error) {
+        console.error("[jobs] repository evidence sync failed:", error.message);
+      }
+    });
+  }, 15 * 60 * 1000);
+  evidenceSyncTimer.unref?.();
+
   return () => {
     clearInterval(timer);
     clearInterval(reconciliationTimer);
@@ -122,5 +135,6 @@ export function registerJobs() {
     clearInterval(webhookDeliveryTimer);
     clearInterval(oversightTimer);
     clearInterval(apiBillingTimer);
+    clearInterval(evidenceSyncTimer);
   };
 }

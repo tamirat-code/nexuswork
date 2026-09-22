@@ -38,6 +38,7 @@ import { OrganizationsRoutes } from "../../modules/organizations/index.js";
 import { ApiPartnerAdminRoutes, ApiPartnerBrowserRoutes, ApiPartnerApplicationRoutes } from "../../modules/api-partners/index.js";
 import { OversightRoutes } from "../../modules/oversight/index.js";
 import { CohortsRoutes } from "../../modules/cohorts/index.js";
+import { EvidenceRoutes } from "../../modules/evidence/index.js";
 
 const router = Router();
 
@@ -81,5 +82,6 @@ router.use("/api-partners/portal", ApiPartnerBrowserRoutes);
 router.use("/api-partner-applications", ApiPartnerApplicationRoutes);
 router.use("/oversight", OversightRoutes);
 router.use("/cohorts", CohortsRoutes);
+router.use("/evidence", EvidenceRoutes);
 
 export default router;

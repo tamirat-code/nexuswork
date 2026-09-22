@@ -69,9 +69,9 @@ export default function ContractsPage() {
 
             return (
               <li key={contract._id}>
-                <Card
-                  as={Link}
-                  to={`/contracts/${contract._id}`}
+                  <Card
+                    as={Link}
+                    to={`/contracts/${contract._id}`}
                   aria-label={`Open contract ${title}`}
                   className="block cursor-pointer transition-colors hover:border-brass/50 hover:bg-ink-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brass/70"
                 >
@@ -96,7 +96,8 @@ export default function ContractsPage() {
                     </div>
                     <StatusBadge status={contract.status} />
                   </div>
-                </Card>
+                  </Card>
+                <Link className="mt-2 inline-block text-sm font-semibold text-brand" to={`/contracts/${contract._id}/evidence`}>{t("contracts.viewEvidence", { defaultValue: "View work evidence" })}</Link>
               </li>
             );
           })}

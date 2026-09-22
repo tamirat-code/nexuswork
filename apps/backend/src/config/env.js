@@ -47,6 +47,12 @@ export function buildEnv(source = process.env) {
     jwtSecret: optional(source.JWT_SECRET),
     jwtExpiresIn: source.JWT_EXPIRES_IN || "7d",
     ssoCallbackUrl: optional(source.SSO_CALLBACK_URL) || `${optional(source.CREDENTIAL_ISSUER_URL) || "http://localhost:5000"}/v1/auth/sso/callback`,
+    githubClientId: optional(source.GITHUB_CLIENT_ID),
+    githubClientSecret: optional(source.GITHUB_CLIENT_SECRET),
+    githubEvidenceCallbackUrl: optional(source.GITHUB_EVIDENCE_CALLBACK_URL),
+    gitlabClientId: optional(source.GITLAB_CLIENT_ID),
+    gitlabClientSecret: optional(source.GITLAB_CLIENT_SECRET),
+    gitlabEvidenceCallbackUrl: optional(source.GITLAB_EVIDENCE_CALLBACK_URL),
 
     googleClientId: optional(source.GOOGLE_CLIENT_ID),
     paymentProvider: (source.PAYMENT_PROVIDER || "stripe").toLowerCase(),

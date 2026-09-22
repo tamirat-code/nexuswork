@@ -54,6 +54,7 @@ const MeetingPage = lazy(() => import("../../features/meetings/MeetingPage.jsx")
 const MeetingsListPage = lazy(() => import("../../features/meetings/MeetingsListPage.jsx"));
 const OrganizationsPage = lazy(() => import("../../features/organizations/OrganizationsPage.jsx"));
 const CohortsPage = lazy(() => import("../../features/cohorts/CohortsPage.jsx"));
+const EvidencePage = lazy(() => import("../../features/evidence/EvidencePage.jsx"));
 const InstitutionOnboardingAdminPage = lazy(() => import("../../features/organizations/InstitutionOnboardingAdminPage.jsx"));
 const InstitutionOnboardingPage = lazy(() => import("../../features/organizations/InstitutionOnboardingPage.jsx"));
 const PartnerPortalPage = lazy(() => import("../../features/partners/PartnerPortalPage.jsx"));
@@ -109,6 +110,7 @@ export default function AppRouter() {
       <Route path="/proposals" element={protect(<ProposalsPage />)} />
       <Route path="/contracts" element={protect(<ContractsPage />)} />
       <Route path="/contracts/:id" element={protect(<ContractDetailPage />)} />
+      <Route path="/contracts/:id/evidence" element={protect(<EvidencePage />)} />
       <Route path="/disputes" element={protect(<DisputesPage />)} />
       <Route path="/wallet" element={protect(<WalletsPage />)} />
       {/* Backwards-compatible redirects for legacy Stripe Connect callback URLs */}
