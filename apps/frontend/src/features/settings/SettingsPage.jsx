@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { KeyRound, ShieldCheck, User } from "lucide-react";
+import { KeyRound, ShieldCheck, User, Eye, AlertTriangle } from "lucide-react";
 import { changePassword, initiateMfaSetup } from "../../services/api/auth.api.js";
 import { updateMe } from "../../services/api/users.api.js";
 import { getTalentApiConsent, updateTalentApiConsent } from "../../services/api/students.api.js";
@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [talentApiEnabled, setTalentApiEnabled] = useState(false);
   const [talentApiFields, setTalentApiFields] = useState([]);
+  const [confirmEnableOpen, setConfirmEnableOpen] = useState(false);
   const isGoogleAccount = user?.auth_provider === "google";
   const isStudent = user?.role === "student";
 
@@ -47,7 +48,10 @@ export default function SettingsPage() {
   }, [talentConsentQuery.data]);
 
   const talentConsentMutation = useMutation({
-    mutationFn: () => updateTalentApiConsent({ enabled: talentApiEnabled, fields: talentApiFields }, token),
+    mutationFn: ({ override } = {}) => {
+      const payload = override || { enabled: talentApiEnabled, fields: talentApiFields };
+      return updateTalentApiConsent(payload, token);
+    },
     onSuccess: ({ data }) => {
       setTalentApiEnabled(Boolean(data?.enabled));
       setTalentApiFields(data?.fields || []);
@@ -135,48 +139,138 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {isStudent && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand" /> {t("settings.talentConsentTitle")}</CardTitle>
-              <CardDescription>{t("settings.talentConsentDescription")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface-soft p-4">
+        {isStudent && (() => {
+          const consentData = talentConsentQuery.data?.data;
+          const updatedAt = consentData?.updated_at;
+
+          const FIELD_META = {
+            name: { label: t("settings.talentFields.name"), desc: t("settings.talentFieldDesc.name", { defaultValue: "Your display name as it appears on your profile." }) },
+            skills: { label: t("settings.talentFields.skills"), desc: t("settings.talentFieldDesc.skills", { defaultValue: "Your skill list, categories, and proficiency levels." }) },
+            verification: { label: t("settings.talentFields.verification"), desc: t("settings.talentFieldDesc.verification", { defaultValue: "Whether your identity and skills are university-verified." }) },
+            institution: { label: t("settings.talentFields.institution"), desc: t("settings.talentFieldDesc.institution", { defaultValue: "Your university name and institution ID." }) },
+            program: { label: t("settings.talentFields.program"), desc: t("settings.talentFieldDesc.program", { defaultValue: "Your academic programme or field of study." }) },
+            bio: { label: t("settings.talentFields.bio"), desc: t("settings.talentFieldDesc.bio", { defaultValue: "Your public bio text." }) },
+          };
+
+          const handleToggleEnable = (next) => {
+            if (next && !talentApiEnabled) {
+              // Show confirmation before enabling
+              setConfirmEnableOpen(true);
+            } else {
+              setTalentApiEnabled(next);
+              if (!next) {
+                // Immediate save when revoking all
+                talentConsentMutation.mutate({ override: { enabled: false, fields: talentApiFields } });
+              }
+            }
+          };
+
+          const handleConfirmEnable = () => {
+            setTalentApiEnabled(true);
+            setConfirmEnableOpen(false);
+          };
+
+          const handleRevokeAll = () => {
+            setTalentApiEnabled(false);
+            setTalentApiFields([]);
+            talentConsentMutation.mutate({ override: { enabled: false, fields: [] } });
+          };
+
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-brand" /> {t("settings.talentConsentTitle")}
+                </CardTitle>
+                <CardDescription>{t("settings.talentConsentDescription")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Enabled/disabled toggle */}
+                <div className="flex items-center justify-between gap-4 rounded-lg border border-border-subtle bg-surface-soft p-4">
+                  <div>
+                    <p className="font-semibold text-content-primary">{t("settings.talentConsentToggle")}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-content-secondary">{t("settings.talentConsentToggleHint")}</p>
+                  </div>
+                  <Switch checked={talentApiEnabled} onCheckedChange={handleToggleEnable} disabled={talentConsentQuery.isLoading} />
+                </div>
+
+                {/* Confirmation dialog for enabling */}
+                {confirmEnableOpen && (
+                  <div className="rounded-xl border border-brass/30 bg-brass/10 p-4" role="alertdialog" aria-modal="true">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-brass" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-content-primary">{t("settings.talentConsentConfirmTitle", { defaultValue: "Enable Talent API discovery?" })}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-content-secondary">
+                          {t("settings.talentConsentConfirmBody", { defaultValue: "Approved enterprise partners will be able to discover your profile using only the fields you select below. You can revoke access at any time." })}
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" onClick={handleConfirmEnable}>{t("settings.talentConsentConfirmYes", { defaultValue: "Yes, enable" })}</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setConfirmEnableOpen(false)}>{t("settings.talentConsentConfirmNo", { defaultValue: "Cancel" })}</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active consent summary banner */}
+                {talentApiEnabled && talentApiFields.length > 0 && (
+                  <div className="rounded-lg border border-teal/30 bg-teal/5 px-4 py-3 text-xs text-content-secondary">
+                    <span className="font-semibold text-teal">{t("settings.talentConsentActive", { defaultValue: "Discovery enabled" })}</span>
+                    {" — "}{t("settings.talentConsentActiveSummary", { count: talentApiFields.length, defaultValue: "You are sharing {{count}} field(s) with verified enterprise partners." })}
+                    {updatedAt && (
+                      <span className="ml-2 text-content-secondary">
+                        {t("settings.talentConsentUpdatedAt", { defaultValue: "Last updated:" })}{" "}
+                        {new Date(updatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Per-field selection with explanations */}
                 <div>
-                  <p className="font-semibold text-content-primary">{t("settings.talentConsentToggle")}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-content-secondary">{t("settings.talentConsentToggleHint")}</p>
+                  <p className="font-semibold text-content-primary">{t("settings.talentConsentFieldsTitle")}</p>
+                  <p className="mt-1 text-xs text-content-secondary">{t("settings.talentConsentFieldsHint")}</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {Object.entries(FIELD_META).map(([field, meta]) => (
+                      <label
+                        key={field}
+                        className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-subtle bg-surface-soft/70 px-3 py-3 text-sm transition hover:border-brand/40"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={talentApiFields.includes(field)}
+                          onChange={() => toggleTalentField(field)}
+                          className="mt-0.5 h-4 w-4 accent-brass"
+                        />
+                        <div>
+                          <p className="font-medium text-content-primary">{meta.label}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-content-secondary">{meta.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <Switch checked={talentApiEnabled} onCheckedChange={setTalentApiEnabled} disabled={talentConsentQuery.isLoading} />
-              </div>
 
-              <div>
-                <p className="font-semibold text-content-primary">{t("settings.talentConsentFieldsTitle")}</p>
-                <p className="mt-1 text-xs text-content-secondary">{t("settings.talentConsentFieldsHint")}</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {["name", "skills", "verification", "institution", "program", "bio"].map((field) => (
-                    <label key={field} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border-subtle bg-surface-soft/70 px-3 py-2.5 text-sm text-content-primary transition hover:border-brand/50">
-                      <input
-                        type="checkbox"
-                        checked={talentApiFields.includes(field)}
-                        onChange={() => toggleTalentField(field)}
-                        className="h-4 w-4 accent-brass"
-                      />
-                      <span>{t(`settings.talentFields.${field}`)}</span>
-                    </label>
-                  ))}
+                {/* Footer actions */}
+                <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border-subtle pt-4">
+                  <p className="max-w-xl text-xs leading-relaxed text-content-secondary">{t("settings.talentConsentPrivacy")}</p>
+                  <div className="flex gap-2">
+                    {talentApiEnabled && (
+                      <Button size="sm" variant="ghost" onClick={handleRevokeAll} loading={talentConsentMutation.isPending && !talentApiEnabled}>
+                        {t("settings.talentConsentRevokeAll", { defaultValue: "Revoke all" })}
+                      </Button>
+                    )}
+                    <Button size="sm" loading={talentConsentMutation.isPending} onClick={() => talentConsentMutation.mutate({})}>
+                      {t("settings.saveTalentConsent")}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
-              <div className="flex items-center justify-between gap-4 border-t border-ink-300 pt-4">
-                <p className="max-w-xl text-xs leading-relaxed text-content-secondary">{t("settings.talentConsentPrivacy")}</p>
-                <Button size="sm" loading={talentConsentMutation.isPending} onClick={() => talentConsentMutation.mutate()}>
-                  {t("settings.saveTalentConsent")}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <Card>
           <CardHeader>

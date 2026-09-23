@@ -3,6 +3,10 @@ import { apiRequest, partnerApiRequest } from "../../lib/http.js";
 const browserBase = "/api-partners/portal";
 const browserRequest = (path = "", options = {}) => apiRequest(`${browserBase}${path}`, options);
 
+// Self-service partner application (client role, pending admin approval)
+export const submitPartnerApplication = (payload, token) =>
+  apiRequest("/api-partner-applications", { method: "POST", body: payload, token });
+
 export const getBrowserPartnerProfile = (token) => browserRequest("/", { token });
 export const listBrowserPartnerKeys = (token) => browserRequest("/keys", { token });
 export const createBrowserPartnerKey = (payload, token) => browserRequest("/keys", { method: "POST", body: payload, token });

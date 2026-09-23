@@ -58,6 +58,7 @@ const EvidencePage = lazy(() => import("../../features/evidence/EvidencePage.jsx
 const InstitutionOnboardingAdminPage = lazy(() => import("../../features/organizations/InstitutionOnboardingAdminPage.jsx"));
 const InstitutionOnboardingPage = lazy(() => import("../../features/organizations/InstitutionOnboardingPage.jsx"));
 const PartnerPortalPage = lazy(() => import("../../features/partners/PartnerPortalPage.jsx"));
+const PartnerApplyPage = lazy(() => import("../../features/partners/PartnerApplyPage.jsx"));
 
 const protect = (element, allowedRoles) => (
   <ProtectedRoute allowedRoles={allowedRoles}>{element}</ProtectedRoute>
@@ -100,6 +101,7 @@ export default function AppRouter() {
       <Route path="/verify-reputation" element={<ReputationVerifyPage />} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/partner-portal" element={<PartnerPortalPage />} />
+      <Route path="/partner-apply" element={protect(<PartnerApplyPage />, [ROLES.CLIENT])} />
 
       {/* Workspace */}
       <Route path="/dashboard" element={protect(<DashboardPage />)} />

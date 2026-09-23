@@ -13,3 +13,14 @@ export const updateApiPartnerBillingMode = (partnerId, billing_mode, token) => a
 export const createStripeBillingSetupIntent = (partnerId, token) => apiRequest(`${base}/${partnerId}/billing/stripe/setup-intent`, { method: "POST", token });
 export const saveStripeBillingPaymentMethod = (partnerId, payment_method_id, token) => apiRequest(`${base}/${partnerId}/billing/stripe/payment-method`, { method: "POST", body: { payment_method_id }, token });
 export const createApiWalletTopUp = (partnerId, amount_minor, token) => apiRequest(`${base}/${partnerId}/wallet/topup`, { method: "POST", body: { amount_minor }, token });
+
+// FR-33: Per-partner partner_api_read audit events
+export const getApiPartnerAuditLog = (partnerId, token, limit = 200) =>
+  apiRequest(`/audit-logs?partner_id=${partnerId}&limit=${limit}`, { token });
+
+// FR-35: Admin billing charge and status management
+export const chargeApiPartnerStatement = (partnerId, ledgerId, token) =>
+  apiRequest(`${base}/${partnerId}/billing/${ledgerId}/charge`, { method: "POST", token });
+export const updateApiPartnerBillingStatus = (partnerId, ledgerId, payload, token) =>
+  apiRequest(`${base}/${partnerId}/billing/${ledgerId}/status`, { method: "PATCH", body: payload, token });
+
