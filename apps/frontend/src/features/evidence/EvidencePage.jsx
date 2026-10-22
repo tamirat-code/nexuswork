@@ -36,7 +36,10 @@ export default function EvidencePage() {
   const sync = useMutation({ mutationFn: (connectionId) => syncRepository(connectionId, { milestone_id: syncMilestone || null }, token), onSuccess: ({ data }) => { refresh(); toast.success(t("evidence.synced", { defaultValue: `${data.imported} commits synchronized` })); }, onError: (error) => toast.error(error.message) });
   const revoke = useMutation({ mutationFn: (connectionId) => revokeRepository(connectionId, token), onSuccess: refresh, onError: (error) => toast.error(error.message) });
   const checkpoint = useMutation({ mutationFn: (status) => decideCheckpoint(id, { status, note: body.trim() }, token), onSuccess: () => { setBody(""); refresh(); toast.success(t("evidence.checkpointSaved", { defaultValue: "Checkpoint decision saved" })); }, onError: (error) => toast.error(error.message) });
-  const items = evidence.data?.data || [];
+  const items = Array.isArray(evidence.data?.data) ? evidence.data.data : [];
+  const repositoryItems = Array.isArray(repositories.data?.data) ? repositories.data.data : [];
+  const checkpointItems = Array.isArray(checkpoints.data?.data) ? checkpoints.data.data : [];
+  const milestoneItems = Array.isArray(milestones.data?.data) ? milestones.data.data : (milestones.data?.data?.milestones || []);
   const isStudent = user?.role === "student";
 
   return (
@@ -76,10 +79,10 @@ export default function EvidencePage() {
             <label className="text-sm font-medium" htmlFor="sync-milestone">{t("evidence.syncMilestone", { defaultValue: "Attach synced commits to milestone (optional)" })}</label>
             <select id="sync-milestone" className="h-10 min-w-56 rounded-control border border-border-subtle bg-surface px-3 text-sm" value={syncMilestone} onChange={(event) => setSyncMilestone(event.target.value)}>
               <option value="">{t("evidence.allContract", { defaultValue: "Entire contract" })}</option>
-              {(milestones.data?.data || []).map((milestone) => <option key={milestone._id} value={milestone._id}>{milestone.title}</option>)}
+              {milestoneItems.map((milestone) => <option key={milestone._id} value={milestone._id}>{milestone.title}</option>)}
             </select>
           </div>
-          {(repositories.data?.data || []).map((connection) => <div key={connection._id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border-subtle p-3">
+          {repositoryItems.map((connection) => <div key={connection._id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border-subtle p-3">
             <div><p className="font-medium">{connection.provider}: {connection.repository}</p><p className="text-xs text-content-secondary">{connection.status} · {connection.last_sync_at ? new Date(connection.last_sync_at).toLocaleString() : t("evidence.neverSynced", { defaultValue: "Not synchronized yet" })}{connection.last_sync_error ? ` · ${connection.last_sync_error}` : ""}</p></div>
             <div className="flex gap-2"><Button size="sm" variant="outline" disabled={connection.status !== "active"} loading={sync.isPending} onClick={() => sync.mutate(connection._id)}>{t("evidence.sync", { defaultValue: "Sync" })}</Button><Button size="sm" variant="ghost" onClick={() => revoke.mutate(connection._id)}>{t("evidence.revoke", { defaultValue: "Revoke" })}</Button></div>
           </div>)}
@@ -107,7 +110,7 @@ export default function EvidencePage() {
 
       <Card>
         <CardHeader><CardTitle>{t("evidence.decisions", { defaultValue: "Checkpoint decisions" })}</CardTitle></CardHeader>
-        <CardContent className="space-y-2">{(checkpoints.data?.data || []).map((item) => <div key={item._id} className="rounded-control border border-border-subtle p-3"><div className="flex justify-between gap-2"><Badge>{item.status.replaceAll("_", " ")}</Badge><time className="text-xs text-content-secondary">{new Date(item.decided_at).toLocaleString()}</time></div>{item.note && <p className="mt-2 text-sm text-content-secondary">{item.note}</p>}</div>)}{!(checkpoints.data?.data || []).length && <p className="text-sm text-content-secondary">{t("evidence.noDecisions", { defaultValue: "No checkpoint decision has been recorded." })}</p>}</CardContent>
+        <CardContent className="space-y-2">{checkpointItems.map((item) => <div key={item._id} className="rounded-control border border-border-subtle p-3"><div className="flex justify-between gap-2"><Badge>{item.status.replaceAll("_", " ")}</Badge><time className="text-xs text-content-secondary">{new Date(item.decided_at).toLocaleString()}</time></div>{item.note && <p className="mt-2 text-sm text-content-secondary">{item.note}</p>}</div>)}{!checkpointItems.length && <p className="text-sm text-content-secondary">{t("evidence.noDecisions", { defaultValue: "No checkpoint decision has been recorded." })}</p>}</CardContent>
       </Card>
     </div>
   );
