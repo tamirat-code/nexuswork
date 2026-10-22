@@ -15,6 +15,12 @@ import { ForbiddenError, NotFoundError, ValidationError, ConflictError } from ".
 
 function id(value) { return String(value?._id || value); }
 
+function publicConnection(connection) {
+  const value = connection?.toObject ? connection.toObject() : { ...connection };
+  delete value.token_encrypted;
+  return value;
+}
+
 async function getContractAccess(contractId, userId) {
   const contract = await Contract.findById(contractId).lean();
   if (!contract) throw new NotFoundError("Contract not found");
@@ -121,7 +127,15 @@ async function providerRepository(provider, repository, token) {
   if (!response.ok) throw new ForbiddenError("The approved repository could not be verified with the provider");
   const allowed = provider === "github" ? Boolean(data.permissions?.push || data.permissions?.admin) : Number(data.permissions?.project_access?.access_level || data.permissions?.access_level || 0) >= 30;
   if (!allowed) throw new ForbiddenError("You do not have sufficient access to this repository");
-  return { id: String(data.id), fullName: provider === "github" ? data.full_name : data.path_with_namespace, defaultBranch: data.default_branch || "main", providerUserId: provider === "github" ? String(data.owner?.id || "unknown") : String(data.namespace?.id || "unknown") };
+  return { id: String(data.id), fullName: provider === "github" ? data.full_name : data.path_with_namespace, defaultBranch: data.default_branch || "main" };
+}
+
+async function providerIdentity(provider, token) {
+  const url = provider === "github" ? "https://api.github.com/user" : "https://gitlab.com/api/v4/user";
+  const response = await fetch(url, { headers: { authorization: `Bearer ${token}`, accept: "application/json", "user-agent": "NexusWork" } });
+  const data = await response.json();
+  if (!response.ok || data.id === undefined) throw new ValidationError("Could not identify the repository account", "PROVIDER_AUTH_FAILED");
+  return { id: String(data.id), login: data.login || data.username || "", email: data.email || "" };
 }
 
 export async function finishRepositoryOAuth({ code, state }) {
@@ -129,15 +143,16 @@ export async function finishRepositoryOAuth({ code, state }) {
   if (!transaction) throw new ValidationError("Repository authorization expired or was already used");
   transaction.consumed_at = new Date(); await transaction.save();
   const token = await exchangeCode(transaction.provider, code);
+  const identity = await providerIdentity(transaction.provider, token);
   const repository = await providerRepository(transaction.provider, transaction.repository, token);
-  const connection = await RepositoryConnection.findOneAndUpdate({ contract_id: transaction.contract_id, student_id: transaction.student_id, provider: transaction.provider, repository: repository.fullName }, { contract_id: transaction.contract_id, student_id: transaction.student_id, provider: transaction.provider, provider_user_id: repository.providerUserId, provider_repository_id: repository.id, repository: repository.fullName, default_branch: repository.defaultBranch, scopes: transaction.provider === "github" ? ["read:user", "repo"] : ["read_api", "read_repository"], token_encrypted: encryptRepositoryToken(token), status: "active", last_sync_error: "" }, { upsert: true, new: true, setDefaultsOnInsert: true });
+  const connection = await RepositoryConnection.findOneAndUpdate({ contract_id: transaction.contract_id, student_id: transaction.student_id, provider: transaction.provider, repository: repository.fullName }, { contract_id: transaction.contract_id, student_id: transaction.student_id, provider: transaction.provider, provider_user_id: identity.id, provider_user_email: identity.email, provider_repository_id: repository.id, repository: repository.fullName, default_branch: repository.defaultBranch, scopes: transaction.provider === "github" ? ["read:user", "user:email", "repo"] : ["read_api", "read_repository"], token_encrypted: encryptRepositoryToken(token), status: "active", last_sync_error: "" }, { upsert: true, new: true, setDefaultsOnInsert: true });
   await audit({ _id: transaction.student_id, role: "student" }, "REPOSITORY_CONNECTED", "evidence.repository_connected", transaction.contract_id, { repository_connection_id: connection._id, provider: connection.provider, repository: connection.repository });
-  return connection;
+  return publicConnection(connection);
 }
 
 export async function listRepositories(contractId, user) {
   const access = await getContractAccess(contractId, user._id);
-  return RepositoryConnection.find({ contract_id: contractId, ...(access.student ? { student_id: user._id } : {}) }).select("provider repository default_branch scopes status last_sync_at last_sync_error createdAt").lean();
+  return RepositoryConnection.find({ contract_id: contractId, ...(access.student ? { student_id: user._id } : {}) }).select("provider repository default_branch scopes status last_sync_at last_synced_commit_at last_sync_error createdAt").lean();
 }
 
 export async function revokeRepository(connectionId, user) {
@@ -147,38 +162,58 @@ export async function revokeRepository(connectionId, user) {
   if (!access.student) throw new ForbiddenError("Only the connected student can revoke this repository");
   connection.status = "revoked"; connection.token_encrypted = "revoked"; connection.last_sync_error = "Connection revoked by student"; await connection.save();
   await audit(user, "REPOSITORY_REVOKED", "evidence.repository_revoked", connection.contract_id, { repository_connection_id: connection._id, repository: connection.repository });
-  return connection;
+  return publicConnection(connection);
 }
 
 async function providerCommits(connection, token) {
-  if (connection.provider === "github") {
-    const response = await fetch(`https://api.github.com/repos/${connection.repository}/commits?per_page=50`, { headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "user-agent": "NexusWork" } });
-    if (!response.ok) throw new ValidationError("GitHub commit sync failed");
-    return (await response.json()).map((item) => ({ id: item.sha, title: item.commit?.message?.split("\n")[0] || "Commit", body: item.commit?.message || "", url: item.html_url, occurred_at: item.commit?.author?.date || item.commit?.committer?.date, metadata: { sha: item.sha, author: item.commit?.author?.name || "" } }));
+  const since = connection.last_synced_commit_at ? new Date(new Date(connection.last_synced_commit_at).getTime() - 1000).toISOString() : null;
+  const pageSize = 100;
+  const maxPages = 20;
+  const commits = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const params = new URLSearchParams({ per_page: String(pageSize), page: String(page) });
+    if (since) params.set("since", since);
+    const url = connection.provider === "github"
+      ? `https://api.github.com/repos/${connection.repository}/commits?${params}`
+      : `https://gitlab.com/api/v4/projects/${encodeURIComponent(connection.repository)}/repository/commits?${params}`;
+    const response = await fetch(url, { headers: { authorization: `Bearer ${token}`, accept: "application/json", "user-agent": "NexusWork" } });
+    if (response.status === 401 || response.status === 403) throw new ValidationError("Repository authorization is no longer valid", "PROVIDER_AUTH_FAILED");
+    if (!response.ok) throw new ValidationError(`${connection.provider} commit sync failed`);
+    const pageItems = await response.json();
+    if (!Array.isArray(pageItems)) throw new ValidationError(`${connection.provider} returned an invalid commit response`);
+    commits.push(...pageItems);
+    if (pageItems.length < pageSize) break;
   }
-  const response = await fetch(`https://gitlab.com/api/v4/projects/${encodeURIComponent(connection.repository)}/repository/commits?per_page=50`, { headers: { authorization: `Bearer ${token}`, accept: "application/json" } });
-  if (!response.ok) throw new ValidationError("GitLab commit sync failed");
-  return (await response.json()).map((item) => ({ id: item.id, title: item.title || "Commit", body: item.message || "", url: item.web_url, occurred_at: item.committed_date || item.created_at, metadata: { sha: item.id, author: item.author_name || "" } }));
+  return commits.map((item) => connection.provider === "github"
+    ? ({ id: item.sha, title: item.commit?.message?.split("\n")[0] || "Commit", body: item.commit?.message || "", url: item.html_url, occurred_at: item.commit?.author?.date || item.commit?.committer?.date, metadata: { sha: item.sha, author: item.commit?.author?.name || "", author_provider_id: item.author?.id ? String(item.author.id) : null, author_verified: item.author?.id ? String(item.author.id) === String(connection.provider_user_id) : false } })
+    : ({ id: item.id, title: item.title || "Commit", body: item.message || "", url: item.web_url, occurred_at: item.committed_date || item.created_at, metadata: { sha: item.id, author: item.author_name || "", author_email: item.author_email || "", author_verified: Boolean(item.author_email && connection.provider_user_email && item.author_email.toLowerCase() === connection.provider_user_email.toLowerCase()) } }));
 }
 
-export async function syncRepository(connectionId, user) {
+export async function syncRepository(connectionId, user, { milestoneId = null } = {}) {
   const connection = await RepositoryConnection.findById(connectionId).select("+token_encrypted");
   if (!connection) throw new NotFoundError("Repository connection not found");
   const access = await getContractAccess(connection.contract_id, user._id);
   if (!access.student) throw new ForbiddenError("Only the connected student can sync this repository");
-  if (connection.status !== "active") throw new ConflictError("Repository connection is revoked");
+  if (connection.status !== "active") throw new ConflictError(connection.status === "needs_reauthorization" ? "Repository authorization must be renewed" : "Repository connection is revoked");
+  if (milestoneId) {
+    const milestone = await Milestone.findOne({ _id: milestoneId, contract_id: connection.contract_id }).select("_id").lean();
+    if (!milestone) throw new ValidationError("Milestone does not belong to this contract");
+  }
   try {
     const commits = await providerCommits(connection, decryptRepositoryToken(connection.token_encrypted));
     const artifacts = [];
     for (const commit of commits) {
-      const artifact = await TaskArtifact.findOneAndUpdate({ repository_connection_id: connection._id, external_id: commit.id }, { contract_id: connection.contract_id, author_id: connection.student_id, kind: "commit", title: commit.title, body: commit.body, url: commit.url, provider: connection.provider, repository_connection_id: connection._id, external_id: commit.id, occurred_at: commit.occurred_at, metadata: commit.metadata }, { upsert: true, new: true, setDefaultsOnInsert: true });
+      const artifact = await TaskArtifact.findOneAndUpdate({ repository_connection_id: connection._id, external_id: commit.id }, { contract_id: connection.contract_id, milestone_id: milestoneId || undefined, author_id: connection.student_id, kind: "commit", title: commit.title, body: commit.body, url: commit.url, provider: connection.provider, repository_connection_id: connection._id, external_id: commit.id, occurred_at: commit.occurred_at, metadata: commit.metadata }, { upsert: true, new: true, setDefaultsOnInsert: true });
       artifacts.push(artifact);
     }
-    connection.last_sync_at = new Date(); connection.last_sync_error = ""; await connection.save();
+    const occurredAt = commits.reduce((latest, commit) => commit.occurred_at && (!latest || new Date(commit.occurred_at) > latest) ? new Date(commit.occurred_at) : latest, connection.last_synced_commit_at ? new Date(connection.last_synced_commit_at) : null);
+    connection.last_sync_at = new Date(); connection.last_synced_commit_at = occurredAt; connection.last_sync_error = ""; await connection.save();
     await audit(user, "REPOSITORY_SYNCED", "evidence.repository_synced", connection.contract_id, { repository_connection_id: connection._id, commit_count: artifacts.length });
-    return { connection, imported: artifacts.length };
+    return { connection: publicConnection(connection), imported: artifacts.length };
   } catch (error) {
-    connection.last_sync_error = error.message; await connection.save(); throw error;
+    connection.last_sync_error = error.message;
+    if (error.code === "PROVIDER_AUTH_FAILED") connection.status = "needs_reauthorization";
+    await connection.save(); throw error;
   }
 }
 

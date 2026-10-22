@@ -1208,7 +1208,7 @@ export default function ContractDetailPage() {
           <h1 className="mt-1 font-display text-2xl leading-tight tracking-tight text-slate">{contract?.project_id?.title || "Contract"}</h1>
           <p className="mt-1 text-sm text-slate-300">With {partnerName || "Partner"} · {formatDate(contract?.createdAt)}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2"><StatusBadge kind="contract" status={contract?.status} showDot />{projectId && <Link to={`/projects/${projectId}/oversight`}><Button size="sm" variant="outline"><ClipboardList className="h-4 w-4" />{t("oversight.openButton")}</Button></Link>}</div>
+        <div className="flex flex-wrap items-center gap-2"><StatusBadge kind="contract" status={contract?.status} showDot />{projectId && <Link to={`/projects/${projectId}/oversight`}><Button size="sm" variant="outline"><ClipboardList className="h-4 w-4" />{t("oversight.openButton")}</Button></Link>}<Link to={`/contracts/${id}/evidence`}><Button size="sm" variant="outline"><ExternalLink className="h-4 w-4" />{t("evidence.openButton", { defaultValue: "Work evidence" })}</Button></Link></div>
       </div>
 
       {contract?.status === "active" && (

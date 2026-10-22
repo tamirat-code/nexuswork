@@ -144,12 +144,12 @@ distinct role in the data model today (`AuditLog.actor_role` has a
 
 | ID | Requirement (summary) | Status | Evidence |
 | --- | --- | --- | --- |
-| FR-67 | Incremental task work artifacts | ❌ | No task/artifact workflow exists |
-| FR-68 | Repository commit ingestion | ❌ | No repository integration or commit-event module exists |
-| FR-69 | Scoped repository authorization | ❌ | No repository OAuth linking workflow exists |
-| FR-70 | Client checkpoint reviews | ❌ | No `CheckpointReview` model or route exists |
-| FR-71 | Descriptive-only evidence timeline | ❌ | No task evidence timeline exists |
-| FR-72 | Check-in fallback when no repository evidence exists | ❌ | Check-in/at-risk engine does not exist |
+| FR-67 | Incremental task work artifacts | ✅ | `TaskArtifact` supports text, links, uploads, commits, and project check-in fallback on the contract evidence timeline |
+| FR-68 | Repository commit ingestion | ✅ | GitHub/GitLab OAuth connections import paginated commits idempotently, with incremental cursors and scheduled synchronization |
+| FR-69 | Scoped repository authorization | ✅ | OAuth state is short-lived and single-use; exact repositories are verified with provider permissions and tokens are encrypted at rest |
+| FR-70 | Client checkpoint reviews | ✅ | `EvidenceCheckpoint` records client approval or revision requests with audit events |
+| FR-71 | Descriptive-only evidence timeline | ✅ | `/contracts/:id/evidence` presents dated artifacts without performance scoring or automatic judgment |
+| FR-72 | Check-in fallback when no repository evidence exists | ✅ | Project check-ins are included as neutral timeline entries; missing evidence is not treated as failure |
 
 ## Job Listing Types & Direct-Hire Applications (FR-73–FR-79)
 

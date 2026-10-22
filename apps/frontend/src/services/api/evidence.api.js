@@ -6,5 +6,5 @@ export const listCheckpoints = (contractId, token) => apiRequest(`/evidence/cont
 export const decideCheckpoint = (contractId, payload, token) => apiRequest(`/evidence/contracts/${contractId}/checkpoints`, { method: "POST", body: payload, token });
 export const listRepositories = (contractId, token) => apiRequest(`/evidence/contracts/${contractId}/repositories`, { token });
 export const startRepositoryOAuth = (contractId, provider, repository, token) => apiRequest(`/evidence/contracts/${contractId}/repositories/${provider}/start?repository=${encodeURIComponent(repository)}`, { token });
-export const syncRepository = (connectionId, token) => apiRequest(`/evidence/repositories/${connectionId}/sync`, { method: "POST", token });
+export const syncRepository = (connectionId, payload = {}, token) => apiRequest(`/evidence/repositories/${connectionId}/sync`, { method: "POST", body: payload, token });
 export const revokeRepository = (connectionId, token) => apiRequest(`/evidence/repositories/${connectionId}`, { method: "DELETE", token });
